@@ -1,0 +1,11 @@
+[package]
+name = "fish_manpage_completions"
+version = "0.1.0"
+authors = ["Scott Steele <scottlsteele@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+structopt = "*"
+itertools = "*"
+regex = "*"
+lazy_static = "*"
