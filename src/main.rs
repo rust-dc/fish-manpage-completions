@@ -502,7 +502,7 @@ impl Type1 {
 
 impl Type1 {
     // TODO Type signature
-    fn fallback(&mut self, options_section: ()) {
+    fn fallback2(&mut self, options_section: ()) {
         unimplemented!()
     }
 }
