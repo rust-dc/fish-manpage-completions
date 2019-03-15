@@ -7,7 +7,7 @@ We're planning to do an initial naïve port from the Python source with the same
 function names, class (i.e., struct/enum in Rust) names, etc.
 
 To contribute, add a comment to
-https://github.com/rust-dc/fish-manpage-completions/issues/2 claiming a
+[this issue](https://github.com/rust-dc/fish-manpage-completions/issues/2), claiming a
 function. When you have it ported in your local or forked branch, submit a PR
 that includes a link to your comment.
 
