@@ -158,22 +158,8 @@ fn unquote_single_quotes(data: String) -> String {
     }
 }
 
-// # Make a string of characters that are deemed safe in fish without needing to be escaped
-// # Note that space is not included
-// g_fish_safe_chars = frozenset(string.ascii_letters + string.digits + '_+-|/:=@~')
-//
-// def fish_escape_single_quote(str):
-//     # Escape a string if necessary so that it can be put in single quotes
-//     # If it has no non-safe chars, there's nothing to do
-//     if g_fish_safe_chars.issuperset(str):
-//         return str
-//
-//     str = str.replace('\\', '\\\\') # Replace one backslash with two
-//     str = str.replace("'", "\\'") # Replace one single quote with a backslash-single-quote
-//     return "'" + str + "'"
-
 fn fish_escape_single_quote(string: String) -> String {
-    unimplemented!()
+    format!("'{}'", string.replace(r"\", r"\\").replace(r"'", r"\'"))
 }
 
 // # Make a string Unicode by attempting to decode it as latin-1, or UTF8. See #658
