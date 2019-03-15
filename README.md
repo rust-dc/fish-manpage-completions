@@ -12,7 +12,7 @@ function. When you have it ported in your local or forked branch, submit a PR
 that includes a link to your comment.
 
 For in-depth discussion of a particularly hairy function, open a dedicated issue
-or pipe up on Zulip: https://rust-dc.zulipchat.com/.
+or pipe up on [the RustDC Zulip chat](https://rust-dc.zulipchat.com/).
 
 Examples
 --------
