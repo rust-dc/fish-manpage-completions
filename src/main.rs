@@ -799,9 +799,20 @@ impl TypeDeroff {
 //     def could_be_description(self, line):
 //         return len(line) > 0 and not line.startswith('-')
 
+#[test]
+fn test_could_be_description() {
+    assert!(TypeDeroff::could_be_description("Test Pass Line") == true);
+    assert!(TypeDeroff::could_be_description("-Test Fail Line") == false);
+    assert!(TypeDeroff::could_be_description("") == false);
+}
+
 impl TypeDeroff {
     fn could_be_description(line: &str) -> bool {
-        unimplemented!()
+        if line.len() > 0 && !line.starts_with("-") {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
 
