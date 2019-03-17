@@ -1,0 +1,2 @@
+# Keep compilation artifacts out of git
+target/
