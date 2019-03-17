@@ -801,18 +801,14 @@ impl TypeDeroff {
 
 #[test]
 fn test_could_be_description() {
-    assert!(TypeDeroff::could_be_description("Test Pass Line") == true);
-    assert!(TypeDeroff::could_be_description("-Test Fail Line") == false);
-    assert!(TypeDeroff::could_be_description("") == false);
+    assert!(TypeDeroff::could_be_description("Test Pass Line"));
+    assert!(!TypeDeroff::could_be_description("-Test Fail Line"));
+    assert!(!TypeDeroff::could_be_description(""));
 }
 
 impl TypeDeroff {
     fn could_be_description(line: &str) -> bool {
-        if line.len() > 0 && !line.starts_with("-") {
-            return true;
-        } else {
-            return false;
-        }
+        line.len() > 0 && !line.starts_with("-")
     }
 }
 
