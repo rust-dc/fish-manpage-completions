@@ -790,9 +790,16 @@ struct TypeDeroff;
 //     def is_option(self, line):
 //         return line.startswith('-')
 
+#[test]
+fn test_is_option() {
+    assert!(!TypeDeroff::is_option("Not an Option"));
+    assert!(TypeDeroff::is_option("-Is an Option"));
+    assert!(!TypeDeroff::is_option(""));
+}
+
 impl TypeDeroff {
     fn is_option(line: &str) -> bool {
-        unimplemented!()
+        line.starts_with("-")
     }
 }
 
