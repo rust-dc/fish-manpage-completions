@@ -1,3 +1,9 @@
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+
+use itertools::Itertools;
+use structopt::StructOpt;
+
 // # -*- coding: utf-8 -*-
 //
 // # Run me like this: ./create_manpage_completions.py /usr/share/man/man{1,8}/* > man_completions.fish
@@ -95,8 +101,6 @@ impl App {
 //         output_str = '\n'.join(diagnostic_output) + '\n'
 //         where.write(output_str)
 //         diagnostic_output[:] = []
-
-use std::io::Write;
 
 impl App {
     fn flush_diagnostics<T>(&mut self, r#where: &mut T)
@@ -205,8 +209,6 @@ fn output_complete_command(
 ) {
     output_list.push(complete_command(cmdname, args, description));
 }
-
-use itertools::Itertools;
 
 fn complete_command(
     cmdname: &str,
@@ -380,8 +382,18 @@ trait ManParser {
 //         else:
 //             return True
 
+#[derive(Copy, Clone, Debug)]
 struct Type1;
-// TODO impl ManParser for Type1
+
+impl ManParser for Type1 {
+    fn is_my_type(&self, manpage: &str) -> bool {
+        unimplemented!();
+    }
+
+    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+        unimplemented!();
+    }
+}
 
 //     def parse_man_page(self, manpage):
 //         options_section_regex = re.compile( "\.SH \"OPTIONS\"(.*?)(\.SH|\Z)", re.DOTALL)
@@ -516,8 +528,18 @@ impl Type1 {
 //         else:
 //             return True
 
+#[derive(Copy, Clone, Debug)]
 struct Type2;
-// TODO impl ManParser for Type2
+
+impl ManParser for Type2 {
+    fn is_my_type(&self, manpage: &str) -> bool {
+        unimplemented!();
+    }
+
+    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+        unimplemented!();
+    }
+}
 
 //     def parse_man_page(self, manpage):
 //         options_section_regex = re.compile( "\.SH OPTIONS(.*?)(\.SH|\Z)", re.DOTALL)
@@ -565,8 +587,18 @@ struct Type2;
 //         else:
 //             return True
 
+#[derive(Copy, Clone, Debug)]
 struct Type3;
-// TODO impl ManParser for Type3
+
+impl ManParser for Type3 {
+    fn is_my_type(&self, manpage: &str) -> bool {
+        unimplemented!();
+    }
+
+    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+        unimplemented!();
+    }
+}
 
 //     def parse_man_page(self, manpage):
 //         options_section_regex = re.compile( "\.SH DESCRIPTION(.*?)(\.SH|\Z)", re.DOTALL)
@@ -614,8 +646,18 @@ struct Type3;
 //         else:
 //             return True
 
+#[derive(Copy, Clone, Debug)]
 struct Type4;
-// TODO impl ManParser for Type4
+
+impl ManParser for Type4 {
+    fn is_my_type(&self, manpage: &str) -> bool {
+        unimplemented!();
+    }
+
+    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+        unimplemented!();
+    }
+}
 
 //     def parse_man_page(self, manpage):
 //         options_section_regex = re.compile( "\.SH FUNCTION LETTERS(.*?)(\.SH|\Z)", re.DOTALL)
@@ -661,8 +703,18 @@ struct Type4;
 //         options_section_matched = compile_and_search("\.S[hH] DESCRIPTION", manpage)
 //         return options_section_matched != None
 
+#[derive(Copy, Clone, Debug)]
 struct TypeDarwin;
-// TODO impl ManParser for TypeDarwin
+
+impl ManParser for TypeDarwin {
+    fn is_my_type(&self, manpage: &str) -> bool {
+        unimplemented!();
+    }
+
+    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+        unimplemented!();
+    }
+}
 
 //     def trim_groff(self, line):
 //         # Remove initial period
@@ -796,8 +848,18 @@ impl TypeDarwin {
 //     def is_my_type(self, manpage):
 //         return True # We're optimists
 
+#[derive(Copy, Clone, Debug)]
 struct TypeDeroff;
-// TODO impl ManParser for TypeDeroff
+
+impl ManParser for TypeDeroff {
+    fn is_my_type(&self, manpage: &str) -> bool {
+        unimplemented!();
+    }
+
+    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+        unimplemented!();
+    }
+}
 
 #[test]
 fn test_TypeDeroff_is_option() {
@@ -889,7 +951,6 @@ impl TypeDeroff {
 //     file.close()
 //     return result
 
-use std::path::{Path, PathBuf};
 fn file_is_overwritable(path: &Path) -> bool {
     unimplemented!()
 }
@@ -1085,6 +1146,47 @@ fn file_is_overwritable(path: &Path) -> bool {
 //     add_diagnostic("Successfully parsed %d / %d pages" % (successful_count, total_count), BRIEF_VERBOSE)
 //     flush_diagnostics(sys.stderr)
 
+#[derive(Copy, Clone, Debug)]
+struct Progress(pub bool);
+
+// TODO Arg/output types?
+fn parse_and_output_man_pages(
+    _paths: impl Iterator<Item = PathBuf>,
+    _output_directory: PathBuf,
+    Progress(_show_progress): Progress,
+) {
+    unimplemented!();
+}
+
+fn parsers_to_try() -> Vec<Box<dyn ManParser>> {
+    vec![
+        Box::new(Type1),
+        Box::new(Type2),
+        Box::new(Type3),
+        Box::new(Type4),
+        Box::new(TypeDarwin),
+        Box::new(TypeDeroff),
+    ]
+}
+
+// TODO Result type
+// This function might be useable as a helper function for parse_manpage_at_path
+fn single_man_page<R: Read, W: Write>(input: &mut R, output: &mut W, input_name: &str) {
+    let mut buf = vec![];
+    input.read_to_end(&mut buf).unwrap();
+    dbg!(buf.len());
+    // TODO Either use lossy conversion or do something sensible with the Err
+    let buf = String::from_utf8(buf).unwrap();
+    // TODO mimic multiple parser logic
+    let mut parsers = parsers_to_try();
+    for parser in parsers.iter_mut() {
+        if let Some(completions) = parser.parse_man_page(&buf) {
+            output.write_all(completions.as_bytes()).unwrap();
+            return;
+        }
+    }
+}
+
 // def get_paths_from_man_locations():
 //     # Return all the paths to man(1) and man(8) files in the manpath
 //     import subprocess, os
@@ -1128,14 +1230,12 @@ fn file_is_overwritable(path: &Path) -> bool {
 //             for name in names:
 //                 result.append(os.path.join(directory_path, name))
 //     return result
-//
-
-use structopt::StructOpt;
 
 mod deroff;
 
-#[derive(StructOpt)]
+#[derive(StructOpt, Debug)]
 struct Opts {
+    files: Vec<PathBuf>,
     #[structopt(short, long, default_value = "0")]
     verbose: u8,
     #[structopt(short, long)]
@@ -1148,6 +1248,12 @@ struct Opts {
     progress: bool,
     #[structopt(short, long)]
     completions: bool,
+}
+
+impl Opts {
+    fn read_from_stdin(&self) -> bool {
+        self.manpath.is_none() && self.files.is_empty()
+    }
 }
 
 // def usage(script_name):
@@ -1238,13 +1344,24 @@ fn shell() -> String {
     .into()
 }
 
-fn main() {
+fn main() -> Result<(), String> {
     let opts = Opts::from_args();
+
     if opts.completions {
         Opts::clap().gen_completions_to(
             "fish_manpage_completions",
             shell().parse().unwrap(),
             &mut std::io::stdout(),
         );
+        return Ok(());
     }
+
+    // TODO Make this less special case-y
+    if opts.read_from_stdin() && opts.stdout {
+        let mut stdin = std::io::stdin();
+        let mut stdout = std::io::stdout();
+        return Ok(single_man_page(&mut stdin, &mut stdout, "STDIN"));
+    }
+
+    Ok(())
 }
