@@ -1,0 +1,2243 @@
+.\" mlterm.1   -*- nroff -*-
+.TH MLTERM 1 "2018-10-27"
+.SH NAME
+mlterm \- Multi Lingual TERMinal emulator on X
+.SH SYNOPSIS
+.B mlterm
+.RB [\fIoptions\fP]
+.\" ********************************************************************
+.SH DESCRIPTION
+\fBmlterm\fP is a multi-lingual terminal emulator written from
+scratch, which supports various character sets and encodings
+in the world and complex characters such as double width for East
+Asian, combining for Thai, Vietnamese, and so on, and bi-direction for
+Arabic and Hebrew.  Indic scripts are experimentally supported.
+It also supports various unique feature such
+as anti-alias using FreeType, multiple XIM, multiple windows,
+scrollbar API, scroll by mouse wheel, automatic selection of
+encoding, daemon mode, and so on.
+.PP
+Supported encodings are:
+ISO-8859-[1-11], ISO-8859-[13-16], TIS-620 (same as ISO-8859-11), KOI8-R,
+KOI8-U, KOI8-T, GEORGIAN-PS, TCVN5712, ISCII_(ASSAMESE|BENGALI|GUJARATI|
+HINDI|KANNADA|MALAYALAM|ORIYA|PUNJABI|TAMIL|TELUGU), VISCII, CP125[0-8],
+CP874, EUC-JP, EUC-JISX0213, Shift_JIS, Shift_JISX0213,
+ISO-2022-JP[1-3], EUC-KR, UHC, JOHAB, ISO-2022-KR, GB2312 (EUC-CN), GBK,
+GB18030, ISO-2022-CN, HZ, EUC-TW, BIG5, BIG5HKSCS, and UTF-8.
+If you have already set locale (for example LANG variable;
+see \fBlocale\fR(7) for detail) \fBmlterm\fR will automatically select
+proper encoding.
+.PP
+.\" ********************************************************************
+.SH OPTIONS
+Note that \fIbool\fR is to be substituted by \fBtrue\fR or \fBfalse\fR.
+.TP
+\fB\-A\fR, \fB\-\-aa\fR(=\fIbool\fR)
+Use anti-aliased fonts. This option works only with Xft or cairo for now.
+The default is \fBfalse\fR.
+.TP
+\fB\-B\fR, \fB\-\-sbbg\fR=\fIcolor\fR
+Specify a background color of a scrollbar.
+A valid value for \fIcolor\fR is a color name or a RGB value.
+The color name should be defined in rgb.txt or "\fBcolor\fR" configuration file.
+The RGB value's format should be "#RRGGBB", "#RRGGBBAA", "rgb:RR/GG/BB" or "rgba:RR/GG/BB/AA".
+.TP
+\fB\-C\fR, \fB\-\-ctl\fR(=\fIbool\fR)
+Enable complex text layouting on UTF8 encoding to support indic scripts and
+RTL (right-to-left) languages such as Arabic and Hebrew.
+The default is \fBtrue\fR.
+.TP
+\fB\-E\fR, \fB\-\-km\fR=\fIencoding\fR
+Specify encoding.
+Valid encodings are listed in \fBDESCRIPTION\fR section
+above in this man page.
+\fBAUTO\fR makes mlterm determine the according according to
+the current locale (default \fBAUTO\fR).
+.TP
+\fB\-F\fR, \fB\-\-sbfg\fR=\fIcolor\fR
+Specify a foreground color of a scrollbar.
+See \fB\-\-sbbg\fR option for valid values.
+.TP
+\fB\-G\fR, \fB\-\-vertical=\fImode\fR
+Specify vertical writing mode.
+\fBcjk\fR for RTL vertical writing and \fBmongol\fR for LTR one.
+The default is \fBnone\fR which means horizontal writing mode.
+.TP
+\fB\-H\fR, \fB\-\-bright=\fIvalue\fR
+Brightness of background images in percent.
+See \fB\-p\fR option for details of background images.
+The default is \fB100\fR (keep original).
+.TP
+\fB\-I\fR, \fB\-\-icon\fR=\fIname\fR
+Specify a name to be used when a mlterm window is iconified.
+The default is "\fBmlterm\fR".
+.TP
+\fB\-J\fR, \fB\-\-dyncomb\fR(=\fIbool\fR)
+Enable dynamic character combining.
+"Dynamic" means that combining characters are stored in
+without combining but they are displayed using combined form.
+This affects calculation of column position,
+i.e., a pair of base character and combining character
+is counted to be two columns in this mode, while it is counted
+to be one column in the normal mode.  Under this option,
+a (logical) column number and a character one-to-one correspondence.
+even for combining characters (though not for fullwidth characters;
+see \fB\-Z\fR/\fB\-\-multicol\fR option for handling of fullwidth characters).
+Thus, this mode enables you to use combining characters with
+software which does not support combining characters.
+The default is \fBfalse\fR.
+.TP
+\fB\-K\fR, \fB\-\-metakey\fR=\fIvalue\fR
+Specify a key to be interpreted as a META key.
+Valid \fIvalue\fRs are: \fBalt\fR, \fBmeta\fR, \fBhyper\fR,
+\fBsuper\fR, \fBmod1\fR, \fBmod2\fR, \fBmod3\fR, \fBmod4\fR,
+and \fBnone\fR.   The default is \fBnone\fR.
+
+See \fB\-k\fR option also.
+.TP
+\fB\-L\fR, \fB\-\-ls\fR(=\fIbool\fR)
+Whether to use login shell or not.  The default is \fBfalse\fR.
+.TP
+\fB\-M\fR, \fB\-\-im\fR= \fIinput method\fR : \fB[\fR\fI arguments\fR \fB... ]\fR
+Specify an input method. (See doc/ja/README.ja in detail)
+.PP
+.RS
+.B Examples:
+.TP
+\-\-im=xim
+Use XIM with the default XIM server specified by standard way (i.e.,
+\fBXMODIFIERS\fR environmental variable).
+.TP
+\-\-im=xim:Ami
+Use XIM with Ami on the system locale.
+.TP
+\-\-im=xim:kinput2:ja_JP.EUC-JP
+Use XIM with kinput2 on ja_JP.EUC-JP locale.
+.TP
+\-\-im=kbd:arabic
+Use keyboard mapping input method in Arabic.
+.TP
+\-\-im=kbd:hebrew
+Use keyboard mapping input method in Hebrew.
+.TP
+\-\-im=kbd:isciixxx
+Use keyboard mapping input method in Indic.
+.TP
+\-\-im=uim
+Use uim with the default conversion engine.
+.TP
+\-\-im=uim:prime
+Use uim with prime conversion engine.
+.TP
+\-\-im=m17nlib:ru
+Use m17n library in Russian.
+.TP
+\-\-im=m17nlib:or:itrans
+Use m17n library in Oriya using ITRANS method.
+.TP
+\-\-im=scim
+Use SCIM.
+.TP
+\-\-im=ibus
+Use IBus with the default conversion engine.
+.TP
+\-\-im=ibus:anthy
+Use IBus with anthy conversion engine.
+.TP
+\-\-im=fcitx
+Use Fcitx.
+.TP
+\-\-im=canna
+Use Canna.
+.TP
+\-\-im=wnn
+Use Freewnn.
+.TP
+\-\-im=wnn:foo.bar
+Use Freewnn with jserver at foo.bar host.
+(JSERVER environmental variable is also available.)
+.TP
+\-\-im=skk
+Use SKK.
+.TP
+\-\-im=skk:dict=foo.bar:utf8,sskey=\\x3b
+Use SKK with the use of utf8 skk server at foo.bar host and semicolon key as sticky shift key.
+(SKK_DICTIONARY and SKK_STICKY_SHIFT_KEY environmental variable are also available.)
+.TP
+\-\-im=iiimf
+Use IIIMF in the system language.
+.TP
+\-\-im=iiimf:ar
+Use IIIMF in Arabic.
+.TP
+\-\-im=iiimf:ja:CannaLE
+Use IIIMF in Japanese using CannaLE language engine.
+.TP
+.TP
+\-\-im=none
+Don't use input method.
+.RE
+.TP
+\fB\-N\fR, \fB\-\-name\fR=\fIname\fR
+Specify application name.
+The default is "\fBmlterm\fR".
+.TP
+\fB\-O\fR, \fB\-\-sbmod\fR=\fIvalue\fR
+Specify the side to show a scrollbar.
+\fBleft\fR for left side and \fBright\fR for right side.
+\fBnone\fR turns off a scrollbar.
+\fBautohide\fR shows a scrollbar only if mouse pointer is
+at the right edge of the screen.
+The default is \fBleft\fR.
+.TP
+\fB\-P\fR, \fB\-\-clip\fR(=\fIbool\fR)
+Whether to enable CLIPBOARD (not only PRIMARY) selection.
+The default is \fBtrue\fR.
+.TP
+\fB\-Q\fR, \fB\-\-vcur\fR(=\fIbool\fR)
+Change interpretation of cursor keys to be natural
+in vertical writing mode.
+This means that up and down arrow keys are treated as
+backward (left arrow in horizontal LTR) and forward
+(right arrow in horizontal LTR), respectively.
+In \fBcjk\fR \fB\-G\fR/\fB\-\-vertical\fR mode,
+left and right arrow keys are also treated as next line
+(down arrow in horizontal LTR) and previous line
+(up arrow in horizontal LTR), respectively, while
+vice versa in \fBmongol\fR mode.
+The default is \fBtrue\fR.
+.TP
+\fB\-R\fR, \fB\-\-fsrange\fR=\fIrange\fR
+Set acceptable range of font size.
+The format is "\fIminsize\fR-\fImaxsize\fR", where \fIminsize\fR and
+\fImaxsize\fR are font sizes in pixel (default \fB6-30\fR).
+The GUI configurator and other means for setting fontsize should honor
+the range.
+.TP
+\fB\-S\fR, \fB\-\-sbview\fR=\fIname\fR
+Select a type of scrollbar.  See \fBSCROLLBAR\fR section below
+for details.  The default is "\fBsimple\fR" which means the
+built-in simple scrollbar.
+.TP
+\fB\-T\fR, \fB\-\-title\fR=\fIname\fR
+Specify a title for a mlterm window.
+The default is "\fBmlterm\fR".
+.TP
+\fB\-U\fR, \fB\-\-viaucs\fR(=\fIbool\fR)
+Force to convert a selection (i.e., copy-and-paste strings) whose
+type is not UTF8_STRING to the current mlterm encoding via Unicode.
+See \fBSELECTION\fR section below for detail.
+The default is \fBfalse\fR.
+.TP
+\fB\-V\fR, \fB\-\-varwidth\fR(=\fIbool\fR)
+Use variable column width.  You may want to use this
+option when you use proportional fonts.
+The default is \fBfalse\fR.
+.TP
+\fB\-W\fR, \fB\-\-sep\fR=\fIcharacterlist\fR
+Delimiter characters used for word selection, which are
+consulted when you double-clicked mlterm, to define what
+is a word.
+The default is "\fB ,.:;/|@()[]{}\fR")
+.TP
+\fB\-X\fR, \fB\-\-alpha\fR=\fIvalue\fR
+Alpha in pseudo or true transparent.
+The default is \fB255\fR.
+.TP
+\fB\-Y\fR, \fB\-\-decsp\fR(=\fIbool\fR)
+Use dynamically composed line drawing character set
+of DEC special.
+The default is \fBfalse\fR.
+This overrides DEC_SPECIAL in "font" configuration file,
+while DEC_SPECIAL in "aafont" (for Xft or cairo) is always
+overridden.
+.TP
+\fB\-Z\fR, \fB\-\-multicol\fR(=\fIbool\fR)
+Treat fullwidth characters (east Asian characters in most cases;
+which occupies two columns on the screen) as they occupy two logical
+columns.  It is the de-facto standard way to handle
+fullwidth characters in east Asian terminal emulators
+(XFree86 xterm and  kterm, cxterm, hanterm, rxvt, eterm)
+and other systems such as MS\-DOS, PC\-9801, and so on.
+In most fonts, the glyphs of fullwidth characters are designed
+assuming that their width are twice of normal characters and
+won't display correctly without this option.
+The default is \fBtrue\fR.
+.TP
+\fB\-0\fR, \fB\-\-crbg\fR=\fIcolor\fR
+Specify background color for cursor (default is same to foreground color).
+Valid values for \fIcolor\fR are color names defined in rgb.txt and
+color rgb string whose format is "#RRGGBB", "#RRGGBBAA",
+"rgb:RR/GG/BB" or "rgba:RR/GG/BB/AA".
+.TP
+\fB\-1\fR, \fB\-\-wscr\fR=\fIvalue\fR
+Specify actual window width, by percentage against
+calculated value by multiplying font width by column number.
+This is useful when you use a proportional font which includes
+some glyphs with exceptionally large width, i.e., much
+larger "maximum width" than your expectation.
+In vertical mode this option changes actual window height.
+The default is \fB100\fR.
+.TP
+\fB\-3\fR, \fB\-\-contrast\fR=\fIvalue\fR)
+Contrast of background image in percent.
+See \fB\-p\fR option for details of background image.
+The default is \fB100\fR.
+.TP
+\fB\-4\fR, \fB\-\-gamma\fR=\fIvalue\fR)
+Gamma of background image in percent.
+See \fB\-p\fR option for details of background image.
+The default is \fB100\fR.
+.TP
+\fB\-5\fR, \fB\-\-big5bug\fR(=\fIbool\fR)
+Enable a workaround for Big5 CTEXT bugs (which had been existed until XFree86 4.1.0).
+This affects Big5 selections (i.e., copy-and-paste strings) in
+COMPOUND_TEXT format which \fBmlterm\fR sends.
+The default is \fBfalse\fR.
+.TP
+\fB\-6\fR, \fB\-\-stbs\fR(=\fIbool\fR)
+Don't exit backscroll mode when console applications output something.
+The default is \fBfalse\fR.
+.TP
+\fB\-7\fR, \fB\-\-bel\fR=\fImode\fR
+Behavior when BEL (0x07) is received. \fBsound\fR for beep
+, \fBvisual\fR for blanking screen and \fBsound|visual\fR for the both.
+The default is \fBnone\fR which ignores BEL.
+.TP
+\fB\-8\fR, \fB\-\-88591\fR(=\fIbool\fR)
+Use ISO8859-1 fonts for US-ASCII part of various encodings.
+.TP
+\fB\-9\fR, \fB\-\-crfg\fR=\fIcolor\fR
+Specify foreground color for cursor (default is same to background color).
+Valid values for \fIcolor\fR are color names defined in rgb.txt and
+color rgb string whose format is "#RRGGBB", "#RRGGBBAA",
+"rgb:RR/GG/BB" or "rgba:RR/GG/BB/AA".
+.TP
+\fB\-$\fR, \fB\-\-mc\fR=\fIvalue\fR
+Doubleclick/tripleclick interval in millisecond.
+The default is \fB250\fR.
+.TP
+\fB\-%\fR, \fB\-\-logseq\fR(=\fIbool\fR)
+Enable logging. Contents of stream received by mlterm will be logged under
+~/.mlterm/.
+This option is mainly intended to be used for debugging purposes.
+The default is \fBfalse\fR.
+Note that \fB%\fR should be escaped to be supplied as a command line option on
+most shells.
+.TP
+\fB\-&\fR, \fB\-\-borderless\fR(=\fIbool\fR)
+Asks the window manager to use no decorations at all. Warning: You will
+not be able to resize the window. You probably want to use \fB\-\-geometry\fR
+as well.
+The default is \fBfalse\fR.
+.TP
+\fB\-@\fR, \fB\-\-screens\fR=\fIvalue\fR
+Specify number of screens (sessions) to be used in start up.
+The default is \fB1\fR.
+Note that when one of these screens are closed, sessions which
+were connected to the screens do not immediately killed.
+
+See \fBMULTIPLE PTY\fR section for details.
+.TP
+\fB\-*\fR, \fB\-\-type\fR=\fIvalue\fR
+Specify the rendering engine to be used to draw fonts.
+\fBxcore\fR is conventional X11 core font mechanism.
+\fBxft\fR means Xft mechanism and \fBcairo\fR means cairo mechanism.
+The default is \fBcairo\fR.
+.TP
+\fB\-#\fR, \fB\-\-initstr\fR=\fIvalue\fR
+Specify a string to be automatically sent after initialization of session.
+The \fBvalue\fR normally will be parsed by a shell.
+See \fB\-e\fR option to execute other application at start-up time.
+.TP
+\fB\-a\fR, \fB\-\-ac\fR=\fIvalue\fR
+Specify number of columns to be occupied by a Unicode's
+"EastAsianAmbiguous" character.  The default is \fB1\fR except "ja" locale
+where the default is \fB2\fR. Some of asian people may want to specify \fB2\fR.
+See Unicode Standard Annex (UAX) #11
+East Asian Width found at Unicode web site for details.
+.TP
+\fB\-b\fR, \fB\-\-bg\fR=\fIcolor\fR
+Specify background color (default \fBwhite\fR).
+Valid values for \fIcolor\fR are color names defined in rgb.txt and
+color rgb string whose format is "#RRGGBB", "#RRGGBBAA",
+"rgb:RR/GG/BB" or "rgba:RR/GG/BB/AA".
+.TP
+\fB\-c\fR, \fB\-\-cp932\fR(=\fIbool\fR)
+Use CP932 mapping table to convert from JIS X 0208 to Unicode
+when displaying JIS X 0208 characters using Unicode font in
+Xft or cairo mode.  This is useful when you use proprietary
+Japanese true type fonts which are intended to be used with Microsoft
+Windows, with \fBmlterm\fR with encodings (such as EUC-JP,
+Shift_JIS, ISO-2022-JP, and so on) which contain JIS X 0208 as
+a coded character set.
+
+The reason is, such proprietary fonts may have glyphs only for
+Unicode code points into which JIS X 0208 code points are converted using
+CP932 mapping table.  (CP932 is a name of mapping table which is
+used by Microsoft to convert from Shift_JIS [plus Microsoft private
+extended characters] into Unicode.  In Unicode's point of view,
+CP932 is a name of encoding which is similar to Shift_JIS and
+is used by Japanese version of Microsoft Windows.)
+If you use such fonts for
+encodings such as EUC-JP and Shift_JIS with JIS0208.TXT mapping
+table which \fBmlterm\fR adopts as the standard, a few characters
+are mapped into Unicode code points where the fonts don't have glyphs.
+
+Both of CP932.TXT and JIS0208.TXT mapping tables are supplied
+by Unicode Consortium, though they are regarded to be obsolete.
+
+The default is \fBtrue\fR.
+.TP
+\fB\-d\fR, \fB\-\-display\fR=\fIstring\fR
+Specify X display to connect with.
+.TP
+\fB\-e\fR \fIprogram\fR \fB[\fR \fIarguments\fR \fB... ]\fR
+Invoke the command in the \fBmlterm\fR window.  This option
+must be the last option on the command line.
+.TP
+\fB\-f\fR, \fB\-\-fg\fR=\fIcolor\fR
+Foreground color (default \fBblack\fR).
+Valid values for \fIcolor\fR are color names defined in rgb.txt and
+color rgb string whose format is "#RRGGBB", "#RRGGBBAA",
+"rgb:RR/GG/BB" or "rgba:RR/GG/BB/AA".
+.TP
+\fB\-g\fR, \fB\-\-geometry\fR=\fIgeometry\fR
+Specify size and position of the window; see \fBX\fR(7).
+.TP
+\fB\-h\fR, \fB\-\-help\fR(=\fIbool\fR)
+Show help messages.
+.TP
+\fB\-i\fR, \fB\-\-xim\fR(=\fIbool\fR)
+Whether to use XIM (X Input Method).  Most east Asian
+people will want to enable this option.  Other people can also
+safely enable this.  The default is \fBtrue\fR.
+The name of the XIM server to be connected is specified by
+standard way (i.e., \fBXMODIFIERS\fR environmental variable).
+.TP
+\fB\-j\fR, \fB\-\-daemon\fR=\fIvalue\fR
+Start as a daemon process. Note that mlclient is executed if a daemon process
+has already started.
+Possible \fR=\fIvalue\fRs are "blend" and "genuine".
+See the chapter of \fBDAEMON MODE\fR for details.
+.TP
+\fB\-k\fR, \fB\-\-meta\fR=\fImode\fR
+Behavior of META key.  \fBesc\fR for sending ESC
+and \fBnone\fR for ignoring META key.
+The default is \fB8bit\fR which sets the most significant bit.
+
+See \fB\-K\fR option also.
+.TP
+\fB\-l\fR, \fB\-\-sl\fR=\fIvalue\fR
+Specify number of lines of backlog or "unlimited".
+Over 65535(0xffff) is regarded as "unlimited".
+The default is \fB128\fR.
+.TP
+\fB\-m\fR, \fB\-\-comb\fR(=\fIbool\fR)
+Enable combining characters by overstriking glyphs (recommended
+for TIS-620, TCVN5712, and UTF-8).
+Note that fonts which contain combining characters which extend
+backward cannot be used, since \fBmlterm\fR does combine characters
+by controlling the writing positions.
+This option is automatically turned on when using \fB\-\-dyncomb\fR option.
+The default is \fBtrue\fR.
+.TP
+\fB\-n\fR, \fB\-\-noucsfont\fR(=\fIbool\fR)
+Use non-Unicode fonts even when \fBmlterm\fR encoding is UTF-8.
+Useful when you don't have ISO10646-1 fonts and you want to use
+UTF-8 encoding.
+The default is \fBfalse\fR.
+.TP
+\fB\-o\fR, \fB\-\-lsp\fR(=\fIvalue\fR)
+Specify number of extra pixels between lines.
+The default is \fB0\fR.
+.TP
+\fB\-p\fR, \fB\-\-pic\fR=\fIpath\fR
+Path for a wallpaper (background) image.
+Note that the wallpaper cannot be used with pseudo transparent background.
+.TP
+\fB\-q\fR, \fB\-\-extkey\fR(=\fIbool\fR)
+Enable extended keys for backscroll mode.
+The default is \fBfalse\fR.
+Extended scroll keys are
+\fBSCROLL_UP\fR, up arrow, and "k" (for scrolling one line backward) and
+\fBSCROLL_DOWN\fR, down arrow, and "j" (for scrolling one line forward).
+Please note that concrete keys for symbols of
+\fBSCROLL_UP\fR and \fBSCROLL_DOWN\fR are specified in
+\fBkey\fR configuration file.
+Only keys of \fBPAGE_UP\fR and \fBPAGE_DOWN\fR (which are
+specified in \fBkey\fR configuration file)
+are available by default.
+.TP
+\fB\-r\fR, \fB\-\-fade\fR=\fIratio\fR
+Specify fading ratio for unfocused windows.
+\fB100\fR means no fading and \fB0\fR means darkest.
+The default is \fB100\fR
+.TP
+\fB\-s\fR, \fB\-\-mdi\fR(=\fIbool\fR)
+Whether to use multiple document interface.
+The default is \fBtrue\fR.
+If you disable this option, scrollbar and screen separation are unavailable.
+.TP
+\fB\-t\fR, \fB\-\-transbg\fR(=\fIbool\fR)
+Whether to enable pseudo transparent background.
+Note that pseudo transparent background cannot be used with wallpaper.
+The default is \fBfalse\fR.
+.TP
+\fB\-u\fR, \fB\-\-onlyucsfont\fR(=\fIbool\fR)
+Use Unicode fonts even when \fBmlterm\fR encoding is not UTF-8.
+Useful when you have ISO10646 fonts but you don't have other fonts
+and want to use non-UTF-8 encodings.
+Note that conversion to Unicode is lossy.
+i.e. if \fBmlterm\fR encoding is not a subset of Unicode
+like ISO-2022-JP-2 or EUC-TW, characters which are regarded as
+a same character in Unicode will be displayed with the same glyph and
+cannot be distinguished.
+
+The default is \fBfalse\fR.
+.TP
+\fB\-v\fR, \fB\-\-version
+Show version information.
+.TP
+\fB\-w\fR, \fB\-\-fontsize\fR=\fIvalue\fR
+Specify font size in pixel.  The default is \fB16\fR.
+.TP
+\fB\-x\fR, \fB\-\-tw\fR=\fIvalue\fR
+Specify tab width.  The default is \fB8\fR.
+.TP
+\fB\-y\fR, \fB\-\-term\fR=\fIstring\fR
+Specify terminal type, i.e., the value of \fBTERM\fR variable.
+The default is \fBxterm\fR.
+.TP
+\fB\-z\fR, \fB\-\-largesmall\fR=\fIsize\fR
+Specify the step of changing font size in pixel when you pushed
+"Font size larger" or "Font size smaller" button on
+GUI configurator.
+The default is \fB1\fR.
+.TP
+\fB\-\-aafont\fR=(\fIbool\fR) (Available for mlterm-fb or mlterm-wl)
+Whether to use ~/.mlterm/*aafont configurations with the use of fontconfig.
+The default is \fBfalse\fR for mlterm-fb and \fBtrue\fR for mlterm-wl.
+.TP
+\fB\-\-ade\fR=\fIvalue\fR
+Specify character encodings detected automatically.
+.TP
+\fB\-\-auto\fR(=\fIbool\fR)
+Automatically detect appropriate character encoding from the encodings
+specified by \-\-ade option. The default is \fBfalse\fR.
+.TP
+\fB\-\-altbuf\fR(=\fIbool\fR)
+Whether to enable alternate screen buffer.
+This option is similar to "titeInhibit" of xterm.
+.TP
+\fB\-\-bc\fR(=\fIbool\fR)
+Whether to broadcast input or pasted characters to all ptys whose value of
+"ignore_broadcasted_chars" option is false.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-bd\fR=\fIvalue\fR
+Specify the color to use to display bold characters.
+.TP
+\fB\-\-bdfont\fR(=\fIbool\fR)
+Use bold font for characters with the bold attribute.
+The default is \fBtrue\fR.
+.TP
+\fB\-\-bimode\fR=\fIvalue\fR
+Specify bidi mode. Valid values are: \fBnormal\fR, \fBleft\fR and \fBright\fR.
+The default is \fBnormal\fR.
+.TP
+\fB\-\-bisep\fR=\fIcharacterlist\fR
+Specify separator characters to render bidi text.
+.TP
+\fB\-\-bl\fR=\fIvalue\fR
+Specify the color to use to display blinking characters.
+.TP
+\fB\-\-blink\fR(=\fIbool\fR)
+Blink cursor. The default is \fBfalse\fR.
+.TP
+\fB\-\-blpos\fR=\fIvalue\fR
+Specify the position (offset from the default baseline) of baseline.
+The default is \fB0\fR.
+.TP
+\fB\-\-border\fR=\fIvalue\fR
+Specify inner border width. The default is \fB2\fR.
+The maximum value is \fB224\fR.
+.TP
+\fB\-\-boxdraw\fR=\fIvalue\fR
+Use either unicode font or DEC Special font forcibly to draw box-drawing characters.
+\fBunicode\fR for unicode font and \fBdecsp\fR for DEC special font.
+The default is \fBnoconv\fR which draw them as they are.
+.TP
+\fB\-\-ciphlist\fR=\fIvalue\fR
+Specify ciphers (comma separated list) for encrypting the ssh session.
+.TP
+\fB\-\-ckm\fR=\fIencoding\fR (Available for mlterm-con)
+Specify encoding of the console where mlterm-con works.
+Valid encodings are listed in \fBDESCRIPTION\fR section
+above in this man page.
+\fBAUTO\fR makes mlterm determine the according according to
+the current locale (default \fBAUTO\fR).
+.TP
+\fB\-\-co\fR=\fIvalue\fR
+Specify the color to use to display crossed-out characters.
+.TP
+\fB\-\-colors\fR(=\fIbool\fR)
+Whether to recognize ANSI color change escape sequences.
+The default is \fBtrue\fR.
+.TP
+\fB\-\-csc\fR=\fIvalue\fR (Available for mlterm-con)
+Specify the number of sixel graphics colors of the console where mlterm-con works.
+A valid value is 16, 256 or full. The default is \fB16\fR.
+.TP
+\fB\-\-csp\fR=\fIvalue\fR
+Specify number of extra pixels between lines. (ignored if you specify \fB\-\-V\fR option.)
+The default is \fB0\fR.
+.TP
+\fB\-\-csz\fR=\fIvalue\fR (Available for mlterm-con)
+Specify cell width and height in pixel which mlterm-con uses if it doesn't get them.
+The default is \fB8,16\fR.
+.TP
+\fB\-\-da1\fR=\fIvalue\fR
+Specify primary device attributes string.
+The default is \fB63;1;2;3;4;7;29\fR.
+.TP
+\fB\-\-da2\fR=\fIvalue\fR
+Specify secondary device attributes string.
+The default is \fB24;279;0\fR.
+.TP
+\fB\-\-depth\fR=\fIvalue\fR
+Specify visual depth. (8,16,24,32)
+If depth is 32, you can enable semi-transparency by specifying
+opacity as the value of \-\-alpha option or "rgba:RR/GG/BB/AA"
+as the value of \-\-bg option.
+.TP
+\fB\-\-deffont\fR=\fIvalue\fR
+DEFAULT in ~/.mlterm/*font.
+.TP
+\fB\-\-emoji\fR=\fIvalue\fR
+Specify path of a directory where emoji image files exist or a open type emoji
+font to show unicode emoji characters.
+The default is \fB~/.mlterm/emoji\fR.
+.TP
+\fB\-\-exitbs\fR(=\fIbool\fR)
+Whether to exit backscroll mode on receiving data from pty.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-fullwidth\fR=\fIvalue\fR
+Force full width regardless of EastAsianWidth.txt.
+
+e.g.) --fullwidth=U+1234-5678,U+0123-4567
+.TP
+\fB\-\-halfwidth\fR=\fIvalue\fR
+Force half width regardless of EastAsianWidth.txt.
+
+e.g.) --halfwidth=U+1234-5678,U+0123-4567
+.TP
+\fB\-\-ibc\fR(=\fIbool\fR)
+Whether to ignore broadcasted characters.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-iconpath\fR=\fIpath\fR
+Specify the file to be used as a window icon.
+.TP
+\fB\-\-it\fR=\fIvalue\fR
+Specify the color to use to display italic characters.
+.TP
+\fB\-\-itfont\fR(=\fIbool\fR)
+Use italic font for characters with the italic attribute.
+The default is \fBtrue\fR.
+.TP
+\fB\-\-keepalive\fR=\fIvalue\fR
+Specify interval seconds to send keepalive message to ssh server.
+The default is \fB0\fR.
+.TP
+\fB\-\-lborder\fR=\fIvalue\fR
+Specify inner border width of a layout manager. The default is \fB0\fR.
+The maximum value is \fB224\fR.
+.TP
+\fB\-\-ldd\fR(=\fIbool\fR)
+Embold glyphs by drawing doubly at 1 pixel leftward instead of rightward.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-locale\fR=\fIvalue\fR
+Specify locale.
+The default is \fB""\fR.
+.TP
+\fB\-\-logmsg\fR(=\fIbool\fR)
+Enable logging messages of mlterm to ~/.mlterm/msg.log.
+The default is \fBtrue\fR.
+.TP
+\fB\-\-loecho\fR(=\fIbool\fR)
+Whether to use local echo mode or not. The default is \fBfalse\fR.
+.TP
+\fB\-\-maxptys\fR=\fIvalue\fR
+Specify maximum number of ptys (sessions) to be opened simultaneously.
+It should be multiple of 32.
+The default is \fB32\fR.
+
+See \fBMULTIPLE PTY\fR section for detail.
+.TP
+\fB\-\-metaprefix\fR=\fIvalue\fR
+Specify prefix characters in pressing meta key if mod_meta_mode = esc.
+The default is \fB\\x1b\fR.
+.TP
+\fB\-\-multivram\fR(=\fIbool\fR) (Available for mlterm-fb on NetBSD/x68k)
+Whether to draw the wall picture on Text VRAM instead of Graphic VRAM to improve
+the performance of scrolling.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-noul\fR(=\fIbool\fR)
+Don't draw underline.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-oft\fR=\fIvalue\fR
+Specify features of glyph substitution.
+The default is \fBfliga,clig,dlig,hlig,rlig\fR.
+.TP
+\fB\-\-osc52\fR(=\fIbool\fR)
+Allow access to clipboard(selection) by OSC 52 sequence.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-ost\fR=\fIvalue\fR
+Specify script of glyph substitution.
+The default is \fBflatn\fR.
+.TP
+\fB\-\-otl\fR(=\fIbool\fR)
+Whether to show substituting glyphs in open type fonts with the use of libotf or harfbuzz.
+Don't specify \-\-ctl=false if you want to use substituting glyphs.
+\-\-ctl option disables automatic search of alternative glyphs in other fonts on cairo/xlib
+and freetype+fontconfig/{wayland|framebuffer}.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-parent\fR=\fIvalue\fR
+Specify parent Window ID.
+The default is \fB0\fR.
+.TP
+\fB\-\-point\fR(=\fIbool\fR)
+Treat the value of \-w option as point instead of pixel.
+Note that this option works on xft, cairo or win32.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-pubkey\fR=\fIvalue\fR
+Specify public key file for ssh connection.
+The default is \fB~/.ssh/id_rsa.pub\fR(\fB%HOMEPATH%\mlterm\id_rsa.pub\fR in win32).
+.TP
+\fB\-\-privkey\fR=\fIvalue\fR
+Specify private key file for ssh connection.
+The default is \fB~/.ssh/id_rsa\fR(\fB%HOMEPATH%\mlterm\id_rsa\fR in win32).
+.TP
+\fB\-\-rcn\fR(=\fIbool\fR)
+Reconnect to ssh server automatically in unexpected disconnection.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-restart\fR=\fIvalue\fR
+Whether to restart mlterm with all opened ptys except ssh if SIGSEGV, SIGBUS, SIGFPE
+or SIGILL is received.
+The default is \fBtrue\fR.
+.TP
+\fB\-\-rv\fR=\fIvalue\fR
+Specify the color to use to display reverse characters.
+.TP
+\fB\-\-scp\fR(=\fIbool\fR)
+Allow OSC 5379 scp.
+The default is \fBfalse\fR.
+Even if allow_scp = false, it is possible to transfer a file to "." directory
+(~/.mlterm/scp).
+.TP
+\fB\-\-seqfmt\fR=\fIvalue\fR
+Specify the format of logging vt100 sequence. \fBraw\fR for logging as it is
+and \fBttyrec\fR for logging by ttyrec format.
+The default is \fBraw\fR.
+.TP
+\fB\-\-serv\fR=\fIvalue\fR
+Specify a host you want to connect via ssh etc.
+This option is enabled only if mlterm is built with MinGW or \-\-enable\-ssh2 option.
+
+Value format: (<protocol>://)(<user>@)<server>(:<port>)(:<encoding>)
+
+e.g.) mlterm \-\-serv ssh://user@host:22:eucjp
+.TP
+\fB\-\-shortcut\fR(=\fIbool\fR)
+Whether to allow dynamic change of shortcut keys by OSC 5379 set_shortcut sequence.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-slp\fR(=\fIbool\fR) (Available for Android)
+Whether to start mlterm with local pty instead of ssh connection.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-trim\fR(=\fIbool\fR)
+Whether to trim new line characters at the end in pasting text.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-ul\fR=\fIvalue\fR
+Specify the color to use to display underlined characters.
+.TP
+\fB\-\-ulpos\fR=\fIvalue\fR
+Specify the position (offset from the baseline) of underline.
+The default is \fB0\fR.
+.TP
+\fB\-\-ucsnoconv\fR=\fIvalue\fR
+Use unicode fonts partially regardless of -n option.
+
+e.g.) --ucsnoconv=U+1234-5678,U+0123-4567
+.TP
+\fB\-\-urgent\fR(=\fIbool\fR)
+Draw the user's attention when making a bell sound in the unfocused window.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-uriword\fR(=\fIbool\fR)
+Select URI by double clicking it regardless of \fB\-W\fR option.
+The default is \fBfalse\fR.
+.TP
+\fB\-\-vtcolor\fR=\fImode\fR
+Set vt color mode. \fB256\fR for pseudo color, \fBhigh\fR for high color and
+\fBtrue\fR for true color.
+The default is \fBhigh\fR.
+.TP
+\fB\-\-working\-directory\fR=\fIvalue\fR
+Working directory.
+.TP
+\fB\-\-x11\fR(=\fIbool\fR)
+Enable x11 forwarding for ssh connection.
+The default is \fBfalse\fR.
+
+.\" ********************************************************************
+.SH GUI CONFIGURATOR
+Pushing control key and mouse button 3 invokes GUI configurator
+(\fBmlconfig\fR).  It can modify encoding, foreground and background
+color, tab size, backlog size, font size, usage of combining character,
+and so on.
+.PP
+GUI configurator has six pages (Encoding, Font, Background, Color,
+Scrollbar, and Others), OK/Apply/Cancel buttons, and
+four special buttons.
+.PP
+Note this feature needs GTK+ 2.x or later.
+.\" ******************************************************
+.SS Encoding page
+Encoding-related configurations are located in this page.
+Note that configurations will be enabled when you push Apply button.
+.TP
+Encoding
+Specify encoding.  (\fB\-E\fR, \fB\-\-km\fR)
+.TP
+Auto detect
+Whether to detect appropriate character encoding automatically. (\fB\-\-auto\fR)
+.TP
+Encoding list
+Specify character encodings detected automatically. (\fB\-\-ade\fR)
+.TP
+Input Method
+Specify which input method to be used. (\fB\-M\fR, \fB\-\-im\fR)
+.PP
+.RS
+.B XIM:
+.TP
+XIM Server
+Specify the name of XIM server to be connected.  You can input
+from your keyboard or you can choose one of registered XIM servers.
+This doesn't have equivalent command option.
+See the section of \fBXIM Configuration File\fR for registration of
+XIM servers.
+.TP
+XIM locale
+Specify the name of the locale to be used for connection to
+the XIM server.  Popular XIM servers usually have acceptable
+locales to be used for connection.  If you choose registered
+XIM server in \fBInput Method\fR, this will be set automatically.
+You can also input the locale name from your keyboard.
+.PP
+.B keyboard:
+.TP
+Option
+Specify the name of key mapping table. When using ISCII encoding, Indic key
+mapping is used automatically. In other encodings, this will be automatically
+selected according to the current locale.
+.PP
+.B uim:
+.TP
+Option
+Specify the name of the conversion engine to be used. If you choose auto,
+the conversion engine will be automatically selected according to the current
+locale.
+.PP
+Note this feature needs uim library.
+.PP
+.B m17n library:
+.TP
+Option
+Specify the language and the input method to be used. If you choose auto, the
+language and input method will be automatically selected according to the
+current locale.
+.PP
+Note this feature needs m17n library and m17n-db.
+.PP
+.B SCIM:
+.TP
+No option
+.PP
+.B iBus:
+.TP
+No option
+.PP
+.B Fcitx:
+.TP
+No option
+.PP
+.B Freewnn:
+.TP
+Option
+Specify the address of the host where jserver works.
+.PP
+.B Canna:
+.TP
+No option
+.PP
+.B SKK:
+.TP
+Option
+Specify the place of skk dictionary (server or file) and the key used as sticky shift key.
+.PP
+.B IIIMF:
+.TP
+Option
+Specify the language id (RFC1766) and the language engine to be used. If you
+choose auto, the language id/engine will be automatically selected according
+to the current locale.
+.PP
+Note this feature needs IIIMCF library.
+.RE
+.TP
+Complex Text Layout
+Whether to enable complex text layouting on UTF8 encoding to support indic scripts and
+RTL (right-to-left) languages such as Arabic and Hebrew.  (\fB\-C\fR, \fB\-\-ctl\fR)
+.TP
+Combining
+Whether to support combining characters by overstriking. (\fB\-m\fR, \fB\-\-comb\fR)
+.TP
+Combining = 1 (or 0) logical column(s)
+Processing combining characters as if it occupies one column logically
+while it occupies zero column on the screen.
+(\fB\-J\fR, \fB\-\-dyncomb\fR)
+.TP
+Process received strings via Unicode
+When you paste some strings into \fBmlterm\fR, the strings
+are converted into Unicode and then to \fBmlterm\fR encoding.
+(\fB\-U\fR, \fB\-\-viaucs\fR)
+.TP
+OpenType Layout
+Whether to show substituting glyphs in open type fonts with the use of libotf or harfbuzz.
+(\fB\-\-otl\fR)
+.TP
+Ambiguouswidth = fullwidth (UTF8 only)
+Processing Unicode characters with EastAsianAmbiguous property as fullwidth.
+(\fB\-a\fR, \fB\-\-ac\fR)
+.TP
+Fullwidth = 2 (or 1) logical column(s)
+Processing CJK fullwidth characters as it occupies two columns logically
+since it occupies two columns on the screen.
+(\fB\-Z\fR, \fB\-\-multicol\fR)
+.\" ******************************************************
+.SS Font page
+Configurations related to appearance (or look&feel) are located
+in this page.
+.TP
+Font size
+Font size in pixel. (\fB\-w\fR, \fB\-\-fontsize\fR)
+.TP
+Foreground color
+Foreground color for letters. (\fB\-f\fR, \fB\-\-fg\fR)
+.TP
+Xft
+Use xft for rendering engine. (\fB\-*\fR, \fB\-\-type\fR)
+.TP
+Cairo
+Use cairo for rendering engine. (\fB\-*\fR, \fB\-\-type\fR)
+.TP
+Anti alias
+Use anti-alias fonts by using Xft or cairo. (\fB\-A\fR, \fB\-\-aa\fR)
+.TP
+Variable column width
+Use variable column width. (\fB\-V\fR, \fB\-\-varwidth\fR)
+.TP
+Vertical mode
+Vertical writing mode. (\fB\-G\fR, \fB\-\-vertical\fR)
+.TP
+Font name
+Specify XLFD, Xft or cairo font for character sets.
+"Select" button shows a dialog to choose it.
+.TP
+Font policy
+Whether to use unicode fonts (or non-unicode fonts) all the time
+regardless of a selected encoding. (\fB\-u\fR, \fB\-\-onlyucsfont\fR)
+(\fB\-n\fR, \fB\-\-noucsfont\fR)
+.TP
+Unicode areas you won't convert to other charsets
+Specify code point areas which are shown by unicode fonts regardless of -n option.
+(\fB\-\-ucsnoconv\fR)
+.TP
+Box drawing
+Whether to use a unicode font or (a dec special font) all the time
+to draw box drawing characters. (\fB\-\-boxdraw\fR)
+.TP
+Line space
+Specify number of extra dots between lines. (\fB\-o\fR, \fB\-\-lsp\fR)
+.TP
+Letter space
+Specify number of extra dots between characters. (\fB\-\-csp\fR)
+.TP
+Underline position
+Specify the position (offset from the baseline) of underline. (\fB\-\-ulpos\fR)
+.TP
+Baseline position
+Specify the position (offset from the default baseline) of baseline. (\fB\-\-blpos\fR)
+.TP
+Screen size ratio against font size
+Specify actual screen width (screen height in vertical mode). (\fB\-1\fR, \fB\-\-wscr\fR)
+.\" ******************************************************
+.SS Background page
+Configurations related to background are located in this page.
+.TP
+Background color
+Background color. (\fB\-b\fR, \fB\-\-bg\fR)
+.TP
+Picture
+Specify the image file to be used for background image.
+(\fB\-p\fR, \fB\-\-pic\fR)
+.TP
+Pseudo Transparent
+Pseudo transparent background. (\fB\-t\fR, \fB\-\-transbg\fR)
+.TP
+Picture/Transparent Brightness, Contrast, Gamma and Alpha.
+Brightness, contrast, gamma alpha of the background image.
+(\fB\-H\fR, \fB\-\-bright\fR)
+(\fB\-3\fR, \fB\-\-contrast\fR)
+(\fB\-4\fR, \fB\-\-gamma\fR)
+(\fB\-X\fR, \fB\-\-alpha\fR)
+.TP
+Fade ratio on unfocus
+Fading ratio when window is unfocused. (\fB\-r\fR, \fB\-\-fade\fR)
+.\" ******************************************************
+.SS Color page
+Configurations related to color are located in this page.
+.TP
+Cursor color
+Specify color to show cursor. (\fB\-9\fR, \fB\-\-crfg\fR)
+(\fB\-0\fR, \fB\-\-crbg\fR)
+.TP
+Substituting color
+Specify color to show instead of bold, underlined, italic, blinking
+or crossed-out attribute.
+(\fB\-\-bd\fR)
+(\fB\-\-ul\fR)
+(\fB\-\-it\fR)
+(\fB\-\-bl\fR)
+(\fB\-\-co\fR)
+.TP
+VT basic 16 colors
+Customize VT basic 16 text colors.
+.\" ******************************************************
+.SS Scrollbar page
+Configurations related to scrollbar are located in this page.
+.TP
+Position
+Specify scrollbar position. (\fB\-O\fR, \fB\-\-sbmod\fR)
+.TP
+View
+Specify name of scrollbar. (\fB\-S\fR, \fB\-\-sbview\fR)
+.TP
+Foreground color
+Specify foreground color of scrollbar. (\fB\-F\fR, \fB\-\-sbfg\fR)
+.TP
+Background color
+Specify background color of scrollbar. (\fB\-B\fR, \fB\-\-sbbg\fR)
+.\" ******************************************************
+.SS Others page
+Other configurations are located in this page.
+.TP
+Tab size
+Column number of tab. (\fB\-x\fR, \fB\-\-tw\fR)
+.TP
+Backlog size
+Number of lines of backlog. (\fB\-l\fR, \fB\-\-sl\fR)
+.TP
+Columns/Rows
+Number of columns and rows of the screen. (\fB\-g\fR, \fB\-\-geometry\fR)
+.TP
+Word separators
+Delimiter characters used for word selection, which are consulted when
+you double-clicked mlterm, to define what is a word.
+(\fB\-W\fR, \fB\-\-sep\fR)
+.TP
+Double click interval (msec)
+Doubleclick/tripleclick interval in millisecond.
+(\fB\-$\fR, \fB\-\-mc\fR)
+.TP
+Meta key outputs
+Behavior of META key. (\fB\-k\fR, \fB\-\-meta\fR)
+.TP
+Bell mode
+Behavior when \fBmlterm\fR receives BEL (0x07) code.
+(\fB\-7\fR, \fB\-\-bel\fR)
+.TP
+Save log
+Whether to log sequence received from pty in ~/.mlterm/[pty].log
+in raw or ttyrec format.
+(\fB\-\-logseq\fR) (\fB\-\-seqfmt\fR)
+.TP
+CLIPBOARD Selection
+Whether to enable CLIPBOARD (not only PRIMARY) selection. (\fB\-P\fR, \fB\-\-clip\fR)
+.TP
+Local echo
+Whether to use local echo mode. (\fB\-\-loecho\fR)
+.TP
+Blink cursor
+Whether to blink cursor. (\fB\-\-blink\fR)
+.TP
+Don't scroll automatically in scrolling back.
+Don't exit backscroll mode when console applications output something. (\fB\-6\fR, \fB\-\-stbs\fR)
+.TP
+Scroll by Shift+Up or Shift+Down
+Enable extended keys for backscroll mode. (\fB\-q\fR, \fB\-\-extkey\fR)
+.TP
+Select URI by double click
+Select URI by double clicking it regardless of \fB\-W\fR option. (\fB\-\-uriword\fR)
+.TP
+Send keys to all windows
+Whether to broadcast input or pasted characters to all ptys whose value of
+"ignore_broadcasted_chars" option is false. (\fB\-\-bc\fR)
+.TP
+Trim trailing CR/LF in pasting
+Whether to trim new line characters at the end in pasting text. (\fB\-\-trim\fR)
+.\" ******************************************************
+.SS Buttons
+There are buttons which is independent from OK/Apply/Cancel buttons.
+.TP
+OK/Apply/Cancel
+OK button applies the modified configuration to the current mlterm
+session, saves it to "\fB~/.mlterm/main\fR" configuration file,
+and quits the GUI Configurator.
+Apply button just applies the modified configuration to the current
+\fBmlterm\fR session.
+.TP
+Font size (Larger and Smaller)
+Change font size.
+.TP
+Full reset
+Reset internal status.
+.TP
+Snapshot
+Snapshot the screen and save it to ~/.mlterm/*.snp.
+.TP
+SSH SCP
+Transfer a file via SCP.
+.TP
+PTY List
+One process of \fBmlterm\fR may have multiple sessions and screens.
+The sessions may or may not have corresponding screen, i.e.,
+the number of sessions can be more than the number of screens.
+Such situation can be achieved by closing a part of multiple screens
+from \fB\-@\fR/\fB\-\-screens\fR option.
+In such case, the screen-less session can be designated to one of
+screens by choosing the session (pty) from this list and push "select"
+button.
+.\" ********************************************************************
+.SH CONFIGURABLE MENU
+Pushing control key and mouse button 1 invokes configurable menu
+displayer (\fBmlterm-menu\fR).  It displays a menu with items such
+as "Larger Font" or "UTF-8 encoding".  Though a default menu definition
+is supplied, you can freely define menu items by writing a menu
+configuration file.  See \fBMenu Configuration File\fR section
+for detail.
+.PP
+Note this feature needs GTK+ 2.x or later.
+.\" ********************************************************************
+.SH MULTIPLE XIM
+\fBmlterm\fR can use multiple XIM (X Input Method) servers.  The current
+XIM is specified by the GUI configurator.  Using this feature you
+can input multiple complex languages such as Japanese and Korean.
+Locale to be used for communication with XIM can also be specified
+for each XIM.  In the GUI configurator, you can choose one of
+registered pair of XIM and its locale or you can input your favorite
+XIM and its locale.
+.PP
+The locale for XIM is only used for communication with the XIM and
+is not related to the current \fBmlterm\fR locale.  You have to
+properly configure the XIM locale only when your XIM has preference
+on the locale of XIM client (i.e., \fBmlterm\fR in this case).
+\fBmlterm\fR automatically convert the inputed string into proper
+encoding and you don't have to care about it.
+.PP
+Of course the initial XIM is chosen by using standard configuration,
+i.e., using \fBXMODIFIERS\fR environmental variable.  See \fBX\fR(7)
+for detail on XIM and \fBXMODIFIERS\fR variable.
+.\" ********************************************************************
+.SH DAEMON MODE
+When invoked with \fB\-j\fR/\fB\-\-daemon\fR command line option,
+mlterm starts to listen on a unix domain socket
+and accept requests from mlclient.
+
+With \fBblend\fR  mlterm will exit when the final terminal window is closed.
+But with  \fBgenuine\fR, mlterm will disconnect from X server windows and continues to
+work. In latter case, it's possible to stop and restart a X server and revive the lasting sessions on mlterm.
+
+.\" ********************************************************************
+.SH SCROLLBAR
+\fBmlterm\fR supports scrollbar API so that users can develop
+scrollbar libraries with arbitrary look and feel.
+The scrollbar libraries can be used by putting the libraries at
+the specified directory (determined on the compilation process)
+and invoke \fBmlterm\fR with \fB\-s \-S \fIname\fR option.
+Scrollbar libraries named "\fBsample\fR", "\fBsample2\fR",
+"\fBathena\fR", "\fBmotif\fR", "\fBmozmodern\fR", and "\fBnext\fR"
+are supplied.
+.\" ********************************************************************
+.SH ANTI\-ALIAS
+\fBmlterm\fR can use True Type fonts using \-A option via FreeType
+library when it has been compiled with anti\-alias option.
+.PP
+Note this feature needs XFree86 4.0.2 or above and FreeType 2.0.2
+or above.
+.\" ********************************************************************
+.SH WALLPAPER
+\fBmlterm\fR can use background image (as known as wallpaper),
+by using \fB\-p\fR/\fB\-\-pic\fR option.
+You can also specify the brightness of the image by using
+\fB\-H\fR/\fB\-\-bright\fR option.
+.PP
+Note this feature needs gdk-pixbuf.
+.\" ********************************************************************
+.SH MULTIPLE PTY
+This is one of most unique features of \fBmlterm\fR.
+The number of windows can be specified using \-P option.
+Typing control + F1 opens another window which shares the same process.
+The maximum number of windows can be specified using \-\-maxptys option.
+.\" ********************************************************************
+.SH BACKSCROLL MODE
+\fBmlterm\fR enters into backscroll mode by typing
+Shift + up or Shift + PageUp key.  In the mode,
+you can use the following keys.
+.TP
+\fBj\fR or \fBDown\fR
+Scroll down one line.
+.TP
+\fBk\fR or \fBUp\fR
+Scroll up one line.
+.TP
+\fBd\fR or \fBPageDown\fR
+Scroll down one page.
+.TP
+\fBu\fR or \fBPageUp\fR
+Scroll up one page.
+.TP
+\fBShift\fR + \fBspace\fR
+Initialize XIM.
+.TP
+\fBShift\fR + \fBInsert\fR
+Insert selection.
+.TP
+\fBControl\fR + \fBF1\fR
+Open a new pty window.
+.TP
+keys defined in \fBkey\fR configuration file
+\fBPAGE_UP\fR, \fBPAGE_DOWN\fR, \fBSCROLL_UP\fR,
+and \fBSCROLL_DOWN\fR keys are defined in the file.
+.TP
+other keys
+Exit from the backscroll mode.
+.PP
+Please note that keys other than \fBPAGE_UP\fR and \fBPAGE_DOWN\fR
+in \fBkey\fR configuration file are available only when you
+used \fB\-q\fR/\fB\-\-extkey\fR command option.
+.\" ********************************************************************
+.SH SELECTION
+Selection is a mechanism to be used for copy-and-paste in X Window System.
+Thus, this section describes on so-called copy-and-paste.
+.PP
+There are many encodings in the world.  Though copy-and-paste needs
+sender and receiver and each of them can use one of various encodings,
+\fBmlterm\fR is designed to be able to receive characters from various
+encodings as much as possible.
+.PP
+There are two internationalized types of selection.  One is
+\fBCOMPOUND_TEXT\fR is the another is \fBUTF8_STRING\fR.
+COMPOUND_TEXT is ISO2022-based and can distinguish character sets
+which a character belongs to.  However, the character sets which
+COMPOUND_TEXT supports are limited to ISO8859-* and East Asian
+character sets.  On the other hand, UTF8_STRING is Unicode-based
+and can express all characters from Unicode character set.  However,
+it cannot distinguish characters from different character sets which
+share one codepoint in Unicode, which can be a problem especially
+for CJK Han Ideogram (in other words, Kanji, Hanji, or Hanja).
+Note that UTF8_STRING is rather new and can be used only with XFree86.
+.PP
+Though the receiver of copy-and-paste can request the preferable
+type of selection, the sender may not support the requested type.
+Thus \fBmlterm\fR has to be able to process both of COMPOUND_TEXT
+and UTF8_STRING.
+.PP
+On the other hand, encodings supported by \fBmlterm\fR (see
+\fBDESCRIPTION\fR section for detail) are classified into four
+categories;
+.TP
+(a) Unicode itself
+UTF-8.
+.TP
+(b) subset of Unicode and ISO-2022-compliant
+"Subset of Unicode" means that Unicode supports round-trip compatibility
+for the encoding, i.e., the conversion of the encoding \-\-> Unicode
+\-\-> the encoding doesn't lose any information.
+"ISO-2022-compliant" means that the encoding can be regarded as a
+subset of ISO-2022 where a part of ISO-2022 control codes and escape
+sequences are not supported.  Many popular encodings belong to this
+category such as ISO-8859-*, EUC-*, ISO-2022-KR, TIS-620, TCVN5712, and
+so on.
+.TP
+(c) subset of Unicode and non-ISO-2022-compliant
+Some of popular encodings such as Shift_JIS, Big5, GBK, GB18030,
+Johab, and so on belongs to this category.
+.TP
+(d) not subset of Unicode
+ISO-2022-JP, ISO-2022-JP-2, ISO-2022-JP-3, EUC-TW, and so on.
+All of them are ISO-2022-compliant.
+.PP
+Now the behavior of \fBmlterm\fR can be explained.
+.PP
+.nf
+-------------------------------------------------------
+encoding received selection  how to process?
+-------------------------------------------------------
+   a     COMPOUND_TEXT       convert to Unicode
+   a     UTF8_STRING         no need for conversion
+   b     COMPOUND_TEXT       user preference *1
+   b     UTF8_STRING         convert to the encoding *2
+   c     COMPOUND_TEXT       user preference *1
+   c     UTF8_STRING         convert to the encoding *2
+   d     COMPOUND_TEXT       no need for conversion *3
+   d     UTF8_STRING         convert to the encoding *2
+-------------------------------------------------------
+.fi
+.PP
+*1 Characters from unsupported character sets (i.e., characters
+which cannot be expressed in the \fBmlterm\fR encoding) may appear
+in the selection (received copy-and-paste string).
+If you want to receive characters which are equivalent to
+characters which are supported in the current \fBmlterm\fR encoding
+(i.e., characters which share the same codepoint in Unicode),
+you can use \fB\-U\fR (or \fB\-\-viaucs\fR) option.  Otherwise,
+these characters are pasted into \fBmlterm\fR using ISO-2022
+escape sequence (when \fBmlterm\fR encoding is category b).
+Note such ISO-2022 escape sequences are illegal in the current
+\fBmlterm\fR encoding and the application software will need
+special feature to treat them properly, though it is displayed
+well in \fBmlterm\fR.  When \fBmlterm\fR encoding is category c,
+such characters are simply ignored (when \fB\-U\fR option is
+not enabled).
+.PP
+*2 Characters which cannot be converted into \fBmlterm\fR encoding
+are simply ignored.
+.PP
+*3 Characters from unsupported character sets will be pasted
+into \fBmlterm\fR using ISO-2022 escape sequence.
+.\" ********************************************************************
+.SH CONFIGURATION
+\fBmlterm\fR loads configuration files of "\fBmain\fR", "\fBfont\fR",
+"\fBvfont\fR", "\fBtfont\fR", "\fBaafont\fR", "\fBvaafont\fR", "\fBtaafont\fR",
+"\fBcolor\fR", "\fBkey\fR", "\fBtermcap\fR", and "\fBxim\fR" on start up.
+"\fBmenu\fR" configuration file is loaded by the configurable menu
+displayer (\fBmlterm-menu\fR).  See the section of \fBCONFIGURABLE
+MENU\fR for detail.
+.PP
+Configuration files for one user are to be located in
+"\fB~/.mlterm/\fR" directory, while location for configuration
+files for all users depends on the compilation option.
+Possible locations are "\fB/etc/\fR", "\fB/etc/X11/\fR",
+"\fB/usr/X11R6/lib/X11/mlterm/\fR", and so on.
+.PP
+The names and the roles of configuration files are:
+.TP
+\fBmain\fR
+Main configuration items which can be overridden by command line options.
+.TP
+\fBfont\fR
+Configurations for ordinary X fonts.
+.TP
+\fBvfont\fR
+Configurations for ordinary X fonts of variable column width.
+.TP
+\fBtfont\fR
+Configurations for ordinary X fonts of vertical writing.
+.TP
+\fBaafont\fR
+Configurations for Xft or cairo fonts.
+.TP
+\fBvaafont\fR
+Configurations for Xft or cairo fonts of variable column width.
+.TP
+\fBtaafont\fR
+Configurations for Xft or cairo fonts of vertical writing.
+.TP
+\fBcolor\fR
+Designate concrete RGB values for color names.
+.TP
+\fBkey\fR
+Key definitions for special features of \fBmlterm\fR.
+.TP
+\fBtermcap\fR
+Define \fBmlterm\fR's behaviors which affects terminfo and
+termcap definition.
+.TP
+\fBxim\fR
+Define preset locales for X Input Methods which are shown
+in the GUI configurator.  Of course you can input XIM names
+and locales for the GUI configurator which are not listed
+in this configuration file.
+.TP
+\fBmenu\fR
+Define menu items which is displayed by configurable menu
+displayer.
+.PP
+The contents of these configuration files (other than \fBmenu\fR)
+consist of lines
+of "\fIkey\fR=\fIvalue\fR" format.  Lines beginning with "\fB#\fR"
+are ignored.
+.PP
+Note that the configuration files are changed since
+version 1.9.44.
+.\" ******************************************************
+.SS Main Configuration File
+This file contains main configuration items which can be
+overridden by command line options.
+The main configuration file "\fBmain\fR" has the following keys.
+Parentheses show the corresponding command-line options.
+See the explanation on these command-line options for detail.
+.TP
+\fBauto_detect_encodings=\fIvalue\fR (\fB\-\-ade\fR)
+Specify character encodings detected automatically.
+.TP
+\fBallow_osc52=\fIbool\fR (\fB\-\-osc52\fR)
+Allow access to clipboard(selection) by OSC 52 sequence.
+.TP
+\fBallow_scp=\fIbool\fR (\fB\-\-scp\fR)
+Allow OSC 5379 scp.
+.TP
+\fBallow_change_shortcut=\fIbool\fR (\fB\-\-shortcut\fR)
+Allow dynamic change of shortcut keys by OSC 5379 set_shortcut sequence.
+.TP
+\fBalpha=\fIname\fR (\fB\-X\fR, \fB\-\-alpha\fR)
+Alpha in pseudo or true transparent.
+.TP
+\fBapp_name=\fIname\fR (\fB\-N\fR, \fB\-\-name\fR)
+Application name.
+\fBauto_restart=\fIbool\fR (\fB\-\-restart\fR)
+Restart mlterm with all opened ptys except ssh if SIGSEGV, SIGBUS, SIGFPE or
+SIGILL is received.
+If you want to get core image, specify "false".
+.TP
+\fBbaseline_offset=\fIvalue\fR (\fB\-\-blpos\fR)
+Specify the position of baseline.
+The default is \fB0\fR.
+.TP
+\fBbel_mode=\fImode\fR (\fB\-7\fR, \fB\-\-bel\fR)
+Behavior when BEL (0x07) is received.
+.TP
+\fBbd_color=\fIvalue\fR (\fB\-\-bd\fR)
+Specify the color to use to display bold characters.
+.TP
+\fBbl_color=\fIvalue\fR (\fB\-\-bl\fR)
+Specify the color to use to display blinking characters.
+.TP
+\fBbg_color=\fIcolor\fR (\fB\-b\fR, \fB\-\-bg\fR)
+Background color.
+.TP
+\fBbidi_mode=\fImode\fR (\fB\-\-bimode\fR)
+Specify bidi mode.
+.TP
+\fBbidi_separators=\fIcharacterlist\fR (\fB\-\-bisep\fR)
+Specify separator characters (\\xNN is also available) to render bidi text.
+.TP
+\fBbig5_buggy=\fIbool\fR (\fB\-5\fR, \fB\-\-big5bug\fR)
+Support Big5 CTEXT bugs (which exist in XFree86 4.1.0 or before).
+.TP
+\fBblink_cursor=\fIbool\fR (\fB\-\-blink\fR)
+Blink cursor.
+.TP
+\fBbox_drawing_font=\fIvalue\fR (\fB\-\-boxdraw\fR)
+Use either unicode font or DEC Special font forcibly to draw box-drawing characters.
+.TP
+\fBborderless=\fIbool\fR (\fB\-&\fR, \fB\-\-borderless\fR)
+Don't draw window decorations.
+.TP
+\fBbrightness=\fIvalue\fR (\fB\-H\fR, \fB\-\-brightness\fR)
+Specify the amount of darkening or lightening the background image.
+.TP
+\fBbroadcast=\fIbool\fR (\fB\-H\fR, \fB\-\-bc\fR)
+Whether to broadcast input or pasted characters to all ptys whose value of
+"ignore_broadcasted_chars" option is false.
+.TP
+\fBcipher_list\fR=\fIvalue\fR (\fB\-\-ciphlist\fR)
+Specify ciphers (comma separated list) for encrypting the ssh session.
+.TP
+\fBco_color=\fIvalue\fR (\fB\-\-co\fR)
+Specify the color to use to display crossed-out characters.
+.TP
+\fBcol_size_of_width_a=\fIvalue\fR (\fB\-a\fR, \fB\-\-ac\fR)
+Number of columns of Unicode characters with EastAsianAmbiguous property.
+.TP
+\fBcompose_dec_special_font=\fIbool\fR (\fB\-Y\fR, \fB\-\-decsp\fR)
+Compose line drawing character set.
+.TP
+\fBconsole_encoding=\fIencoding\fR (\fB\-\-ckm\fR) (Available for mlterm-con)
+Specify encoding of the console where mlterm-con works.
+.TP
+\fBconsole_sixel_colors=\fIvalue\fR (\fB\-\-csc\fR) (Available for mlterm-con)
+Specify the number of sixel graphics colors of the console where mlterm-con works.
+.TP
+\fBcontrast=\fIvalue\fR (\fB\-3\fR, \fB\-\-contrast\fR)
+Contrast of background image in percent.
+.TP
+\fBcursor_bg_color=\fIcolor\fR (\fB\-0\fR, \fB\-\-crbg\fR)
+Specify background color for cursor.
+.TP
+\fBcursor_fg_color=\fIcolor\fR (\fB\-9\fR, \fB\-\-crfg\fR)
+Specify foreground color for cursor.
+.TP
+\fBdaemon_mode=\fImode\fR (\fB\-j\fR, \fB\-\-daemon\fR)
+Start as a daemon process.
+.TP
+\fBdefault_cell_size=\fIvalue\fR (\fB\-\-csz\fR) (Available for mlterm-con)
+Specify cell width and height in pixel which mlterm-con uses if it doesn't get them.
+.TP
+\fBdefault_server=\fIvalue\fR (\fB\-\-serv\fR)
+Specify a host you want to connect via ssh etc.
+.TP
+\fBdepth\fR=\fIvalue\fR (\fB\-\-depth\fR)
+Specify visual depth.
+.TP
+\fBdisplay=\fIvalue\fR (\fB\-d\fR, \fB\-\-display\fR)
+Specify X server to connect.
+.TP
+\fBemoji_path=\fIvalue\fR (\fB\-\-emoji\fR)
+Specify path of a directory where emoji image files exist or a open type emoji
+font to show unicode emoji characters.
+.TP
+\fBencoding=\fIencoding\fR (\fB\-E\fR, \fB\-\-km\fR)
+Specify encoding.
+.TP
+\fBexit_backscroll_by_pty=\fIbool\fR (\fB\-\-exitbs\fR)
+Exit backscroll mode on receiving data from pty.
+.TP
+\fBfade_ratio=\fIratio\fR (\fB\-r\fR, \fB\-\-fade_ratio\fR)
+Specify fading ratio when window is unfocused.
+.TP
+\fBfb_resolution=\fIratio\fR (Available for mlterm-fb on NetBSD/x68k or OpenBSD)
+Specify the screen resolution and depth. (e.g. 768x512x4)
+.TP
+\fBfg_color=\fIcolor\fR (\fB\-f\fR, \fB\-\-fg\fR)
+Foreground color.
+.TP
+\fBfontsize=\fIvalue\fR (\fB\-w\fR, \fB\-\-fontsize\fR)
+Font size in pixel.
+.TP
+\fBfont_size_range=\fIrange\fR (\fB\-R\fR, \fB\-\-fsrange\fR)
+Range of size of usable fonts.
+.TP
+\fBgamma=\fIvalue\fR (\fB\-4\fR, \fB\-\-gamma\fR)
+Gamma of background image in percent.
+.TP
+\fBgeometry=\fIvalue\fR (\fB\-g\fR, \fB\-\-geometry\fR)
+Specify size and position of the window; see \fBX\fR(7).
+.TP
+\fBhide_underline=\fIbool\fR (\fB\-\-noul\fR)
+Don't draw underline.
+.TP
+\fBicon_name=\fIname\fR (\fB\-I\fR, \fB\-\-icon\fR)
+Icon name.
+.TP
+\fBicon_path=\fIpath\fR
+Path for the image file to be used as window icon.
+.TP
+\fBignore_broadcasted_chars=\fIbool\fR (\fB\-\-ibc\fR)
+Whether to ignore broadcasted characters.
+.TP
+\fBinner_border=\fIvalue\fR (\fB\-\-border\fR)
+Specify inner border width.
+.TP
+\fBinput_method\fR= \fIinput method\fR : \fB[\fR\fI arguments\fR \fB... ]\fR (\fB\-M\fR, \fB\-\-im\fR)
+Specify input method.
+.TP
+\fBiso88591_font_for_usascii=\fIbool\fR (\fB\-8\fR, \fB\-\-88591\fR)
+Use ISO8859-1 fonts for US-ASCII part of various encodings.
+.TP
+\fBit_color=\fIvalue\fR (\fB\-\-it\fR)
+Specify the color to use to display italic characters.
+.TP
+\fBlayout_inner_border=\fIvalue\fR (\fB\-\-lborder\fR)
+Specify inner border width of a layout manager.
+.TP
+\fBleftward_double_drawing=\fIbool\fR (\fB\-\-ldd\fR)
+Embold glyphs by drawing doubly at 1 pixel leftward instead of rightward.
+.TP
+\fBletter_space=\fIvalue\fR (\fB\-\-csp\fR)
+Specify number of extra dots between letters. (ignored if you specify \fB\-\-V\fR option.)
+If you use multiple fonts whose widths are different, adjust this option.
+.TP
+\fBline_space=\fIvalue\fR (\fB\-o\fR, \fB\-\-lsp\fR)
+Specify number of extra dots between lines. (Negative value is available.)
+If you use multiple fonts whose heights are different, adjust this option.
+.TP
+\fBlocale=\fIvalue\fR (\fB\-\-locale\fR)
+Specify locale.
+.TP
+\fBlogging_msg=\fIbool\fR (\fB\-\-logmsg\fR)
+Enable logging messages of mlterm to ~/.mlterm/msg[pid].log.
+.TP
+\fBlogging_vt_seq=\fIbool\fR (\fB\-\-logseq\fR)
+Enable logging vt100 sequences to ~/.mlterm/[device].log.
+.TP
+\fBlogsize=\fIvalue\fR (\fB\-l\fR, \fB\-\-sl\fR)
+Specify number of lines of backlog or "unlimited".
+.TP
+\fBmax_ptys=\fIvalue\fR (\fB\-\-maxptys\fR)
+Specify maximum number of ptys (sessions) to be opened simultaneously.
+.TP
+\fBmeta_prefix=\fIvalue\fR (\fB\-\-metaprefix\fR)
+Specify prefix characters in pressing meta key if mod_meta_mode = esc.
+.TP
+\fBmod_meta_mode=\fImode\fR (\fB\-k\fR, \fB\-\-meta\fR)
+Behavior of META key.
+.TP
+\fBmod_meta_key=\fIvalue\fR (\fB\-K\fR, \fB\-\-metakey\fR)
+Specify a key to be regarded as META.
+.TP
+\fBnot_use_unicode_font=\fIbool\fR (\fB\-n\fR, \fB\-\-noucsfont\fR)
+Use non-Unicode fonts even when \fBmlterm\fR encoding is UTF-8.
+.TP
+\fBonly_use_unicode_font=\fIbool\fR (\fB\-u\fR, \fB\-\-onlyucsfont\fR)
+Use Unicode fonts even when \fBmlterm\fR encoding is not UTF-8.
+.TP
+\fBot_features=\fIvalue\fR (\-\-gft\fR)
+Specify features of glyph substitution.
+.TP
+\fBot_features=\fIvalue\fR (\-\-gst\fR)
+Specify script of glyph substitution.
+.TP
+\fBparent_window=\fIvalue\fR (\fB\-\-parent\fR)
+Specify parent Window ID.
+.TP
+\fBprimary_da=\fIvalue\fR (\fB\-\-da1\fR)
+Specify primary device attributes string.
+.TP
+\fBreceive_string_via_ucs=\fIbool\fR (\fB\-U\fR, \fB\-\-viaucs\fR)
+If the received selection (i.e., copy-and-paste strings) or strings received
+from XIM is not UTF8_STRING type, convert it into Unicode and then to the
+current mlterm encoding, in order to identify equivalent characters
+(i.e., characters which share the same codepoint in Unicode) from various
+character sets.
+See \fBSELECTION\fR section below for detail.
+.TP
+\fBregard_uri_as_word=\fIbool\fR (\fB\-\-uriword\fR)
+Select URI by double clicking it regardless of \-\-W option.
+.TP
+\fBrv_color=\fIvalue\fR (\fB\-\-rv\fR)
+Specify the color to use to display reverse characters.
+.TP
+\fBsb_bg_color=\fIcolor\fR (\fB\-B\fR, \fB\-\-sbbg\fR)
+Background color for scrollbar.
+.TP
+\fBsb_fg_color=\fIcolor\fR (\fB\-F\fR, \fB\-\-sbfg\fR)
+Foreground color for scrollbar.
+.TP
+\fBscreen_width_ratio=\fIvalue\fR (\fB\-1\fR, \fB\-\-wscr\fR)
+Specify actual screen width (screen height in vertical mode).
+.TP
+\fBscrollbar_mode=\fImode\fR (\fB\-O\fR, \fB\-\-sbmod\fR)
+Specify scrollbar position.
+.TP
+\fBscrollbar_view_name=\fIname\fR (\fB\-S\fR, \fB\-\-sbview\fR)
+Specify name of scrollbar.
+.TP
+\fBsecondary_da=\fIvalue\fR (\fB\-\-da2\fR)
+Specify secondary device attributes string.
+.TP
+\fBseparate_wall_picture=\fIbool\fR (\fB\-\-multivram\fR) (Available for mlterm-fb on NetBSD/x68k)
+Draw the wall picture on Text VRAM instead of Graphic VRAM to improve
+the performance of scrolling.
+\fBssh_auto_reconnect\fR=\fIbool\fR (\fB\-\-rcn\fR)
+Reconnect to ssh server automatically in unexpected disconnection.
+.TP
+\fBssh_keepalive_interval\fR=\fIvalue\fR (\fB\-\-keepalive\fR)
+Specify interval seconds to send keepalive message to ssh server.
+.TP
+\fBssh_public_key\fR=\fIvalue\fR (\fB\-\-pubkey\fR)
+Specify public key file for ssh connection.
+.TP
+\fBssh_private_key\fR=\fIvalue\fR (\fB\-\-privkey\fR)
+Specify private key file for ssh connection.
+.TP
+\fBssh_x11_forwarding\fR=\fIbool\fR (\fB\-\-x11\fR)
+Enable x11 forwarding for ssh connection.
+.TP
+\fBstart_with_local_pty\fR (\fB\-\-slp\fR) (Available for Android)
+Start mlterm with local pty instead of ssh connection.
+.TP
+\fBstep_in_changing_font_size\fR (\fB\-z\fR, \fB\-\-largesmall\fR)
+Specify changing size when font size becomes larger or smaller.
+.TP
+\fBtabsize=\fIvalue\fR (\fB\-x\fR, \fB\-\-tw\fR)
+Specify tab width.
+.TP
+\fBtermtype=\fIstring\fR (\fB\-y\fR, \fB\-\-term\fR)
+Terminal type.
+.TP
+\fBtitle=\fIname\fR (\fB\-T\fR, \fB\-\-title\fR)
+Title name.
+.TP
+\fBtrim_trailing_newline_in_pasting=\fIbool\fR (\fB\-\-trim\fR)
+Trim new line characters at the end in pasting text.
+.TP
+\fBtype_engine=\fIvalue\fR (\fB\-*\fR, \fB\-\-type\fR)
+Rendering engine for drawing fonts.
+.TP
+\fBul_color=\fIvalue\fR (\fB\-\-ul\fR)
+Specify the color to use to display underlined characters.
+.TP
+\fBunderline_offset=\fIvalue\fR (\fB\-\-ulpos\fR)
+Specify the position (offset from the baseline) of underline.
+The default is \fB0\fR.
+.TP
+\fBunicode_full_width_areas\fR=\fIvalue\fR (\fB\-\-fullwidth\fR)
+Force full width regardless of EastAsianWidth.txt.
+.TP
+\fBunicode_half_width_areas\fR=\fIvalue\fR (\fB\-\-halfwidth\fR)
+Force half width regardless of EastAsianWidth.txt.
+.TP
+\fBunicode_noconv_areas\fR=\fIvalue\fR (\fB\-\-ucsnoconv\fR)
+Use unicode fonts partially regardless of -n option.
+.TP
+\fBuse_aafont=\fIbool\fR (\fB\-\-aafont\fR) (Available for mlterm-fb or mlterm-wl)
+Use ~/.mlterm/*aafont configurations with the use of fontconfig.
+.TP
+\fBuse_auto_detect=\fIbool\fR (\fB\-\-auto\fR)
+Automatically detect appropriate character encoding from the encodings
+specified by auto_detect_encodings option.
+.TP
+\fBuse_alt_buffer=\fIbool\fR (\fB\-\-altbuf\fR)
+Use alternate screen buffer.
+.TP
+\fBuse_ansi_colors=\fIbool\fR (\fB\-\-colors\fR)
+Recognize ANSI color change escape sequences.
+.TP
+\fBuse_anti_alias=\fIbool\fR (\fB\-A\fR, \fB\-\-aa\fR)
+Use anti alias font.
+.TP
+\fBuse_bold_font=\fIbool\fR (\fB\-\-bdfont\fR)
+Use bold font for characters with the bold attribute.
+.TP
+\fBuse_clipboard=\fIbool\fR (\fB\-P\fR, \fB\-\-clip\fR)
+Use CLIPBOARD (not only PRIMARY) selection.
+.TP
+\fBuse_combining=\fIbool\fR (\fB\-m\fR, \fB\-\-comb\fR)
+Enable combining characters.
+.TP
+\fBuse_cp932_ucs_for_xft=\fIbool\fR (\fB\-c\fR, \fB\-\-cp932\fR)
+Use CP932 - UCS mapping for displaying JISX0208 by Xft or cairo.
+.TP
+\fBuse_dynamic_comb=\fIbool\fR (\fB\-J\fR, \fB\-\-dyncomb\fR)
+Enable dynamic character combining.
+.TP
+\fBuse_extended_scroll_shortcut=\fIbool\fR (\fB\-q\fR, \fB\-\-extkey\fR)
+Enable extended short cut keys for scrolling.
+.TP
+\fBuse_ctl=\fIbool\fR (\fB\-C\fR, \fB\-\-ctl\fR)
+Enable complex text layouting on UTF8 encoding.
+.TP
+\fBuse_ot_layout=\fIbool\fR (\-\-otl\fR)
+Whether to show substituting glyphs in open type fonts with the use of libotf or harfbuzz.
+.TP
+\fBuse_italic_font=\fIbool\fR (\fB\-\-itfont\fR)
+Use italic font for characters with the italic attribute.
+.TP
+\fBuse_local_echo=\fIbool\fR (\fB\-\-loecho\fR)
+Use local echo mode.
+.TP
+\fBuse_login_shell=\fIbool\fR (\fB\-L\fR, \fB\-\-ls\fR)
+Whether to use login shell or not.
+.TP
+\fBuse_multi_column_char=\fIbool\fR (\fB\-Z\fR, \fB\-\-multicol\fR)
+Process full width characters.
+.TP
+\fBuse_point_size=\fIbool\fR (\fB\-\-point\fR)
+Treat the value of \-w option as point instead of pixel.
+.TP
+\fBuse_mdi=\fIbool\fR (\fB\-s\fR, \fB\-\-mdi\fR)
+Use multiple document interface.
+.TP
+\fBuse_transbg=\fIbool\fR (\fB\-t\fR, \fB\-\-transbg\fR)
+Use pseudo transparent background.
+.TP
+\fBuse_urgent_bell=\fIbool\fR (\fB\-\-urgent\fR)
+Draw the user's attention when making a bell sound in the unfocused window.
+.TP
+\fBuse_variable_column_width=\fIbool\fR (\fB\-V\fR, \fB\-\-varwidth\fR)
+Use variable column width.
+.TP
+\fBuse_vertical_cursor=\fIvalue\fR (\fB\-Q\fR, \fB\-\-vcur\fR)
+Use cursor movement for vertical writing.
+.TP
+\fBuse_xim=\fIbool\fR (\fB\-i\fR, \fB\-\-xim\fR)
+Use XIM (X Input Method).
+.TP
+\fBvt_color_mode=\fImode\fR (\fB\-\-vtcolor\fR)
+Set vt color mode.
+.TP
+\fBvertical_mode=\fIvalue\fR (\fB\-G\fR, \fB\-\-vertical\fR)
+Use vertical writing.
+.TP
+\fBwall_picture=\fIpath\fR (\fB\-p\fR, \fB\-\-pic\fR)
+Path for wallpaper image.
+.TP
+\fBword_separators=\fIcharacterlist\fR (\fB\-W\fR, \fB\-\-sep\fR)
+Delimiter characters (\\xNN is also available) used for word selection.
+.TP
+\fBworking_directory=\fIvalue\fR (\fB\-\-working\-directory\fR)
+Working directory.
+.TP
+\fBstatic_backscroll_mode=\fIbool\fR (\fB\-6\fR, \fB\-\-stbs\fR)
+Don't exit backscroll mode when console applications output something.
+.TP
+\fBvt_seq_format=\fIvalue\fR (\fB\-\-seqfmt\fR)
+Specify the format of logging vt100 sequence.
+.\" ******************************************************
+.SS Font Configuration Files
+The font configuration files "\fBfont\fR", "\fBvfont\fR", "\fBtfont\fR",
+"\fBaafont\fR", "\fBvaafont\fR", and "\fBtaafont\fR" have the following keys.
+.PP
+.nf
+\fBDEFAULT=\fIfont\fR
+\fBDEC_SPECIAL=\fIfont\fR
+\fBISO8859_\fIn\fB=\fIfont\fR
+\fBTIS620=\fIfont\fR
+\fBISCII_HINDI=\fIfont\fR
+\fBISCII_MALAYALAM=\fIfont\fR
+\fBISCII_ASSAMESE=\fIfont\fR
+\fBISCII_BENGALI=\fIfont\fR
+\fBISCII_GUJARATI=\fIfont\fR
+\fBISCII_KANNADA=\fIfont\fR
+\fBISCII_MALAYALAM=\fIfont\fR
+\fBISCII_ORIYA=\fIfont\fR
+\fBISCII_PUNJABI=\fIfont\fR
+\fBISCII_TAMIL=\fIfont\fR
+\fBISCII_TELUGU=\fIfont\fR
+\fBVISCII=\fIfont\fR
+\fBKOI8_R=\fIfont\fR
+\fBKOI8_U=\fIfont\fR
+\fBTCVN5712=\fIfont\fR
+\fBJISX0201_ROMAN=\fIfont\fR
+\fBJISX0201_KATA=\fIfont\fR
+\fBJISX0208_1978=\fIfont\fR
+\fBJISX0208_1983=\fIfont\fR
+\fBJISX0208_1990=\fIfont\fR
+\fBJISX0213_2000_1=\fIfont\fR
+\fBJISX0213_2000_2=\fIfont\fR
+\fBKSX1001_1997=\fIfont\fR
+\fBUHC=\fIfont\fR (not used)
+\fBJOHAB=\fIfont\fR (not used)
+\fBGB2312_80=\fIfont\fR
+\fBGBK=\fIfont\fR
+\fBBIG5=\fIfont\fR
+\fBHKSCS=\fIfont\fR
+\fBCNS11643_1992_\fIn\fB=\fIfont\fR
+\fBISO10646_UCS4_1=\fIfont\fR
+\fBISO10646_UCS4_1_FULLWIDTH=\fIfont\fR
+\fBU+XXXX-XXXX=\fIfont\fR
+.fi
+.RS
+Specify fonts for corresponding character sets.  The format is
+different between "\fBfont\fR", "\fBvfont\fR" "\fBtfont\fR" files and
+"\fBaafont\fR", "\fBvaafont\fR" "\fBtaafont\fR" files.
+.PP
+In "\fBfont\fR", "\fBvfont\fR", "\fBtfont\fR" files, "\fIfont\fR" is specified in
+"\fINAME\fR:\fIPERCENT\fR"
+format where "\fISIZE\fR" is font size in pixel,
+and "\fINAME\fR" is XLFD or alias names of X fonts.
+If "\fINAME\fR" contains "%d", it is replaced by an appropriate font size number.
+":\fIPERCENT\fR" is multiplied by font size and decides character width of a font.
+If ":\fIPERCENT\fR" is omitted, max font width is used for it.
+.PP
+In "\fBaafont\fR", "\fBvaafont\fR", "\fBtaafont\fR" files, "\fIfont\fR" is specified in
+"\fIFAMILY WEIGHT SLANT SIZE\fR:\fIPERCENT\fR"
+format.
+":\fIPERCENT\fR" is multiplied by font size and decides character width of a font.
+If ":\fIPERCENT\fR" is omitted, 'M' width is used for it.
+.PP
+\fBmlfc\fR command generates ~/.mlterm/aafont automatically.
+.PP
+.RE
+.TP
+\fIcharset\fB_BOLD=\fIfont\fR
+Specify boldface fonts.
+.TP
+\fIcharset\fB_ITALIC=\fIfont\fR
+Specify italic fonts.
+.TP
+\fIcharset\fB_BOLD_ITALIC=\fIfont\fR
+Specify bold-italic fonts.
+.TP
+\fIU+XXXX-XXXX=\fIfont\fR
+Specify which fonts to use for unicode ranges except U+00-7f.
+.\" ******************************************************
+.SS Color Configuration File
+The color configuration file "\fBcolor\fR" has the following key.
+.TP
+\fICOLORNAME\fR=\fIRGB\fR
+Assign a concrete color for the name \fICOLORNAME\fR.
+Default colors used by mlterm are
+\fBblack\fR,
+\fBred\fR,
+\fBgreen\fR,
+\fByellow\fR,
+\fBblue\fR,
+\fBmagenta\fR,
+\fBcyan\fR, and
+\fBwhite\fR.  and can be overridden here.
+
+For highlighted colors, a name with "hl_" prefix will be automatically searched.
+i.e. for bold read character, "hl_red" is searched instead of "red".
+
+\fB17\fR - \fB230\fR and \fB232\fR - \fB255\fR in 256 colors can be also overridden.
+
+The format of \fIRGB\fR is either "\fIRRRR\fB\-\fIGGGG\fB\-\fIBBBB\fR"
+(where
+\fIRRRR\fR,
+\fIGGGG\fR, and
+\fIBBBB\fR are hexadecimal value from 0 to ffff),
+"\fB#\fIRRGGBB\fR", "\fB#\fIRRGGBBAA\fR", "\fIrgb:RR/GG/BB\fR"
+or "\fIrgba:RR/GG/BB/AA\fR"(where
+\fIRR\fR,
+\fIGG\fR, and
+\fIBB\fR are hexadecimal value from 00 to ff).
+
+If mlterm failed to parse a entry, the color will be regarded as black.
+.\" ******************************************************
+.SS XIM Configuration File
+The X Input Methods configuration file "\fBxim\fR" has the following
+format
+.PP
+\fIXIM\fR=\fIlocale\fR
+.PP
+where \fIXIM\fR is XIM name and \fIlocale\fR is locale name used
+for communication with the XIM server.  For example,
+.nf
+kinput2=ja_JP.eucJP
+Ami=ko_KR.eucKR
+xcin-zh_CN.GB2312=zh_CN.GB2312
+.fi
+These settings are used to create list of XIMs by the GUI configurator.
+Though a XIM which is not listed in this file can't be selected from the list,
+it can be selected by specifying its name directly.
+.\" ******************************************************
+.SS Feature Key Configuration File
+The feature key configuration file "\fBkey\fR" has the following format.
+.PP
+\fIKEY\fR=\fIFEATURE\fR
+.PP
+Here, the format for \fIKEY\fR is "\fI(MASK\fB+\fI)KEY\fR",
+where \fIMASK\fR is one of \fBControl\fR, \fBShift\fR, \fBMod1\fR, \fBMod2\fR,
+\fBMod3\fR, \fBMod4\fR, \fBMod5\fR, \fBMod\fR and \fBAlt\fR.
+You can specify multiple "\fIMASK\fB+\fR"s.
+You can search spellings of \fIKEY\fR by using \fBxev\fR(1)
+command or searching keysym macros from
+\fB/usr/X11R6/include/X11/keysymdefs.h\fR (or the equivalent
+file in your X11 include directory) and omit the prefix \fBXK_\fR.
+Double quotation marks are not needed.
+You can specify Button1, Button2, Button3, Button4 or Button5 as \fIKEY\fR.
+.PP
+\fIFEATURE\fR is one of \fBIM_HOTKEY\fR,
+\fBEXT_KBD\fR,
+\fBOPEN_SCREEN\fR,
+\fBNEW_PTY\fR,
+\fBOPEN_PTY\fR,
+\fBNEXT_PTY\fR,
+\fBPREV_PTY\fR,
+\fBVSPLIT_SCREEN\fR,
+\fBHSPLIT_SCREEN\fR,
+\fBCLOSE_SCREEN\fR,
+\fBNEXT_SCREEN\fR,
+\fBPREV_SCREEN\fR,
+\fBHEXPAND_SCREEN\fR,
+\fBVEXPAND_SCREEN\fR,
+\fBPAGE_UP\fR,
+\fBPAGE_DOWN\fR,
+\fBSCROLL_UP\fR,
+\fBSCROLL_DOWN\fR,
+\fBINSERT_SELECTION\fR,
+\fB"\fISTRING\fB"\fR,
+or \fB"proto:\fISTRING\fB"\fR.
+.TP
+\fBIM_HOTKEY\fR
+Switch conversion mode of m17n library and kdb input methods. (default \fBUNUSED\fR)
+.TP
+\fBEXT_KBD\fR
+Activate or deactivate kbd input method.
+(This feature was obsoleted by IM_HOTKEY)
+.TP
+\fBOPEN_SCREEN\fR
+Open new pty in new screen (default \fBCtrl+F1\fR).
+.TP
+\fBNEW_PTY\fR
+Same as OPEN_SCREEN (obsoleted).
+.TP
+\fBOPEN_PTY\fR
+Open new pty in current screen (default \fBCtrl+F2\fR).
+.TP
+\fBNEXT_PTY\fR
+Switch to a next free pty (default \fBCtrl+F3\fR).
+.TP
+\fBPREV_PTY\fR
+Switch to a previous free pty (default \fBCtrl+F4\fR).
+.TP
+\fBHSPLIT_SCREEN\fR
+Open new pty in horizontally split screen (default \fBShift+F1\fR).
+.TP
+\fBVSPLIT_SCREEN\fR
+Open new pty in vertically split screen (default \fBShift+F2\fR).
+.TP
+\fBNEXT_SCREEN\fR
+Switch to a next unfocused screen (default \fBShift+F3\fR).
+.TP
+\fBPREV_SCREEN\fR
+Switch to a previous unfocused screen (default \fBShift+F4\fR).
+.TP
+\fBCLOSE_SCREEN\fR
+Close current screen (default \fBShift+F5\fR).
+.TP
+\fBHEXPAND_SCREEN\fR
+Expand current screen horizontally (default \fBShift+F6\fR).
+.TP
+\fBVEXPAND_SCREEN\fR
+Expand current screen vertically (default \fBShift+F7\fR).
+.TP
+\fBPAGE_UP\fR
+Start backscroll mode and scroll up one page
+(default \fBShift+Prior\fR).
+.TP
+\fBPAGE_DOWN\fR
+Scroll down one page.
+(default \fBShift+Next\fR).
+.TP
+\fBSCROLL_UP\fR
+Start backscroll mode and scroll up by one line
+(default \fBShift+Up\fR).  Note this key is enabled only when
+\fB\-q\fR/\fB\-\-extkey\fR option is used.
+.TP
+\fBSCROLL_DOWN\fR
+Scroll down one line
+(default \fBShift+Down\fR).  Note this key is enabled only when
+\fB\-q\fR/\fB\-\-extkey\fR option is used.
+.TP
+\fBINSERT_SELECTION\fR
+Insert selection (default \fBShift+Insert\fR).
+.TP
+\fB"\fISTRING\fB"\fR
+The specified string is issued when the \fIKEY\fR key is pressed.
+Double quotation marks are required around the \fISTRING\fR.
+Note that you cannot control the status of mlterm by
+sending terminal control codes such as \fB"\\x1b]5379;encoding=utf8\\x0a"\fR
+because the code sequence will be caught by your shell (or something running on it).
+To deliver control sequences to mlterm directly, use \fB"proto:\fISTRING\fB"\fR
+instead.
+.TP
+\fB"proto:\fISTRING\fB"\fR
+The specified string is assumed to \fBmlterm\fR's original control
+sequence. A list of sequences should be found in \fBdoc/en/PROTOCOL\fR.
+For example, \fB"proto:encoding=utf8"\fR
+means changing the current character encoding to UTF-8.
+.TP
+\fB"exesel:\fISTRING\fB"\fR
+The specified string is assumed to a command to be executed with selected
+strings as arguments.
+For example, \fB"exesel:mlclient -e w3m"\fR means executing
+"mlclient -e w3m [selected text]".
+.TP
+\fB"menu:\fISTRING\fB"\fR
+The specified string is assumed to a configuration program to be executed.
+For example, \fB"menu:mlterm-menu"\fR means executing mlterm-menu.
+.\" ******************************************************
+.SS Terminal Behavior Configuration File
+This configuration file determines the behaviors of \fBmlterm\fR
+that should match the definition of terminfo and termcap.  In principle,
+this file should not be edited and, instead, you should choose a
+proper value for \fBTERM\fR variable (i.e., proper terminfo/termcap
+definition) which meets \fBmlterm\fR's behavior.
+(Since \fBmlterm\fR' can behave as a xterm/kterm to some extent,
+\fBTERM=kterm\fR / \fBTERM=xterm\fR should give acceptable results.)
+However, sometimes you may not want to edit your terminfo and termcap.
+Your software may don't understand terminfo nor termcap, or your
+terminfo/termcap entry is shared by several terminal emulators
+and changing it will break other terminals.
+In such cases, you can configure \fBmlterm\fR
+so that it works well on existing terminfo/termcap definitions
+on your systems.  This is also useful for distributors of
+operating systems (like Debian) with strict policy of terminal
+emulators' behaviors.
+.PP
+You can define the behaviors of \fBmlterm\fR for each value
+of \fBTERM\fR variable, so that you don't need to edit \fBtermcap\fR
+file each time you login into other systems and use different
+value of \fBTERM\fR variable by \fB\-y\fR option.  You can also specify
+the default behavior when \fBTERM\fR variable is different from all
+of specified TERM names in the \fBtermcap\fR file.
+.PP
+The grammar of this configuration file is resemble to the grammar
+of termcap entries.  First, one or more name(s) of TERM is written.
+Multiple names are connected with vertical line character '|'.
+Special name '*' is for default.
+Then colon ':' comes, and keys are written separated by colons.
+Configuration(s) for other TERM will follow after new line.
+.PP
+Followings are available keys for each TERM value.
+.TP
+\fBkD=\fIsequence\fR
+Specify sequence to be outputted when Delete key is pushed
+(default \fB\\E[3~\fR).
+.TP
+\fBkb=\fIsequence\fR
+Specify sequence to be outputted when BackSpace key is pushed
+(default \fB^H\fR).
+.TP
+\fBkh=\fIsequence\fR
+Specify sequence to be outputted when HOME key is pushed
+in application cursor key mode.
+(default \fB\\EOH\fR).
+.TP
+\fB@7=\fIsequence\fR
+Specify sequence to be outputted when END key is pushed
+in application cursor key mode.
+(default \fB\\EOF\fR).
+.TP
+\fBk1=\fIsequence\fR
+Specify sequence to be outputted when F1 key is pushed
+(default \fB\\EOP\fR).
+.TP
+\fBk2=\fIsequence\fR
+Specify sequence to be outputted when F2 key is pushed
+(default \fB\\EOQ\fR).
+.TP
+\fBk3=\fIsequence\fR
+Specify sequence to be outputted when F3 key is pushed
+(default \fB\\EOR\fR).
+.TP
+\fBk4=\fIsequence\fR
+Specify sequence to be outputted when F4 key is pushed
+(default \fB\\EOS\fR).
+.TP
+\fBk5=\fIsequence\fR
+Specify sequence to be outputted when F5 key is pushed
+(default \fB\\E[15~\fR).
+.TP
+\fBut\fR
+Specify the way how the screen is erased by control codes.
+If \fBut\fR is written in the \fBtermcap\fR file, charcells
+are painted by the current background color when erased;
+otherwise the charcells are painted by the initial background
+color.  Default is non-\fBut\fR behavior.
+.PP
+The following special characters can be used to specify \fIsequence\fR
+in keys of \fBkD\fR/\fBkb\fR/\fBkh\fR/\fB@7\fR.
+.TP
+\fB\\E\fR
+ESC code (0x1b).
+.TP
+\fB^?\fR
+DEL code (0x7f).
+.TP
+\fB^A\fR, \fB^B\fR,...
+Corresponding control code (0x01 \- 0x1a).
+.\" ******************************************************
+.SS Menu Configuration File
+This configuration file defines the menu displayed by the
+configurable menu displayer \fBmlterm-menu\fR.  See
+\fBCONFIGURABLE MENU\fR section for detail.
+.\" ********************************************************************
+.SH SEE ALSO
+Manual pages of
+\fBmlclient\fR(1),
+\fBlocale\fR(7),
+\fBcharsets\fR(7),
+\fBUTF-8\fR(7), and
+\fBX\fR(7).
+.PP
+\fBPROTOCOL\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/PROTOCOL)
+for mlterm's original control escape sequences which enable you to change
+configurations dynamically.
+
+e.g.) echo -en "\\x1b]5379;encoding=eucjp\\x07"
+.PP
+\fBREADME.android\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.android)
+for mlterm on Android.
+.PP
+\fBREADME.brltty\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.brltty)
+for accessibility with the use of brlapi. (http://brl.thefreecat.org).
+.PP
+\fBREADME.cocoa\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.cocoa)
+for mlterm on MacOSX/Cocoa.
+.PP
+\fBREADME.cocoatouch\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.cocoatouch)
+for mlterm on iOS/Cocoa Touch.
+.PP
+\fBREADME.console\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.console)
+for mlterm on Console.
+.PP
+\fBREADME.fb\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.fb)
+for mlterm on framebuffer.
+.PP
+\fBREADME.indic\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.indic)
+for indic scripts.
+.PP
+\fBREADME.sb\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.sb)
+for development of scrollbar library.
+.PP
+\fBREADME.sdl2\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.sdl2)
+for mlterm on SDL2.
+.PP
+\fBREADME.ssh\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.ssh)
+for ssh connection with the use of libssh2 (http://www.libssh2.org).
+.PP
+\fBREADME.wayland\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.wayland)
+for mlterm on Wayland.
+.PP
+\fBREADME.win32\fR (http://bitbucket.org/arakiken/mlterm/src/tip/doc/en/README.win32)
+for mlterm on Win32 GDI.
+.PP
+Mapping tables between Unicode and local character sets
+(and encodings) are found at Unicode Consortium web site
+(http://www.unicode.org/Public/MAPPINGS/).  Note that
+mapping tables for East Asian character sets and encodings
+are moved to OBSOLETE/EASTASIA directory of the site
+since August 2001.
+.PP
+For BIG5 and BIG5HKSCS encodings, mapping tables for Unicode
+is taken from ftp://xcin.linux.org.tw/pub/xcin/i18n/charset/.
+.PP
+\fBUnicode Standard Annex (UAX) #11 East Asian Width\fR,
+which explains East Asian Width properties, and
+\fBEastAsianWidth.txt\fR, which defines EastAsianAmbiguous
+characters in Unicode, are supplied by Unicode Consortium
+(http://www.unicode.org).
+.\" ********************************************************************
+.SH FILES
+.TP
+"\fImain\fR", "\fIfont\fR", "\fIvfont\fR", "\fItfont\fR", "\fIaafont\fR", \
+"\fIvaafont\fR", "\fItaafont\fR", "\fIcolor\fR", "\fIkey\fR", \
+"\fItermcap\fR", "\fIxim\fR", and "\fImenu\fR"
+Configuration files.
+.\" ********************************************************************
+.SH CONTACT
+Subscribe mlterm-dev-en ML
+(http://lists.sourceforge.net/lists/listinfo/mlterm-dev-en).
+
+Attach ~/.mlterm/msg.log, backtrace log and related files to your report
+if at all possible.
+
+\"  LocalWords:  stbs backscroll bel crfg mc sbfg cjk mongol
