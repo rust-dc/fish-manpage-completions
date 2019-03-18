@@ -715,8 +715,6 @@ impl TypeDarwin {
     }
 }
 
-//     def is_option(self, line):
-//         return line.startswith('.It Fl')
 #[test]
 fn test_TypeDarwin_is_option() {
     assert!(!TypeDarwin::is_option("Not an Option"));
@@ -793,9 +791,6 @@ impl TypeDarwin {
 struct TypeDeroff;
 // TODO impl ManParser for TypeDeroff
 
-//     def is_option(self, line):
-//         return line.startswith('-')
-
 #[test]
 fn test_TypeDeroff_is_option() {
     assert!(!TypeDeroff::is_option("Not an Option"));
@@ -808,9 +803,6 @@ impl TypeDeroff {
         line.starts_with("-")
     }
 }
-
-//     def could_be_description(self, line):
-//         return len(line) > 0 and not line.startswith('-')
 
 #[test]
 fn test_could_be_description() {
