@@ -723,6 +723,7 @@ fn test_TypeDarwin_is_option() {
     assert!(TypeDarwin::is_option(".It Fl Is an Option"));
     assert!(!TypeDarwin::is_option(""));
 }
+
 impl TypeDarwin {
     fn is_option(line: &str) -> bool {
         line.starts_with(".It Fl")
