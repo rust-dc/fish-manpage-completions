@@ -1,5 +1,5 @@
 [package]
-name = "fish_manpage_completions"
+name = "fish-manpage-completions"
 version = "0.1.0"
 authors = ["Scott Steele <scottlsteele@gmail.com>"]
 edition = "2018"
