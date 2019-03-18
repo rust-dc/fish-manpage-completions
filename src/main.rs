@@ -717,10 +717,15 @@ impl TypeDarwin {
 
 //     def is_option(self, line):
 //         return line.startswith('.It Fl')
-
+#[test]
+fn test_TypeDarwin_is_option() {
+    assert!(!TypeDarwin::is_option("Not an Option"));
+    assert!(TypeDarwin::is_option(".It Fl Is an Option"));
+    assert!(!TypeDarwin::is_option(""));
+}
 impl TypeDarwin {
     fn is_option(line: &str) -> bool {
-        unimplemented!()
+        line.starts_with(".It Fl")
     }
 }
 
@@ -791,7 +796,7 @@ struct TypeDeroff;
 //         return line.startswith('-')
 
 #[test]
-fn test_is_option() {
+fn test_TypeDeroff_is_option() {
     assert!(!TypeDeroff::is_option("Not an Option"));
     assert!(TypeDeroff::is_option("-Is an Option"));
     assert!(!TypeDeroff::is_option(""));
