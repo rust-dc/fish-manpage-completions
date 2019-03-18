@@ -105,8 +105,10 @@ impl Deroffer {
             "or" => &"|",
             "at" => &"@",
             "sh" => &"#",
-            "Eu" => &"€",
-            "eu" => &"€",
+            // For the moment, faithfully mimic the behavior of the Python script,
+            // even though it might seem that &"€" is a more appropriate result here
+            "Eu" => &"¤",
+            "eu" => &"¤",
             "Do" => &"$",
             "ct" => &"¢",
             "Fo" => &"«",
