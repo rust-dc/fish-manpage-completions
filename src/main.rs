@@ -702,16 +702,24 @@ impl TypeDarwin {
     }
 }
 
-//     # Replace some groff escapes. There's a lot we don't bother to handle.
-//     def groff_replace_escapes(self, line):
-//         line = line.replace('.Nm', CMDNAME)
-//         line = line.replace('\\ ', ' ')
-//         line = line.replace('\& ', '')
-//         return line
+#[test]
+fn test_TypeDarwin_groff_replace_escapes() {
+    // tests for expected replacements
+    assert!(TypeDarwin::groff_replace_escapes(".Nm") == "CMDNAME");
+    assert!(TypeDarwin::groff_replace_escapes("\\ ") == " ");
+    assert!(TypeDarwin::groff_replace_escapes(r"& ") == "");
+    assert!(TypeDarwin::groff_replace_escapes(r"\ .Nm & ") == " CMDNAME ");
+    // tests for no expected replacement
+    assert!(TypeDarwin::groff_replace_escapes(".N") == ".N");
+    assert!(TypeDarwin::groff_replace_escapes(r"\x ") == r"\x ");
+    assert!(TypeDarwin::groff_replace_escapes(r"&") == "&");
+}
 
 impl TypeDarwin {
     fn groff_replace_escapes(line: &str) -> String {
-        unimplemented!()
+        line.replace(".Nm", "CMDNAME")
+            .replace("\\ ", " ")
+            .replace(r"& ", "")
     }
 }
 
