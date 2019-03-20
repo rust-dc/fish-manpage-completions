@@ -716,23 +716,32 @@ impl ManParser for TypeDarwin {
     }
 }
 
-//     def trim_groff(self, line):
-//         # Remove initial period
-//         if line.startswith('.'):
-//             line = line[1:]
-//         # Skip leading groff crud
-//         while re.match('[A-Z][a-z]\s', line):
-//             line = line[3:]
-//
-//         # If the line ends with a space and then a period or comma, then erase the space
-//         # This hack handles lines of the form '.Ar projectname .'
-//         if line.endswith(' ,') or line.endswith(' .'):
-//             line = line[:-2] + line[-1]
-//         return line
+#[test]
+fn test_TypeDarwin_trim_groff() {
+    assert_eq!(TypeDarwin::trim_groff(". Test"), " Test");
+    assert_eq!(TypeDarwin::trim_groff("..."), "..");
+    assert_eq!(TypeDarwin::trim_groff(" Test"), " Test");
+    assert_eq!(TypeDarwin::trim_groff("Test ."), "Test.");
+    assert_eq!(TypeDarwin::trim_groff("Test ,"), "Test,");
+    assert_eq!(TypeDarwin::trim_groff("Ab "), "");
+    assert_eq!(TypeDarwin::trim_groff(".Ab Dd Fz ZZ ."), "ZZ.");
+    assert_eq!(TypeDarwin::trim_groff("Test , ."), "Test ,.");
+    assert_eq!(TypeDarwin::trim_groff("Test . ,"), "Test .,");
+}
 
 impl TypeDarwin {
     fn trim_groff(line: &str) -> String {
-        unimplemented!()
+        // Orig Python code would transform:
+        // "This is a comment. An interesting example."
+        // into " interesting example."
+        // This port changes the regex to find the pattern at the start of the line
+        // instead of anywhere in the line.
+
+        // Remove initial period
+        // Skip leading groff crud
+        let line = regex!(r"^\.?([A-Z][a-z]\s)*").replace(&line, "");
+        // If the line ends with a space and then a period or comma, then erase the space
+        regex!(r" ([.,])$").replace(&line, "$1").to_string()
     }
 }
 
