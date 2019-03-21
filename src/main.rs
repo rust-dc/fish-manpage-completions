@@ -745,21 +745,54 @@ impl TypeDarwin {
     }
 }
 
-//     def count_argument_dashes(self, line):
-//         # Determine how many dashes the line has using the following regex hack
-//         # Look for the start of a line, followed by a dot, then a sequence of
-//         # one or more dashes ('Fl')
-//         result = 0
-//         if line.startswith('.'):
-//             line = line[4:]
-//             while line.startswith('Fl '):
-//                 result = result + 1
-//                 line = line[3:]
-//         return result
+#[test]
+fn test_replace_all() {
+    let (string, num) = replace_all("");
+    assert_eq!(string, "");
+    assert_eq!(num, 0);
+
+    let (string, num) = replace_all(".xyzppp");
+    assert_eq!(string, "ppp");
+    assert_eq!(num, 0);
+
+    let (string, num) = replace_all("Fl jkl");
+    assert_eq!(string, "Fl jkl");
+    assert_eq!(num, 0);
+
+    let (string, num) = replace_all(".xxxFl jkl");
+    assert_eq!(string, "jkl");
+    assert_eq!(num, 1);
+
+    let (string, num) = replace_all(".Fl Fl Fl jkl");
+    assert_eq!(string, "jkl");
+    assert_eq!(num, 2);
+}
+
+use std::borrow::Cow;
+fn replace_all(line: &str) -> (Cow<str>, u32) {
+    let mut result = 0;
+    (
+        regex!(r"^(?:\....)((?:Fl\s)*)").replace(&line, |captures: &regex::Captures| {
+            result = (captures[1].len() / 3) as u32; // Divide by 3 since there are 3 bytes per `Fl\s` pattern
+            ""
+        }),
+        result,
+    )
+}
+
+#[test]
+fn test_TypeDarwin_count_argument_dashes() {
+    assert_eq!(TypeDarwin::count_argument_dashes(".Fl Fl xx"), 1);
+    assert_eq!(TypeDarwin::count_argument_dashes(".xxxFl Fl "), 2);
+    assert_eq!(TypeDarwin::count_argument_dashes(".xxxFl FL "), 1);
+    assert_eq!(TypeDarwin::count_argument_dashes("Fl Fl Fl "), 0);
+    assert_eq!(TypeDarwin::count_argument_dashes(".Fl "), 0);
+}
 
 impl TypeDarwin {
     fn count_argument_dashes(line: &str) -> u32 {
-        unimplemented!()
+        let (string, result) = replace_all(&line);
+        result
     }
 }
 
