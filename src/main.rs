@@ -766,14 +766,14 @@ impl TypeDarwin {
 #[test]
 fn test_TypeDarwin_groff_replace_escapes() {
     // tests for expected replacements
-    assert!(TypeDarwin::groff_replace_escapes(".Nm") == "CMDNAME");
-    assert!(TypeDarwin::groff_replace_escapes("\\ ") == " ");
-    assert!(TypeDarwin::groff_replace_escapes(r"& ") == "");
-    assert!(TypeDarwin::groff_replace_escapes(r"\ .Nm & ") == " CMDNAME ");
+    assert_eq!(TypeDarwin::groff_replace_escapes(".Nm"), "CMDNAME");
+    assert_eq!(TypeDarwin::groff_replace_escapes("\\ "), " ");
+    assert_eq!(TypeDarwin::groff_replace_escapes(r"& "), "");
+    assert_eq!(TypeDarwin::groff_replace_escapes(r"\ .Nm & "), " CMDNAME ");
     // tests for no expected replacement
-    assert!(TypeDarwin::groff_replace_escapes(".N") == ".N");
-    assert!(TypeDarwin::groff_replace_escapes(r"\x ") == r"\x ");
-    assert!(TypeDarwin::groff_replace_escapes(r"&") == "&");
+    assert_eq!(TypeDarwin::groff_replace_escapes(".N"), ".N");
+    assert_eq!(TypeDarwin::groff_replace_escapes(r"\x "), r"\x ");
+    assert_eq!(TypeDarwin::groff_replace_escapes(r"&"), "&");
 }
 
 impl TypeDarwin {
