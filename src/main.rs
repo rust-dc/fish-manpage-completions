@@ -71,6 +71,7 @@ impl Default for Verbosity {
     }
 }
 
+#[derive(Default)]
 struct App {
     verbosity: Verbosity,
     diagnostic_output: String,
@@ -341,13 +342,6 @@ fn remove_groff_formatting(data: &str) -> String {
     unimplemented!()
 }
 
-// class ManParser(object):
-//     def is_my_type(self, manpage):
-//         return False
-
-//     def parse_man_page(self, manpage):
-//         return False
-
 trait ManParser {
     fn is_my_type(&self, manpage: &str) -> bool {
         false
@@ -359,22 +353,12 @@ trait ManParser {
     }
 }
 
-// class Type1ManParser(ManParser):
-//     def is_my_type(self, manpage):
-//         #   print manpage
-//         options_section_matched = compile_and_search("\.SH \"OPTIONS\"(.*?)", manpage)
-//
-//         if options_section_matched == None:
-//             return False
-//         else:
-//             return True
-
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Type1;
 
 impl ManParser for Type1 {
     fn is_my_type(&self, manpage: &str) -> bool {
-        unimplemented!();
+        manpage.contains(r#".SH "OPTIONS""#)
     }
 
     fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
@@ -382,6 +366,7 @@ impl ManParser for Type1 {
     }
 }
 
+// class Type1ManParser(ManParser):
 //     def parse_man_page(self, manpage):
 //         options_section_regex = re.compile( "\.SH \"OPTIONS\"(.*?)(\.SH|\Z)", re.DOTALL)
 //         options_section_matched = re.search( options_section_regex, manpage)
@@ -506,21 +491,12 @@ impl Type1 {
     }
 }
 
-// class Type2ManParser(ManParser):
-//     def is_my_type(self, manpage):
-//         options_section_matched = compile_and_search("\.SH OPTIONS(.*?)", manpage)
-//
-//         if options_section_matched == None:
-//             return False
-//         else:
-//             return True
-
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Type2;
 
 impl ManParser for Type2 {
     fn is_my_type(&self, manpage: &str) -> bool {
-        unimplemented!();
+        manpage.contains(".SH OPTIONS")
     }
 
     fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
@@ -528,6 +504,7 @@ impl ManParser for Type2 {
     }
 }
 
+// class Type2ManParser(ManParser):
 //     def parse_man_page(self, manpage):
 //         options_section_regex = re.compile( "\.SH OPTIONS(.*?)(\.SH|\Z)", re.DOTALL)
 //         options_section_matched = re.search( options_section_regex, manpage)
@@ -565,21 +542,12 @@ impl ManParser for Type2 {
 //             options_section = options_section[options_matched.end()-3:]
 //             options_matched = re.search(options_parts_regex, options_section)
 
-// class Type3ManParser(ManParser):
-//     def is_my_type(self, manpage):
-//         options_section_matched = compile_and_search("\.SH DESCRIPTION(.*?)", manpage)
-//
-//         if options_section_matched == None:
-//             return False
-//         else:
-//             return True
-
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Type3;
 
 impl ManParser for Type3 {
     fn is_my_type(&self, manpage: &str) -> bool {
-        unimplemented!();
+        manpage.contains(".SH DESCRIPTION")
     }
 
     fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
@@ -587,6 +555,7 @@ impl ManParser for Type3 {
     }
 }
 
+// class Type3ManParser(ManParser):
 //     def parse_man_page(self, manpage):
 //         options_section_regex = re.compile( "\.SH DESCRIPTION(.*?)(\.SH|\Z)", re.DOTALL)
 //         options_section_matched = re.search( options_section_regex, manpage)
@@ -624,21 +593,12 @@ impl ManParser for Type3 {
 //             options_section = options_section[options_matched.end()-3:]
 //             options_matched = re.search(options_parts_regex, options_section)
 
-// class Type4ManParser(ManParser):
-//     def is_my_type(self, manpage):
-//         options_section_matched = compile_and_search("\.SH FUNCTION LETTERS(.*?)", manpage)
-//
-//         if options_section_matched == None:
-//             return False
-//         else:
-//             return True
-
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Type4;
 
 impl ManParser for Type4 {
     fn is_my_type(&self, manpage: &str) -> bool {
-        unimplemented!();
+        manpage.contains(".SH FUNCTION LETTERS")
     }
 
     fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
@@ -646,6 +606,7 @@ impl ManParser for Type4 {
     }
 }
 
+// class Type4ManParser(ManParser):
 //     def parse_man_page(self, manpage):
 //         options_section_regex = re.compile( "\.SH FUNCTION LETTERS(.*?)(\.SH|\Z)", re.DOTALL)
 //         options_section_matched = re.search( options_section_regex, manpage)
@@ -685,17 +646,12 @@ impl ManParser for Type4 {
 //
 //         return True
 
-// class TypeDarwinManParser(ManParser):
-//     def is_my_type(self, manpage):
-//         options_section_matched = compile_and_search("\.S[hH] DESCRIPTION", manpage)
-//         return options_section_matched != None
-
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct TypeDarwin;
 
 impl ManParser for TypeDarwin {
     fn is_my_type(&self, manpage: &str) -> bool {
-        unimplemented!();
+        regex!(r##"\.S[hH] DESCRIPTION"##).is_match(manpage)
     }
 
     fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
@@ -873,16 +829,15 @@ impl TypeDarwin {
 //
 //         return got_something
 
-// class TypeDeroffManParser(ManParser):
-//     def is_my_type(self, manpage):
-//         return True # We're optimists
-
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct TypeDeroff;
 
 impl ManParser for TypeDeroff {
     fn is_my_type(&self, manpage: &str) -> bool {
-        unimplemented!();
+        // TODO Revisit post-MVP
+        // I think this is just to account for TypeDeroff being the last ManParser implementation
+        // that is checked; it's the fallback.
+        true
     }
 
     fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
@@ -916,6 +871,7 @@ impl TypeDeroff {
     }
 }
 
+// class TypeDeroffManParser(ManParser):
 //     def parse_man_page(self, manpage):
 //         d = Deroffer()
 //         d.deroff(manpage)
@@ -1187,31 +1143,102 @@ fn parse_and_output_man_pages(
     unimplemented!();
 }
 
-fn parsers_to_try() -> Vec<Box<dyn ManParser>> {
-    vec![
-        Box::new(Type1),
-        Box::new(Type2),
-        Box::new(Type3),
-        Box::new(Type4),
-        Box::new(TypeDarwin),
-        Box::new(TypeDeroff),
-    ]
+macro_rules! mantypes {
+    ($($typ: tt),*) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        enum ManType {
+            $($typ($typ),)*
+        }
+
+        impl ManType {
+            const ALL: &'static [ManType] = &[$(ManType::$typ($typ),)*];
+        }
+
+        $(
+        impl From<$typ> for ManType {
+            fn from(t: $typ) -> Self {
+                ManType::$typ(t)
+            }
+        }
+        )*
+
+        impl ManParser for ManType {
+            fn is_my_type(&self, manpage: &str) -> bool {
+                match self {$(
+                    ManType::$typ(t) => t.is_my_type(manpage),
+                )*}
+            }
+        }
+    };
 }
 
-// TODO Result type
-// This function might be useable as a helper function for parse_manpage_at_path
-fn single_man_page<R: Read, W: Write>(input: &mut R, output: &mut W, input_name: &str) {
-    let mut buf = vec![];
-    input.read_to_end(&mut buf).unwrap();
-    dbg!(buf.len());
-    // TODO Either use lossy conversion or do something sensible with the Err
-    let buf = String::from_utf8(buf).unwrap();
-    // TODO mimic multiple parser logic
-    let mut parsers = parsers_to_try();
-    for parser in parsers.iter_mut() {
-        if let Some(completions) = parser.parse_man_page(&buf) {
-            output.write_all(completions.as_bytes()).unwrap();
-            return;
+mantypes![Type1, Type2, Type3, Type4, TypeDarwin, TypeDeroff];
+
+fn parsers_to_try(input: &str) -> Vec<ManType> {
+    ManType::ALL
+        .iter()
+        .filter(|parser| parser.is_my_type(input))
+        .cloned()
+        .collect()
+}
+
+#[test]
+fn test_parsers_to_try() {
+    assert_eq!(
+        parsers_to_try(r###".SH "OPTIONS""###),
+        [Type1.into(), TypeDeroff.into()],
+    );
+
+    assert_eq!(
+        parsers_to_try(r###".SH OPTIONS"###),
+        [Type2.into(), TypeDeroff.into()],
+    );
+
+    assert_eq!(
+        parsers_to_try(".SH OPTIONS\nabc.SH DESCRIPTION"),
+        [
+            Type2.into(),
+            Type3.into(),
+            TypeDarwin.into(),
+            TypeDeroff.into(),
+        ],
+    );
+
+    assert_eq!(
+        parsers_to_try(".SH OPTIONS\nabc.Sh DESCRIPTION"),
+        [Type2.into(), TypeDarwin.into(), TypeDeroff.into()],
+    );
+
+    assert_eq!(
+        parsers_to_try(".SH FUNCTION LETTERS"),
+        [Type4.into(), TypeDeroff.into()],
+    );
+}
+
+impl App {
+    // TODO Result type
+    // This function might be useable as a helper function for parse_manpage_at_path
+    fn single_man_page<R: Read, W: Write>(
+        &mut self,
+        input: &mut R,
+        output: &mut W,
+        input_name: &str,
+    ) {
+        let mut buf = vec![];
+        input.read_to_end(&mut buf).unwrap();
+        dbg!(buf.len());
+        // TODO Either use lossy conversion or do something sensible with the Err
+        let buf = String::from_utf8(buf).unwrap();
+        // TODO mimic multiple parser logic
+        let mut parsers = parsers_to_try(&buf);
+        if parsers.is_empty() {
+            self.add_diagnostic(&format!("{}: Not supported", input_name), None);
+        }
+        for parser in parsers.iter_mut() {
+            if let Some(completions) = parser.parse_man_page(&buf) {
+                output.write_all(completions.as_bytes()).unwrap();
+                return;
+            }
         }
     }
 }
@@ -1267,6 +1294,7 @@ struct Opts {
     files: Vec<PathBuf>,
     #[structopt(short, long, default_value = "0")]
     verbose: u8,
+    /// Print to stdout rather than to a directory of completions
     #[structopt(short, long)]
     stdout: bool,
     #[structopt(short, long)]
@@ -1373,12 +1401,20 @@ fn shell() -> String {
     .into()
 }
 
+fn program_name() -> String {
+    std::env::current_exe()
+        .unwrap()
+        .file_stem()
+        .map(|stem| stem.to_string_lossy().into_owned())
+        .expect("No extractable program name.")
+}
+
 fn main() -> Result<(), String> {
     let opts = Opts::from_args();
 
     if opts.completions {
         Opts::clap().gen_completions_to(
-            "fish_manpage_completions",
+            program_name(),
             shell().parse().unwrap(),
             &mut std::io::stdout(),
         );
@@ -1389,7 +1425,8 @@ fn main() -> Result<(), String> {
     if opts.read_from_stdin() && opts.stdout {
         let mut stdin = std::io::stdin();
         let mut stdout = std::io::stdout();
-        return Ok(single_man_page(&mut stdin, &mut stdout, "STDIN"));
+        let mut app = App::default();
+        return Ok(app.single_man_page(&mut stdin, &mut stdout, "STDIN"));
     }
 
     Ok(())
