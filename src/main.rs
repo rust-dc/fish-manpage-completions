@@ -1,9 +1,13 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/create_manpage_completions.py
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use itertools::Itertools;
 use structopt::StructOpt;
+
+#[cfg(test)]
+use pretty_assertions::{assert_eq, assert_ne};
 
 mod util;
 
@@ -60,6 +64,16 @@ mod util;
 // global VERBOSITY, WRITE_TO_STDOUT, DEROFF_ONLY
 // VERBOSITY, WRITE_TO_STDOUT, DEROFF_ONLY = NOT_VERBOSE, False, False
 //
+
+macro_rules! regex {
+    ($pattern: expr) => {{
+        lazy_static::lazy_static! {
+            static ref REGEX: regex::Regex = regex::Regex::new($pattern).unwrap();
+        }
+        &REGEX
+    }};
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Verbosity {
     Not,
@@ -78,6 +92,7 @@ struct App {
     verbosity: Verbosity,
     diagnostic_output: String,
     diagnostic_indent: usize,
+    already_output_completions: HashMap<String, HashSet<String>>,
 }
 
 // def add_diagnostic(dgn, msg_verbosity = VERY_VERBOSE):
@@ -194,30 +209,213 @@ fn test_lossy_unicode() {
     assert_eq!("�", bad_s);
 }
 
-// def output_complete_command(cmdname, args, description, output_list):
-//     comps = ['complete -c', cmdname]
-//     comps.extend(args)
-//     if description:
-//         comps.append('--description')
-//         comps.append(description)
-//     output_list.append(lossy_unicode(' ').join([lossy_unicode(c) for c in comps]))
+const MAX_DESCRIPTION_WIDTH: usize = 78;
+const TRUNCATION_SUFFIX: char = '…';
 
-fn output_complete_command(
-    cmdname: &str,
-    args: impl Iterator<Item = String>,
-    description: &str,
-    output_list: &mut Vec<String>,
-) {
-    output_list.push(complete_command(cmdname, args, description));
+fn char_len(string: &str) -> usize {
+    string.chars().count()
 }
 
-fn complete_command(
-    cmdname: &str,
-    mut args: impl Iterator<Item = String>,
+fn fish_options(options: &str, existing_options: &mut HashSet<String>) -> Vec<String> {
+    let mut out = vec![];
+
+    for option in regex!(r###"[ ,"=\[\]]"###).split(options) {
+        let option = regex!(r###"\[.*\]"###).replace_all(option, "");
+        let option = regex!(
+            r###"(?x)
+                ^ [ \t\r\n\[\](){}.,:!]
+                | [ \t\r\n\[\](){}.,:!] $
+            "###
+        )
+        .replace_all(&option, "");
+
+        if option == "-" || option == "--" {
+            continue;
+        }
+
+        if regex!(r###"[{}()]"###).is_match(&option) {
+            continue;
+        }
+
+        let (fish_opt, num_dashes) = if option.starts_with("--") {
+            ("l", 2)
+        } else if option.starts_with("-") {
+            (if option.len() == 2 { "s" } else { "o" }, 1)
+        } else {
+            continue;
+        };
+
+        let option = format!(
+            "-{} {}",
+            fish_opt,
+            // Direct indexing of `option` won't panic due to how `num_dashes`
+            // is calculated.
+            fish_escape_single_quote(String::from(&option[num_dashes..]))
+        );
+
+        if existing_options.insert(option.clone()) {
+            out.push(option);
+        }
+    }
+
+    out
+}
+
+#[test]
+fn test_fish_options() {
+    let output: Vec<String> = vec!["-s 'f'".into(), "-l 'force'".into()];
+    let options = "-f, --force[=false]";
+    let mut existing_options: HashSet<String> = Default::default();
+    assert_eq!(fish_options(options, &mut existing_options), output);
+    assert_eq!(
+        output.iter().cloned().collect::<HashSet<_>>(),
+        existing_options
+    );
+
+    use std::iter::once;
+
+    let output: Vec<String> = vec!["-l 'force'".into()];
+    let options = "-f, --force[=false]";
+    let mut existing_options: HashSet<String> = Default::default();
+    existing_options.insert("-s 'f'".into());
+    existing_options.insert("-l 'something'".into());
+    assert_eq!(fish_options(options, &mut existing_options), output);
+    assert_eq!(
+        output
+            .iter()
+            .cloned()
+            .chain(once("-s 'f'".to_string()))
+            .chain(once("-l 'something'".to_string()))
+            .collect::<HashSet<_>>(),
+        existing_options,
+    );
+}
+
+/// # Panics
+/// If `max_length` is zero.
+fn char_truncate_string(string: &str, max_length: usize, truncator: char) -> Cow<str> {
+    let mut chars = string
+        .char_indices()
+        .skip(max_length.checked_sub(1).unwrap())
+        .map(|(idx, _)| idx);
+
+    let penultimate = chars.next();
+
+    if chars.next().is_some() {
+        // Okay to unwrap since the item element _following_ `penultimate` is
+        // `Some`.
+        format!("{}{}", &string[0..penultimate.unwrap()], truncator).into()
+    } else {
+        string.into()
+    }
+}
+
+#[test]
+fn test_string_truncation() {
+    assert_eq!(char_truncate_string("abc", 3, '…'), "abc");
+
+    assert_eq!(char_truncate_string("abcd", 3, '…'), "ab…");
+
+    assert_eq!("ßbc".len(), 4);
+    assert_eq!(char_truncate_string("ßbc", 3, '…'), "ßbc");
+
+    assert_eq!(char_truncate_string("abß", 3, '…'), "abß");
+
+    assert_eq!("aßbc".len(), 5);
+    assert_eq!("aß…".len(), 6);
+    assert_eq!(char_truncate_string("aßbc", 3, '…'), "aß…");
+}
+
+fn truncated_description(description: &str) -> String {
+    let sentences = description.replace(r"\'", "'").replace(r"\.", ".");
+
+    let mut sentences = sentences
+        .split(".")
+        .filter(|sentence| !sentence.trim().is_empty());
+
+    let mut out = format!(
+        "{}.",
+        lossy_unicode(&sentences.next().unwrap_or_default().as_bytes())
+    );
+    let mut out_len = char_len(&out);
+
+    if out_len > MAX_DESCRIPTION_WIDTH {
+        out = char_truncate_string(&out, MAX_DESCRIPTION_WIDTH, TRUNCATION_SUFFIX).into_owned();
+    } else {
+        for line in sentences {
+            let line = lossy_unicode(&line.as_bytes());
+            out_len += 1 // space
+                + char_len(&line)
+                + 1 // period
+                ;
+            if out_len > MAX_DESCRIPTION_WIDTH {
+                break;
+            }
+            out = format!("{} {}.", out, line);
+        }
+    }
+
+    fish_escape_single_quote(out)
+}
+
+#[test]
+fn test_truncated_description() {
+    assert_eq!(truncated_description(r"\'\."), r"'\'.'");
+
+    assert_eq!(
+        truncated_description(r"Don't use this command."),
+        r"'Don\'t use this command.'"
+    );
+
+    assert_eq!(
+        truncated_description(r"Don't use this command. It's really dumb."),
+        r"'Don\'t use this command.  It\'s really dumb.'"
+    );
+
+    assert_eq!(
+        truncated_description(r"The description for the command is so long. This second sentence will be dropped, in fact, because it is too long to be displayed comfortably."),
+        r"'The description for the command is so long.'"
+    );
+
+    assert_eq!(
+        truncated_description(r"This single, initial sentence exceeds the `MAX_DESCRIPTION_WIDTH` and so it will not be displayed in its entirety, which is a crying shame."),
+        r"'This single, initial sentence exceeds the `MAX_DESCRIPTION_WIDTH` and so it w…'"
+    );
+
+    assert_eq!(
+        // Note: This behavior seems wrong. Should probably change to remove extra spaces.
+        truncated_description(
+            r"     Dumb command.   \It's really dumb\.  Extra spaces aren\'t removed.    "
+        ),
+        r"'     Dumb command.    \\It\'s really dumb.   Extra spaces aren\'t removed.'"
+    );
+}
+
+fn built_command(
+    options: &str,
     description: &str,
-) -> String {
+    built_command_output: &mut Vec<String>,
+    existing_options: &mut HashSet<String>,
+    cmd_name: String,
+) {
+    let fish_options = fish_options(options, existing_options);
+
+    if fish_options.is_empty() {
+        return;
+    }
+
+    built_command_output.push(complete_command(
+        fish_escape_single_quote(cmd_name),
+        fish_options,
+        &truncated_description(description),
+    ));
+}
+
+fn complete_command(cmdname: String, args: Vec<String>, description: &str) -> String {
     format!(
-        "complete --command {cmdname} {args}{description_flag}{description}",
+        "complete \
+         -c {cmdname} \
+         {args}{description_flag}{description}",
         cmdname = cmdname,
         args = args.join(" "),
         description_flag = if description.is_empty() {
@@ -229,84 +427,42 @@ fn complete_command(
     )
 }
 
-// def built_command(options, description):
-// #    print "Options are: ", options
-//     man_optionlist = re.split(" |,|\"|=|[|]", options)
-//     fish_options = []
-//     for optionstr in man_optionlist:
-//         option = re.sub(r"(\[.*\])", "", optionstr)
-//         option = option.strip(" \t\r\n[](){}.,:!")
-//
-//
-//         # Skip some problematic cases
-//         if option in ['-', '--']: continue
-//         if any(c in "{}()" for c in option): continue
-//
-//         if option.startswith('--'):
-//             # New style long option (--recursive)
-//             fish_options.append('-l ' + fish_escape_single_quote(option[2:]))
-//         elif option.startswith('-') and len(option) == 2:
-//             # New style short option (-r)
-//             fish_options.append('-s ' + fish_escape_single_quote(option[1:]))
-//         elif option.startswith('-') and len(option) > 2:
-//             # Old style long option (-recursive)
-//             fish_options.append('-o ' + fish_escape_single_quote(option[1:]))
-//
-//     # Determine which options are new (not already in existing_options)
-//     # Then add those to the existing options
-//     existing_options = already_output_completions.setdefault(CMDNAME, set())
-//     fish_options = [opt for opt in fish_options if opt not in existing_options]
-//     existing_options.update(fish_options)
-//
-//     # Maybe it's all for naught
-//     if not fish_options: return
-//
-//     # Here's what we'll use to truncate if necessary
-//     max_description_width = 78
-//     if IS_PY3:
-//         truncation_suffix = '…'
-//     else:
-//         ELLIPSIS_CODE_POINT = 0x2026
-//         truncation_suffix = unichr(ELLIPSIS_CODE_POINT)
-//
-//     # Try to include as many whole sentences as will fit
-//     # Clean up some probably bogus escapes in the process
-//     clean_desc = description.replace("\\'", "'").replace("\\.", ".")
-//     sentences = clean_desc.split('.')
-//
-//     # Clean up "sentences" that are just whitespace
-//     # But don't let it be empty
-//     sentences = [x for x in sentences if x.strip()]
-//     if not sentences: sentences = ['']
-//
-//     udot = lossy_unicode('.')
-//     uspace = lossy_unicode(' ')
-//
-//     truncated_description = lossy_unicode(sentences[0]) + udot
-//     for line in sentences[1:]:
-//         if not line: continue
-//         proposed_description = lossy_unicode(truncated_description) + uspace + lossy_unicode(line) + udot
-//         if len(proposed_description) <= max_description_width:
-//             # It fits
-//             truncated_description = proposed_description
-//         else:
-//             # No fit
-//             break
-//
-//     # If the first sentence does not fit, truncate if necessary
-//     if len(truncated_description) > max_description_width:
-//         prefix_len = max_description_width - len(truncation_suffix)
-//         truncated_description = truncated_description[:prefix_len] + truncation_suffix
-//
-//     # Escape some more things
-//     truncated_description = fish_escape_single_quote(truncated_description)
-//     escaped_cmd = fish_escape_single_quote(CMDNAME)
-//
-//     output_complete_command(escaped_cmd, fish_options, truncated_description, built_command_output)
+#[test]
+fn test_complete_command() {
+    assert_eq!(
+        complete_command(
+            "tr".into(),
+            vec![
+                "-s".into(),
+                "s".into(),
+                "-l".into(),
+                "squeeze-repeats".into(),
+            ],
+            "'replace each input sequence of a repeated character that is listed in SET1 …'",
+        ),
+        "complete \
+         -c tr \
+         -s s \
+         -l squeeze-repeats \
+         --description 'replace each input sequence of a repeated character that is listed in SET1 …'"
+    );
 
-// TODO args / arg types?
-fn built_command() {
-    unimplemented!()
+    assert_eq!(
+        complete_command(
+            "tr".into(),
+            vec![
+                "-s".into(),
+                "s".into(),
+                "-l".into(),
+                "squeeze-repeats".into(),
+            ],
+            "",
+        ),
+        "complete \
+         -c tr \
+         -s s \
+         -l squeeze-repeats"
+    );
 }
 
 fn remove_groff_formatting(data: &str) -> String {
