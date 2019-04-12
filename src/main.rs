@@ -296,30 +296,6 @@ fn built_command() {
     unimplemented!()
 }
 
-// def remove_groff_formatting(data):
-//     data = data.replace("\\fI","")
-//     data = data.replace("\\fP","")
-//     data = data.replace("\\f1","")
-//     data = data.replace("\\fB","")
-//     data = data.replace("\\fR","")
-//     data = data.replace("\\e","")
-//     data = re.sub(".PD( \d+)","",data)
-//     data = data.replace(".BI","")
-//     data = data.replace(".BR","")
-//     data = data.replace("0.5i","")
-//     data = data.replace(".rb","")
-//     data = data.replace("\\^","")
-//     data = data.replace("{ ","")
-//     data = data.replace(" }","")
-//     data = data.replace("\ ","")
-//     data = data.replace("\-","-")
-//     data = data.replace("\&","")
-//     data = data.replace(".B","")
-//     data = data.replace("\-","-")
-//     data = data.replace(".I","")
-//     data = data.replace("\f","")
-//     return data
-
 macro_rules! regex {
     ($pattern: expr) => {{
         lazy_static::lazy_static! {
@@ -331,15 +307,34 @@ macro_rules! regex {
 
 fn remove_groff_formatting(data: &str) -> String {
     // TODO Can we remove all of these strings in one go?
-    let data = data
-        .replace(r#"\fI"#, "")
-        .replace(r#"\fP"#, "")
-        // ... TODO
-        ;
-    let data = regex!(r##".PD( \d+"##).replace_all(&data, "");
-    // ... TODO
+    let mut data = data.to_owned();
+    for marker in &[
+        r"\fI", r"\fP", r"\f1", r"\fB", r"\fR", r"\e", r".BI", r".BR", r"0.5i", r".rb", r"\^",
+        r"{ ", r" }", ".B",
+        ".I",
+        //     The next ones are odd. Putting them into a python file makes my
+        //     python linter warn about anomalous backslash and python2 vs python3
+        //     seems to make no difference
+        //     data = data.replace("\ ","")
+        //     data = data.replace("\-","-")
+        //"\ ",
+        //"\&",
+        //"\f",
+    ] {
+        data = data.replace(marker, "");
+    }
+    // See note above about anomalous backslash
+    //data = data.replace("\-", "-");
+    let data = regex!(r##".PD( \d+)"##).replace_all(&data, "");
+    data.to_string()
+}
 
-    unimplemented!()
+#[test]
+fn test_remove_groff_formatting() {
+    assert_eq!(
+        remove_groff_formatting(r#"Foo\fIbar\fP Zoom.PD 325 Zoom"#),
+        "Foobar Zoom Zoom"
+    );
 }
 
 trait ManParser {
