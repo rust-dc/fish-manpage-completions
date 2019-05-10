@@ -492,7 +492,7 @@ impl Type1 {
 
 impl Type1 {
     // TODO Type signature
-    fn fallback2(&mut self, options_section: &str) -> bool {
+    fn fallback2(&self, options_section: &str) -> bool {
         unimplemented!()
     }
 }
