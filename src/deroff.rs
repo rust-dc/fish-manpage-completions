@@ -273,6 +273,45 @@ impl Deroffer {
             _ => return None,
         })
     }
+
+    fn skip_char<'a>(&self, s: &'a str, amount: Option<usize>) -> &'a str {
+        let amount = amount.unwrap_or(1);
+        s.get(amount..).unwrap_or("")
+    }
+
+    fn skip_leading_whitespace<'a>(&self, s: &'a str) -> &'a str {
+        s.trim_start()
+    }
+
+    fn str_at<'a>(s: &'a str, idx: usize) -> &'a str {
+        // This doesn't fully mirror the python version functionality
+        // It could be implemented with `str::chars` method on a utf-8 string
+        // should we need that
+        s.get(idx..idx + 1).unwrap_or("")
+    }
+
+    fn is_white<'a>(s: &'a str, idx: usize) -> bool {
+        match Self::str_at(s, idx) {
+            "" => false,
+            c => c.chars().all(|c| c.is_whitespace()),
+        }
+    }
+}
+
+#[test]
+fn test_str_at() {
+    assert_eq!(Deroffer::str_at("", 1), "");
+    assert_eq!(Deroffer::str_at("ab cd", 42), "");
+    assert_eq!(Deroffer::str_at("ab cd", 1), "b");
+    assert_eq!(Deroffer::str_at("🗻", 1), ""); // Python would return "🗻" from this
+}
+#[test]
+fn test_is_white() {
+    assert_eq!(Deroffer::is_white("", 1), false);
+    assert_eq!(Deroffer::is_white("ab cd", 42), false);
+    assert_eq!(Deroffer::is_white("ab cd", 1), false);
+    assert_eq!(Deroffer::is_white("ab cd", 2), true);
+    assert_eq!(Deroffer::is_white("ab cd", 3), false);
 }
 //
 //     g_re_word = re.compile(r'[a-zA-Z_]+') # equivalent to the word() method
@@ -395,19 +434,6 @@ impl Deroffer {
 //         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
 //         if not special:
 //             self.output.append(str)
-
-//     def str_at(self, idx):
-//         return self.s[idx:idx+1]
-
-//     def skip_char(self, amt=1):
-//         self.s = self.s[amt:]
-
-//     def skip_leading_whitespace(self):
-//         self.s = self.s.lstrip()
-
-//     def is_white(self, idx):
-//         # Note this returns false for empty strings (idx >= len(self.s))
-//         return self.s[idx:idx+1].isspace()
 
 //     def str_eq(offset, other, len):
 //         return self.s[offset:offset+len] == other[:len]
