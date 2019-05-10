@@ -178,7 +178,18 @@ fn fish_escape_single_quote(string: String) -> String {
 //     return s.decode('latin-1', 'ignore')
 
 fn lossy_unicode(bytes: &[u8]) -> String {
-    unimplemented!()
+    String::from_utf8_lossy(bytes).to_string()
+}
+
+#[test]
+fn test_lossy_unicode() {
+    let bytes = b"123 456";
+    let s = lossy_unicode(bytes);
+    assert_eq!("123 456", s);
+
+    let bad_bytes = &[255];
+    let bad_s = lossy_unicode(bad_bytes);
+    assert_eq!("�", bad_s);
 }
 
 // def output_complete_command(cmdname, args, description, output_list):
