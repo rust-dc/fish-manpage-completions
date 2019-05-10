@@ -448,8 +448,7 @@ impl ManParser for Type1 {
 //         return True
 
 impl Type1 {
-    // TODO Type signature
-    fn fallback(&mut self, options_section: ()) {
+    fn fallback(&self, options_section: &str) -> bool {
         unimplemented!()
     }
 }
@@ -491,8 +490,7 @@ impl Type1 {
 //         return True
 
 impl Type1 {
-    // TODO Type signature
-    fn fallback2(&mut self, options_section: ()) {
+    fn fallback2(&self, options_section: &str) -> bool {
         unimplemented!()
     }
 }
