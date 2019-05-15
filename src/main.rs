@@ -912,47 +912,34 @@ impl TypeDeroff {
 
 #[test]
 fn test_file_is_overwritable() {
-    use std::path::Path;
-
+    use tests::TestPath;
     // Setup file paths
     // Good File Paths
-    let good_string = String::from("good.txt");
-    let good_path = Path::new(&good_string);
+    let good_path = &TestPath::new("good.txt");
 
     // Bad File paths
-    let bad_string = String::from("bad.txt");
-    let bad_path = Path::new(&bad_string);
-
-    // Remove any leftover files if the already
-    // exist for a previous test failure
-    tests::remove_test_file(good_path);
-    tests::remove_test_file(bad_path);
+    let bad_path = &TestPath::new("bad.txt");
 
     // Create good test file
-    tests::create_test_file(good_path);
+    tests::create_test_file(good_path).unwrap();
 
     // Test for IO Error when File doesn't exist
     let result = file_is_overwritable(bad_path);
     assert!(result.is_err());
 
     // Create bad test file
-    tests::create_test_file(bad_path);
+    tests::create_test_file(bad_path).unwrap();
 
     // Tests
     let result = file_is_overwritable(good_path);
     assert_eq!(result, Ok(true));
     let result = file_is_overwritable(bad_path);
     assert_eq!(result, Ok(false));
-
-    // Tear down
-    tests::remove_test_file(good_path);
-    tests::remove_test_file(bad_path);
 }
 
 // Return whether the file at the given path is overwritable
 // Raises IOError if it cannot be opened
 fn file_is_overwritable(path: &Path) -> Result<bool, String> {
-    use std::error::Error;
     use std::fs::File;
     use std::io::BufRead;
     use std::io::BufReader;
@@ -1467,9 +1454,9 @@ fn main() -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    pub(crate) use test_path::TestPath;
 
-    pub fn create_test_file(path: &Path) -> std::io::Result<()> {
+    pub(super) fn create_test_file(path: &TestPath) -> std::io::Result<()> {
         use std::fs::File;
         use std::io::prelude::*;
         let mut file = File::create(path)?;
@@ -1482,10 +1469,45 @@ mod tests {
         Ok(())
     }
 
-    pub fn remove_test_file(path: &Path) -> std::io::Result<()> {
+    mod test_path {
         use std::fs;
-        fs::remove_file(path)?;
-        Ok(())
-    }
+        use std::ops::Deref;
+        use std::path::{Path, PathBuf};
 
+        #[derive(Debug)]
+        pub(crate) struct TestPath(PathBuf);
+
+        impl TestPath {
+            pub(crate) fn new<P>(path: P) -> Self
+            where
+                P: AsRef<Path>,
+            {
+                Self(path.as_ref().to_owned())
+            }
+        }
+
+        impl Drop for TestPath {
+            fn drop(&mut self) {
+                if self.is_file() {
+                    let _ = fs::remove_file(self);
+                } else if self.is_dir() {
+                    let _ = fs::remove_dir_all(self);
+                }
+            }
+        }
+
+        impl AsRef<Path> for TestPath {
+            fn as_ref(&self) -> &Path {
+                &*self
+            }
+        }
+
+        impl Deref for TestPath {
+            type Target = Path;
+
+            fn deref(&self) -> &Self::Target {
+                self.0.deref()
+            }
+        }
+    }
 }
