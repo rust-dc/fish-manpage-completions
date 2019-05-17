@@ -1,6 +1,8 @@
 fish-manpage-completions
 ========================
 
+[![Build Status](https://travis-ci.com/rust-dc/fish-manpage-completions.svg?branch=master)](https://travis-ci.com/rust-dc/fish-manpage-completions)
+
 Port! Not Starboard! From Python to Rust!
 
 We're planning to do an initial naïve port from the Python source with the same
