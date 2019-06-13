@@ -541,7 +541,7 @@ fn test_is_white() {
 //     def str_eq(offset, other, len):
 //         return self.s[offset:offset+len] == other[:len]
 
-//     def prch(self, idx):
+//     def not_whitespace(self, idx):
 //         # Note that this return False for the empty string (idx >= len(self.s))
 //         ch = self.s[idx:idx+1]
 //         return ch not in ' \t\n'
@@ -555,14 +555,14 @@ fn test_is_white() {
 //     def font2(self):
 //         if self.s[0:2] == '\\f':
 //             c = self.str_at(2)
-//             if c == '(' and self.prch(3) and self.prch(4):
+//             if c == '(' and self.not_whitespace(3) and self.not_whitespace(4):
 //                 self.skip_char(5)
 //                 return True
 //             elif c == '[':
 //                 self.skip_char(2)
-//                 while self.prch(0) and self.str_at(0) != ']': self.skip_char()
+//                 while self.not_whitespace(0) and self.str_at(0) != ']': self.skip_char()
 //                 if self.str_at(0) == ']': self.skip_char()
-//             elif self.prch(2):
+//             elif self.not_whitespace(2):
 //                 self.skip_char(3)
 //                 return True
 //         return False
@@ -592,22 +592,22 @@ fn test_is_white() {
 //             if self.s[3:5] == 'dy':
 //                 self.skip_char(5)
 //                 return True
-//             elif self.str_at(2) == '(' and self.prch(3) and self.prch(4):
+//             elif self.str_at(2) == '(' and self.not_whitespace(3) and self.not_whitespace(4):
 //                 self.skip_char(5)
 //                 return True
-//             elif self.str_at(2) == '[' and self.prch(3):
+//             elif self.str_at(2) == '[' and self.not_whitespace(3):
 //                 self.skip_char(3)
 //                 while self.str_at(0) and self.str_at(0) != ']':
 //                     self.skip_char()
 //                 return True
-//             elif self.prch(2):
+//             elif self.not_whitespace(2):
 //                 self.skip_char(3)
 //                 return True
 //         elif s0s1 == '\\*':
-//             if self.str_at(2) == '(' and self.prch(3) and self.prch(4):
+//             if self.str_at(2) == '(' and self.not_whitespace(3) and self.not_whitespace(4):
 //                 reg = self.s[3:5]
 //                 self.skip_char(5)
-//             elif self.str_at(2) == '[' and self.prch(3):
+//             elif self.str_at(2) == '[' and self.not_whitespace(3):
 //                 self.skip_char(3)
 //                 while self.str_at(0) and self.str_at(0) != ']':
 //                     reg = reg + self.str_at(0)
@@ -616,7 +616,7 @@ fn test_is_white() {
 //                     self.skip_char()
 //                 else:
 //                     return False
-//             elif self.prch(2):
+//             elif self.not_whitespace(2):
 //                 reg = self.str_at(2)
 //                 self.skip_char(3)
 //             else:
@@ -639,7 +639,7 @@ fn test_is_white() {
 
 //     def spec(self):
 //         self.specletter = False
-//         if self.s[0:2] == '\\(' and self.prch(2) and self.prch(3):
+//         if self.s[0:2] == '\\(' and self.not_whitespace(2) and self.not_whitespace(3):
 //             key = self.s[2:4]
 //             if key in Deroffer.g_specs_specletter:
 //                 self.condputs(Deroffer.g_specs_specletter[key])
