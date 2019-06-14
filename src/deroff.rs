@@ -552,21 +552,6 @@ fn test_is_white() {
 //         self.skip_char(match.end())
 //         return True
 
-//     def font2(self):
-//         if self.s[0:2] == '\\f':
-//             c = self.str_at(2)
-//             if c == '(' and self.not_whitespace(3) and self.not_whitespace(4):
-//                 self.skip_char(5)
-//                 return True
-//             elif c == '[':
-//                 self.skip_char(2)
-//                 while self.not_whitespace(0) and self.str_at(0) != ']': self.skip_char()
-//                 if self.str_at(0) == ']': self.skip_char()
-//             elif self.not_whitespace(2):
-//                 self.skip_char(3)
-//                 return True
-//         return False
-
 //     def comment(self):
 //         # Here we require that the string start with \"
 //         while self.str_at(0) and self.str_at(0) != '\n': self.skip_char()
