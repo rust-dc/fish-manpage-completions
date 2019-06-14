@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 use itertools::Itertools;
 use structopt::StructOpt;
 
+mod util;
+
 // # -*- coding: utf-8 -*-
 //
 // # Run me like this: ./create_manpage_completions.py /usr/share/man/man{1,8}/* > man_completions.fish
@@ -305,15 +307,6 @@ fn complete_command(
 // TODO args / arg types?
 fn built_command() {
     unimplemented!()
-}
-
-macro_rules! regex {
-    ($pattern: expr) => {{
-        lazy_static::lazy_static! {
-            static ref REGEX: regex::Regex = regex::Regex::new($pattern).unwrap();
-        }
-        &REGEX
-    }};
 }
 
 fn remove_groff_formatting(data: &str) -> String {
