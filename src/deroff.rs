@@ -2,6 +2,16 @@
 // """ Deroff.py, ported to Python from the venerable deroff.c """
 use regex::Regex;
 
+
+use std::collections::HashMap;
+
+type TODO_TYPE = u8;
+type TODO_NUMBER_TYPE = i8;
+
+const OPTIONS: u8 = 0;
+const FORMAT: u8 = 1;
+const DATA: u8 = 2;
+
 // class Deroffer:
 struct Deroffer {
     g_re_word: &'static Regex,
@@ -9,6 +19,28 @@ struct Deroffer {
     g_re_not_backslash_or_whitespace: &'static Regex,
     g_re_newline_collapse: &'static Regex,
     g_re_font: &'static Regex,
+
+    reg_table: HashMap<TODO_TYPE, TODO_TYPE>,
+    tr_from: String,
+    tr_to: String,
+    tr: String,
+    nls: TODO_NUMBER_TYPE,
+    specletter: bool,
+    refer: bool,
+    r#macro: TODO_NUMBER_TYPE,
+    nobody: bool,
+    inlist: bool,
+    inheader: bool,
+    pic: bool,
+    tbl: bool,
+    tblstate: TODO_NUMBER_TYPE,
+    tblTab: String,
+    eqn: bool,
+    skipheaders: bool,
+    skiplists: bool,
+    ignore_sonx: bool,
+    output: Vec<TODO_TYPE>,
+    name: String,
 }
 
 impl Deroffer {
