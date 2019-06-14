@@ -8,9 +8,14 @@ use std::collections::HashMap;
 type TODO_TYPE = u8;
 type TODO_NUMBER_TYPE = i8;
 
-const OPTIONS: u8 = 0;
-const FORMAT: u8 = 1;
-const DATA: u8 = 2;
+const SKIP_LISTS: bool = false;
+const SKIP_HEADERS: bool = false;
+
+enum TblState {
+    Options,
+    Format,
+    Data,
+}
 
 // class Deroffer:
 struct Deroffer {
@@ -24,23 +29,21 @@ struct Deroffer {
     tr_from: String,
     tr_to: String,
     tr: String,
-    nls: TODO_NUMBER_TYPE,
     specletter: bool,
     refer: bool,
-    r#macro: TODO_NUMBER_TYPE,
+    r#macro: bool,
     nobody: bool,
     inlist: bool,
     inheader: bool,
     pic: bool,
     tbl: bool,
-    tblstate: TODO_NUMBER_TYPE,
+    tblstate: TblState,
     tblTab: String,
     eqn: bool,
-    skipheaders: bool,
-    skiplists: bool,
-    ignore_sonx: bool,
     output: Vec<TODO_TYPE>,
     name: String,
+
+    s: String, // This is not explicitly defined in python code
 }
 
 impl Deroffer {
@@ -56,7 +59,27 @@ impl Deroffer {
                     (\(\S{2})  | # Open paren, then two printable chars
                     (\[\S*?\]) | # Open bracket, zero or more printable characters, then close bracket
                     \S)          # Any printable character
-                   "##)
+                   "##),
+
+            reg_table: HashMap::new(),
+            tr_from: String::new(),
+            tr_to: String::new(),
+            tr: String::new(),
+            specletter: false,
+            refer: false,
+            r#macro: false,
+            nobody: false,
+            inlist: false,
+            inheader: false,
+            pic: false,
+            tbl: false,
+            tblstate: TblState::Options,
+            tblTab: String::new(),
+            eqn: false,
+            output: Vec::new(),
+            name: String::new(),
+
+            s: String::new(), // This is not explicitly defined in python code
         }
     }
     // for the moment, return small strings, until we figure out what
@@ -496,6 +519,24 @@ impl Deroffer {
     fn macro_other(&mut self) -> bool {
         unimplemented!()
     }
+
+    fn not_whitespace(s: &str, idx: usize) -> bool {
+        // # Note that this return False for the empty string (idx >= len(self.s))
+        // ch = self.s[idx:idx+1]
+        // return ch not in ' \t\n'
+        // TODO Investigate checking for ASCII whitespace after mvp
+        s.get(idx..(idx + 1))
+            .map(|string| " \t\n".contains(string))
+            .unwrap_or_default()
+    }
+}
+
+#[test]
+fn test_not_whitespace() {
+    assert_eq!(Deroffer::not_whitespace("", 0), false);
+    assert_eq!(Deroffer::not_whitespace("", 9), false);
+    assert_eq!(Deroffer::not_whitespace("ab d", 2), true);
+    assert_eq!(Deroffer::not_whitespace("ab d", 3), false);
 }
 
 #[test]
@@ -572,11 +613,6 @@ fn test_is_white() {
 
 //     def str_eq(offset, other, len):
 //         return self.s[offset:offset+len] == other[:len]
-
-//     def not_whitespace(self, idx):
-//         # Note that this return False for the empty string (idx >= len(self.s))
-//         ch = self.s[idx:idx+1]
-//         return ch not in ' \t\n'
 
 //     def font(self):
 //         match = Deroffer.g_re_font.match(self.s)
