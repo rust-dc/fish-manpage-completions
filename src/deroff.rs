@@ -318,6 +318,152 @@ impl Deroffer {
             c => c.chars().all(|c| c.is_whitespace()),
         }
     }
+
+    // Replaces the g_macro_dict lookup in the Python code
+    fn g_macro_dispatch<'a>(&mut self, s: &'a str) -> bool {
+        match s {
+            "SH" => self.macro_sh(),
+            "SS" => self.macro_ss_ip(),
+            "IP" => self.macro_ss_ip(),
+            "H " => self.macro_ss_ip(),
+            "I " => self.macro_i_ir(),
+            "IR" => self.macro_i_ir(),
+            "IB" => self.macro_i_ir(),
+            "B " => self.macro_i_ir(),
+            "BR" => self.macro_i_ir(),
+            "BI" => self.macro_i_ir(),
+            "R " => self.macro_i_ir(),
+            "RB" => self.macro_i_ir(),
+            "RI" => self.macro_i_ir(),
+            "AB" => self.macro_i_ir(),
+            "Nm" => self.macro_nm(),
+            "] " => self.macro_close_bracket(),
+            "PS" => self.macro_ps(),
+            "PE" => self.macro_pe(),
+            "TS" => self.macro_ts(),
+            "T&" => self.macro_t_and(),
+            "TE" => self.macro_te(),
+            "EQ" => self.macro_eq(),
+            "EN" => self.macro_en(),
+            "R1" => self.macro_r1(),
+            "R2" => self.macro_r2(),
+            "de" => self.macro_de(),
+            "BL" => self.macro_bl_vl(),
+            "VL" => self.macro_bl_vl(),
+            "AL" => self.macro_bl_vl(),
+            "LB" => self.macro_bl_vl(),
+            "RL" => self.macro_bl_vl(),
+            "ML" => self.macro_bl_vl(),
+            "DL" => self.macro_bl_vl(),
+            "BV" => self.macro_bv(),
+            "LE" => self.macro_le(),
+            "LP" => self.macro_lp_pp(),
+            "PP" => self.macro_lp_pp(),
+            "P\n" => self.macro_lp_pp(),
+            "ds" => self.macro_ds(),
+            "so" => self.macro_so_nx(),
+            "nx" => self.macro_so_nx(),
+            "tr" => self.macro_tr(),
+            "sp" => self.macro_s(),
+            _ => self.macro_other(),
+        }
+    }
+
+    fn macro_sh(&mut self) -> bool {
+        false
+    }
+
+    fn macro_ss_ip(&mut self) -> bool {
+        false
+    }
+
+    fn macro_i_ir(&mut self) -> bool {
+        false
+    }
+
+    fn macro_nm(&mut self) -> bool {
+        false
+    }
+
+    fn macro_close_bracket(&mut self) -> bool {
+        false
+    }
+
+    fn macro_ps(&mut self) -> bool {
+        false
+    }
+
+    fn macro_pe(&mut self) -> bool {
+        false
+    }
+
+    fn macro_ts(&mut self) -> bool {
+        false
+    }
+
+    fn macro_t_and(&mut self) -> bool {
+        false
+    }
+
+    fn macro_te(&mut self) -> bool {
+        false
+    }
+
+    fn macro_eq(&mut self) -> bool {
+        false
+    }
+
+    fn macro_en(&mut self) -> bool {
+        false
+    }
+
+    fn macro_r1(&mut self) -> bool {
+        false
+    }
+
+    fn macro_r2(&mut self) -> bool {
+        false
+    }
+
+    fn macro_de(&mut self) -> bool {
+        false
+    }
+
+    fn macro_bl_vl(&mut self) -> bool {
+        false
+    }
+
+    fn macro_bv(&mut self) -> bool {
+        false
+    }
+
+    fn macro_le(&mut self) -> bool {
+        false
+    }
+
+    fn macro_lp_pp(&mut self) -> bool {
+        false
+    }
+
+    fn macro_ds(&mut self) -> bool {
+        false
+    }
+
+    fn macro_so_nx(&mut self) -> bool {
+        false
+    }
+
+    fn macro_tr(&mut self) -> bool {
+        false
+    }
+
+    fn macro_s(&mut self) -> bool {
+        false
+    }
+
+    fn macro_other(&mut self) -> bool {
+        false
+    }
 }
 
 #[test]
@@ -336,9 +482,6 @@ fn test_is_white() {
     assert_eq!(Deroffer::is_white("ab cd", 2), true);
     assert_eq!(Deroffer::is_white("ab cd", 3), false);
 }
-
-//     # This gets filled in in __init__ below
-//     g_macro_dict = False
 
 //     def __init__(self):
 //         self.reg_table = {}
@@ -369,52 +512,6 @@ fn test_is_white() {
 //
 //         # words is uninteresting and should be treated as false
 //
-//         if not Deroffer.g_macro_dict:
-//             Deroffer.g_macro_dict = {
-//                 'SH': Deroffer.macro_sh,
-//                 'SS': Deroffer.macro_ss_ip,
-//                 'IP': Deroffer.macro_ss_ip,
-//                 'H ': Deroffer.macro_ss_ip,
-//                 'I ': Deroffer.macro_i_ir,
-//                 'IR': Deroffer.macro_i_ir,
-//                 'IB': Deroffer.macro_i_ir,
-//                 'B ': Deroffer.macro_i_ir,
-//                 'BR': Deroffer.macro_i_ir,
-//                 'BI': Deroffer.macro_i_ir,
-//                 'R ': Deroffer.macro_i_ir,
-//                 'RB': Deroffer.macro_i_ir,
-//                 'RI': Deroffer.macro_i_ir,
-//                 'AB': Deroffer.macro_i_ir,
-//                 'Nm': Deroffer.macro_Nm,
-//                 '] ': Deroffer.macro_close_bracket,
-//                 'PS': Deroffer.macro_ps,
-//                 'PE': Deroffer.macro_pe,
-//                 'TS': Deroffer.macro_ts,
-//                 'T&': Deroffer.macro_t_and,
-//                 'TE': Deroffer.macro_te,
-//                 'EQ': Deroffer.macro_eq,
-//                 'EN': Deroffer.macro_en,
-//                 'R1': Deroffer.macro_r1,
-//                 'R2': Deroffer.macro_r2,
-//                 'de': Deroffer.macro_de,
-//                 'BL': Deroffer.macro_bl_vl,
-//                 'VL': Deroffer.macro_bl_vl,
-//                 'AL': Deroffer.macro_bl_vl,
-//                 'LB': Deroffer.macro_bl_vl,
-//                 'RL': Deroffer.macro_bl_vl,
-//                 'ML': Deroffer.macro_bl_vl,
-//                 'DL': Deroffer.macro_bl_vl,
-//                 'BV': Deroffer.macro_bv,
-//                 'LE': Deroffer.macro_le,
-//                 'LP': Deroffer.macro_lp_pp,
-//                 'PP': Deroffer.macro_lp_pp,
-//                 'P\n': Deroffer.macro_lp_pp,
-//                 'ds': Deroffer.macro_ds,
-//                 'so': Deroffer.macro_so_nx,
-//                 'nx': Deroffer.macro_so_nx,
-//                 'tr': Deroffer.macro_tr,
-//                 'sp': Deroffer.macro_sp
-//             }
 
 //     def flush_output(self, where):
 //         if where:
@@ -715,7 +812,7 @@ fn test_is_white() {
 //         pass
 //         return False
 
-//     def macro_Nm(self):
+//     def macro_nm(self):
 //         if self.s == 'Nm\n':
 //             self.condputs(self.name)
 //         else:
@@ -867,6 +964,7 @@ fn test_is_white() {
 //         self.nobody = False
 //         s0s1 = self.s[0:2]
 //
+// RUST NOTE: use Deroffer.g_macro_dispatch(s0s1) which will return like macro_func does below
 //         macro_func = Deroffer.g_macro_dict.get(s0s1, Deroffer.macro_other)
 //         if macro_func(self):
 //             return True
