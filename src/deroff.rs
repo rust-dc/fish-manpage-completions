@@ -1,10 +1,40 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/deroff.py
 // """ Deroff.py, ported to Python from the venerable deroff.c """
+extern crate regex;
+use regex::Regex;
 
 // class Deroffer:
-struct Deroffer {}
+struct Deroffer {
+    g_re_word: &'static Regex,
+    g_re_number: &'static Regex,
+    g_re_esc_char: &'static Regex,
+    g_re_not_backslash_or_whitespace: &'static Regex,
+    g_re_newline_collapse: &'static Regex,
+    g_re_font: &'static Regex,
+}
 
 impl Deroffer {
+    fn new() -> Deroffer {
+        Deroffer {
+            g_re_word: crate::regex!(r##"[a-zA-Z_]+"##),
+            g_re_number: crate::regex!(r##"[+-]?\d+"##),
+            g_re_esc_char: crate::regex!(
+                r##"(?x)([a-zA-Z_]) |  # word
+                    ([+-]?\d+)      |  # number
+                    \\                 # backslash for escape seqs
+                    "##
+            ),
+            // sequence of not backslash or whitespace
+            g_re_not_backslash_or_whitespace: crate::regex!(r##"[^ \t\n\r\f\v\\]+"##),
+            g_re_newline_collapse: crate::regex!(r##"\n{3,}"##),
+            g_re_font: crate::regex!(
+                r##"\\f(         # Starts with backslash f
+                    (\(\S{2})  | # Open paren, then two printable chars
+                    (\[\S*?\]) | # Open bracket, zero or more printable characters, then close bracket
+                    \S)          # Any printable character
+                   "##)
+        }
+    }
     // for the moment, return small strings, until we figure out what
     // it should really be doing
     fn g_specs_specletter(key: &str) -> Option<&'static str> {
@@ -305,6 +335,7 @@ fn test_str_at() {
     assert_eq!(Deroffer::str_at("ab cd", 1), "b");
     assert_eq!(Deroffer::str_at("🗻", 1), ""); // Python would return "🗻" from this
 }
+
 #[test]
 fn test_is_white() {
     assert_eq!(Deroffer::is_white("", 1), false);
@@ -313,24 +344,7 @@ fn test_is_white() {
     assert_eq!(Deroffer::is_white("ab cd", 2), true);
     assert_eq!(Deroffer::is_white("ab cd", 3), false);
 }
-//
-//     g_re_word = re.compile(r'[a-zA-Z_]+') # equivalent to the word() method
-//     g_re_number = re.compile(r'[+-]?\d+') # equivalent to the number() method
-//     g_re_esc_char = re.compile(r"""([a-zA-Z_]) |   # Word
-//                                    ([+-]?\d)   |   # Number
-//                                    \\              # Backslash (for escape seq)
-//                                """, re.VERBOSE)
-//
-//     g_re_not_backslash_or_whitespace = re.compile(r'[^ \t\n\r\f\v\\]+') # Match a sequence of not backslash or whitespace
-//
-//     g_re_newline_collapse = re.compile(r'\n{3,}')
-//
-//     g_re_font = re.compile(r"""\\f(         # Starts with backslash f
-//                                (\(\S{2}) |  # Open paren, then two printable chars
-//                                (\[\S*?\]) |  # Open bracket, zero or more printable characters, then close bracket
-//                                \S)          # Any printable character
-//                             """,  re.VERBOSE)
-//
+
 //     # This gets filled in in __init__ below
 //     g_macro_dict = False
 
