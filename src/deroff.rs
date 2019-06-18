@@ -320,7 +320,7 @@ impl Deroffer {
     }
 
     // Replaces the g_macro_dict lookup in the Python code
-    fn g_macro_dispatch<'a>(&mut self, s: &'a str) -> bool {
+    fn g_macro_dispatch(&mut self, s: &str) -> bool {
         match s {
             "SH" => self.macro_sh(),
             "SS" => self.macro_ss_ip(),
