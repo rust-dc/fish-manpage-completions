@@ -1,5 +1,3 @@
-extern crate regex;
-
 #[macro_export]
 macro_rules! regex {
     ($pattern: expr) => {{

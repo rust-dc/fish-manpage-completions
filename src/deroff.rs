@@ -1,13 +1,11 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/deroff.py
 // """ Deroff.py, ported to Python from the venerable deroff.c """
-extern crate regex;
 use regex::Regex;
 
 // class Deroffer:
 struct Deroffer {
     g_re_word: &'static Regex,
     g_re_number: &'static Regex,
-    g_re_esc_char: &'static Regex,
     g_re_not_backslash_or_whitespace: &'static Regex,
     g_re_newline_collapse: &'static Regex,
     g_re_font: &'static Regex,
@@ -18,17 +16,11 @@ impl Deroffer {
         Deroffer {
             g_re_word: crate::regex!(r##"[a-zA-Z_]+"##),
             g_re_number: crate::regex!(r##"[+-]?\d+"##),
-            g_re_esc_char: crate::regex!(
-                r##"(?x)([a-zA-Z_]) |  # word
-                    ([+-]?\d+)      |  # number
-                    \\                 # backslash for escape seqs
-                    "##
-            ),
             // sequence of not backslash or whitespace
             g_re_not_backslash_or_whitespace: crate::regex!(r##"[^ \t\n\r\f\v\\]+"##),
             g_re_newline_collapse: crate::regex!(r##"\n{3,}"##),
             g_re_font: crate::regex!(
-                r##"\\f(         # Starts with backslash f
+                r##"(?x)\\f(     # Starts with backslash f
                     (\(\S{2})  | # Open paren, then two printable chars
                     (\[\S*?\]) | # Open bracket, zero or more printable characters, then close bracket
                     \S)          # Any printable character
