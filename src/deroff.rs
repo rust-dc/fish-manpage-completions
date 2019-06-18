@@ -370,99 +370,99 @@ impl Deroffer {
     }
 
     fn macro_sh(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_ss_ip(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_i_ir(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_nm(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_close_bracket(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_ps(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_pe(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_ts(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_t_and(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_te(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_eq(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_en(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_r1(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_r2(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_de(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_bl_vl(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_bv(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_le(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_lp_pp(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_ds(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_so_nx(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_tr(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_s(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 
     fn macro_other(&mut self) -> bool {
-        false
+        unimplemented!()
     }
 }
 
