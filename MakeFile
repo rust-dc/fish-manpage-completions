@@ -1,0 +1,6 @@
+CARGO = cargo
+
+.PHONY: test
+
+test:
+	@$(CARGO) test --verbose --all -- --test-threads=1

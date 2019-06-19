@@ -16,6 +16,11 @@ that includes a link to your comment.
 For in-depth discussion of a particularly hairy function, open a dedicated issue
 or pipe up on [the RustDC Zulip chat](https://rust-dc.zulipchat.com/).
 
+Development
+-----------
+
+To run the tests use `make test`
+
 Examples
 --------
 
