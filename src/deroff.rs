@@ -2,6 +2,20 @@
 // """ Deroff.py, ported to Python from the venerable deroff.c """
 use regex::Regex;
 
+use std::collections::HashMap;
+
+type TODO_TYPE = u8;
+type TODO_NUMBER_TYPE = i8;
+
+const SKIP_LISTS: bool = false;
+const SKIP_HEADERS: bool = false;
+
+enum TblState {
+    Options,
+    Format,
+    Data,
+}
+
 // class Deroffer:
 struct Deroffer {
     g_re_word: &'static Regex,
@@ -9,6 +23,26 @@ struct Deroffer {
     g_re_not_backslash_or_whitespace: &'static Regex,
     g_re_newline_collapse: &'static Regex,
     g_re_font: &'static Regex,
+
+    reg_table: HashMap<TODO_TYPE, TODO_TYPE>,
+    tr_from: String,
+    tr_to: String,
+    tr: String,
+    specletter: bool,
+    refer: bool,
+    r#macro: bool,
+    nobody: bool,
+    inlist: bool,
+    inheader: bool,
+    pic: bool,
+    tbl: bool,
+    tblstate: TblState,
+    tblTab: String,
+    eqn: bool,
+    output: Vec<TODO_TYPE>,
+    name: String,
+
+    s: String, // This is not explicitly defined in python code
 }
 
 impl Deroffer {
@@ -24,7 +58,27 @@ impl Deroffer {
                     (\(\S{2})  | # Open paren, then two printable chars
                     (\[\S*?\]) | # Open bracket, zero or more printable characters, then close bracket
                     \S)          # Any printable character
-                   "##)
+                   "##),
+
+            reg_table: HashMap::new(),
+            tr_from: String::new(),
+            tr_to: String::new(),
+            tr: String::new(),
+            specletter: false,
+            refer: false,
+            r#macro: false,
+            nobody: false,
+            inlist: false,
+            inheader: false,
+            pic: false,
+            tbl: false,
+            tblstate: TblState::Options,
+            tblTab: String::new(),
+            eqn: false,
+            output: Vec::new(),
+            name: String::new(),
+
+            s: String::new(), // This is not explicitly defined in python code
         }
     }
     // for the moment, return small strings, until we figure out what
@@ -464,6 +518,24 @@ impl Deroffer {
     fn macro_other(&mut self) -> bool {
         unimplemented!()
     }
+
+    fn not_whitespace(s: &str, idx: usize) -> bool {
+        // # Note that this return False for the empty string (idx >= len(self.s))
+        // ch = self.s[idx:idx+1]
+        // return ch not in ' \t\n'
+        // TODO Investigate checking for ASCII whitespace after mvp
+        s.get(idx..(idx + 1))
+            .map(|string| " \t\n".contains(string))
+            .unwrap_or_default()
+    }
+}
+
+#[test]
+fn test_not_whitespace() {
+    assert_eq!(Deroffer::not_whitespace("", 0), false);
+    assert_eq!(Deroffer::not_whitespace("", 9), false);
+    assert_eq!(Deroffer::not_whitespace("ab d", 2), true);
+    assert_eq!(Deroffer::not_whitespace("ab d", 3), false);
 }
 
 #[test]
@@ -541,31 +613,11 @@ fn test_is_white() {
 //     def str_eq(offset, other, len):
 //         return self.s[offset:offset+len] == other[:len]
 
-//     def prch(self, idx):
-//         # Note that this return False for the empty string (idx >= len(self.s))
-//         ch = self.s[idx:idx+1]
-//         return ch not in ' \t\n'
-
 //     def font(self):
 //         match = Deroffer.g_re_font.match(self.s)
 //         if not match: return False
 //         self.skip_char(match.end())
 //         return True
-
-//     def font2(self):
-//         if self.s[0:2] == '\\f':
-//             c = self.str_at(2)
-//             if c == '(' and self.prch(3) and self.prch(4):
-//                 self.skip_char(5)
-//                 return True
-//             elif c == '[':
-//                 self.skip_char(2)
-//                 while self.prch(0) and self.str_at(0) != ']': self.skip_char()
-//                 if self.str_at(0) == ']': self.skip_char()
-//             elif self.prch(2):
-//                 self.skip_char(3)
-//                 return True
-//         return False
 
 //     def comment(self):
 //         # Here we require that the string start with \"
@@ -592,22 +644,22 @@ fn test_is_white() {
 //             if self.s[3:5] == 'dy':
 //                 self.skip_char(5)
 //                 return True
-//             elif self.str_at(2) == '(' and self.prch(3) and self.prch(4):
+//             elif self.str_at(2) == '(' and self.not_whitespace(3) and self.not_whitespace(4):
 //                 self.skip_char(5)
 //                 return True
-//             elif self.str_at(2) == '[' and self.prch(3):
+//             elif self.str_at(2) == '[' and self.not_whitespace(3):
 //                 self.skip_char(3)
 //                 while self.str_at(0) and self.str_at(0) != ']':
 //                     self.skip_char()
 //                 return True
-//             elif self.prch(2):
+//             elif self.not_whitespace(2):
 //                 self.skip_char(3)
 //                 return True
 //         elif s0s1 == '\\*':
-//             if self.str_at(2) == '(' and self.prch(3) and self.prch(4):
+//             if self.str_at(2) == '(' and self.not_whitespace(3) and self.not_whitespace(4):
 //                 reg = self.s[3:5]
 //                 self.skip_char(5)
-//             elif self.str_at(2) == '[' and self.prch(3):
+//             elif self.str_at(2) == '[' and self.not_whitespace(3):
 //                 self.skip_char(3)
 //                 while self.str_at(0) and self.str_at(0) != ']':
 //                     reg = reg + self.str_at(0)
@@ -616,7 +668,7 @@ fn test_is_white() {
 //                     self.skip_char()
 //                 else:
 //                     return False
-//             elif self.prch(2):
+//             elif self.not_whitespace(2):
 //                 reg = self.str_at(2)
 //                 self.skip_char(3)
 //             else:
@@ -639,7 +691,7 @@ fn test_is_white() {
 
 //     def spec(self):
 //         self.specletter = False
-//         if self.s[0:2] == '\\(' and self.prch(2) and self.prch(3):
+//         if self.s[0:2] == '\\(' and self.not_whitespace(2) and self.not_whitespace(3):
 //             key = self.s[2:4]
 //             if key in Deroffer.g_specs_specletter:
 //                 self.condputs(Deroffer.g_specs_specletter[key])
