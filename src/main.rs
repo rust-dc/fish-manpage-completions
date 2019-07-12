@@ -249,7 +249,7 @@ fn fish_options(options: &str, existing_options: &mut HashSet<String>) -> Vec<St
             "-{} {}",
             fish_opt,
             // Direct indexing of `option` won't panic due to how `num_dashes`
-            // is calculated.
+            // is calculated. (I promise!)
             fish_escape_single_quote(String::from(&option[num_dashes..]))
         );
 
