@@ -533,21 +533,6 @@ impl Deroffer {
     }
 }
 
-// def deroff_files(files):
-//     for arg in files:
-//         sys.stderr.write(arg + '\n')
-//         if arg.endswith('.gz'):
-//             f = gzip.open(arg, 'r')
-//             str = f.read()
-//             if IS_PY3: str = str.decode('latin-1')
-//         else:
-//             f = open(arg, 'r')
-//             str = f.read()
-//         d = Deroffer()
-//         d.deroff(str)
-//         d.flush_output(sys.stdout)
-//         f.close()
-
 fn deroff_files(files: &[String]) -> std::io::Result<()> {
     for arg in files {
         eprintln!("{}", arg);
