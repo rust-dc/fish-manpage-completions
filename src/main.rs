@@ -263,38 +263,42 @@ fn fish_options(options: &str, existing_options: &mut HashSet<String>) -> Vec<St
 
 #[test]
 fn test_fish_options() {
-    let expected_output: Vec<String> = vec!["-s 'f'".into(), "-l 'force'".into()];
-    let options = "-f, --force[=false]";
-    let mut existing_options: HashSet<String> = Default::default();
-    assert_eq!(
-        fish_options(options, &mut existing_options),
-        expected_output
-    );
-    assert_eq!(
-        expected_output.iter().cloned().collect::<HashSet<_>>(),
-        existing_options
-    );
+    {
+        let expected_output: Vec<String> = vec!["-s 'f'".into(), "-l 'force'".into()];
+        let options = "-f, --force[=false]";
+        let mut existing_options: HashSet<String> = Default::default();
+        assert_eq!(
+            fish_options(options, &mut existing_options),
+            expected_output
+        );
+        assert_eq!(
+            expected_output.iter().cloned().collect::<HashSet<_>>(),
+            existing_options
+        );
+    }
 
-    use std::iter::once;
+    {
+        use std::iter::once;
 
-    let expected_output: Vec<String> = vec!["-l 'force'".into()];
-    let options = "-f, --force[=false]";
-    let mut existing_options: HashSet<String> = Default::default();
-    existing_options.insert("-s 'f'".into());
-    existing_options.insert("-l 'something'".into());
-    assert_eq!(
-        fish_options(options, &mut existing_options),
-        expected_output
-    );
-    assert_eq!(
-        expected_output
-            .iter()
-            .cloned()
-            .chain(once("-s 'f'".to_string()))
-            .chain(once("-l 'something'".to_string()))
-            .collect::<HashSet<_>>(),
-        existing_options,
-    );
+        let expected_output: Vec<String> = vec!["-l 'force'".into()];
+        let options = "-f, --force[=false]";
+        let mut existing_options: HashSet<String> = Default::default();
+        existing_options.insert("-s 'f'".into());
+        existing_options.insert("-l 'something'".into());
+        assert_eq!(
+            fish_options(options, &mut existing_options),
+            expected_output
+        );
+        assert_eq!(
+            expected_output
+                .iter()
+                .cloned()
+                .chain(once("-s 'f'".to_string()))
+                .chain(once("-l 'something'".to_string()))
+                .collect::<HashSet<_>>(),
+            existing_options,
+        );
+    }
 }
 
 /// # Panics
