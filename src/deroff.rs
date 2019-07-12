@@ -392,6 +392,13 @@ impl Deroffer {
         }
     }
 
+    fn digit(s: &str, idx: usize) -> bool {
+        match Self::str_at(s, idx) {
+            "" => false,
+            c => c.chars().all(|c| c.is_digit(10)),
+        }
+    }
+
     // Replaces the g_macro_dict lookup in the Python code
     fn g_macro_dispatch(&mut self, s: &str) -> bool {
         match s {
@@ -611,6 +618,15 @@ fn test_is_white() {
     assert_eq!(Deroffer::is_white("ab cd", 3), false);
 }
 
+#[test]
+fn test_digit() {
+    assert_eq!(Deroffer::digit("0", 0), true);
+    assert_eq!(Deroffer::digit("9", 0), true);
+    assert_eq!(Deroffer::digit("", 1), false);
+    assert_eq!(Deroffer::digit("1", 1), false);
+    assert_eq!(Deroffer::digit("a", 0), false);
+    assert_eq!(Deroffer::digit(" ", 0), false);
+}
 //     def __init__(self):
 //         self.reg_table = {}
 //         self.tr_from = ''
@@ -794,10 +810,6 @@ fn test_is_white() {
 //                     self.condputs(self.str_at(0))
 //                     self.skip_char()
 //         return True
-
-//     def digit(self, idx):
-//         ch = self.str_at(idx)
-//         return ch.isdigit()
 
 //     def number(self):
 //         match = Deroffer.g_re_number.match(self.s)
