@@ -531,6 +531,14 @@ impl Deroffer {
             .map(|string| " \t\n".contains(string))
             .unwrap_or_default()
     }
+
+    fn deroff(&mut self, string: String) {
+        unimplemented!()
+    }
+
+    fn flush_output<W: std::io::Write>(&mut self, write: W) {
+        unimplemented!()
+    }
 }
 
 fn deroff_files(files: &[String]) -> std::io::Result<()> {
@@ -545,11 +553,11 @@ fn deroff_files(files: &[String]) -> std::io::Result<()> {
         } else {
             file.read_to_string(&mut string)?;
         }
-        let d = Deroffer::new();
+        let mut d = Deroffer::new();
         println!("string: {}", string);
 
-        // d.deroff(string);
-        // d.flush_output();
+        d.deroff(string);
+        d.flush_output(std::io::stdout());
     }
     Ok(())
 }
