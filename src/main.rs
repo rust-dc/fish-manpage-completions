@@ -304,14 +304,14 @@ fn test_fish_options() {
 /// # Panics
 /// If `max_length` is zero.
 fn char_truncate_string(string: &str, max_length: usize, truncator: char) -> Cow<str> {
-    let mut chars = string
+    let mut char_indices = string
         .char_indices()
         .skip(max_length.checked_sub(1).unwrap())
         .map(|(idx, _)| idx);
 
-    let penultimate = chars.next();
+    let penultimate = char_indices.next();
 
-    if chars.next().is_some() {
+    if char_indices.next().is_some() {
         // Okay to unwrap since the item element _following_ `penultimate` is
         // `Some`.
         format!("{}{}", &string[0..penultimate.unwrap()], truncator).into()
