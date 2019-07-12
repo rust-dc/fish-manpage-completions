@@ -550,7 +550,6 @@ fn deroff_files(files: &[String]) -> std::io::Result<()> {
 
         // d.deroff(string);
         // d.flush_output();
-
     }
     Ok(())
 }
