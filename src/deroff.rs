@@ -619,10 +619,6 @@ fn test_is_white() {
 //         clean_res = Deroffer.g_re_newline_collapse.sub('\n', res)
 //         return clean_res
 
-//     def putchar(self, c):
-//         self.output.append(c)
-//         return c
-
 //     # This gets swapped in in place of condputs the first time tr gets modified
 //     def condputs_tr(self, str):
 //         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
@@ -1274,7 +1270,6 @@ fn test_is_white() {
 //             self.s = line + '\n'
 //             if not self.do_line():
 //                 break
-//             #self.putchar('\n')
 
 // def deroff_files(files):
 //     for arg in files:
