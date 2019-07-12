@@ -376,6 +376,13 @@ impl Deroffer {
         }
     }
 
+    fn letter<'a>(s: &'a str, idx: usize) -> bool {
+        match Self::str_at(s, idx) {
+            "" => false,
+            c => c.chars().all(|c| c.is_alphabetic() || c == '_'), // underscore is used in C identifiers
+        }
+    }
+
     // Replaces the g_macro_dict lookup in the Python code
     fn g_macro_dispatch(&mut self, s: &str) -> bool {
         match s {
@@ -587,6 +594,21 @@ fn test_is_white() {
     assert_eq!(Deroffer::is_white("ab cd", 3), false);
 }
 
+#[test]
+fn test_letter() {
+    assert_eq!(Deroffer::letter("a", 0), true);
+    assert_eq!(Deroffer::letter("z", 0), true);
+    assert_eq!(Deroffer::letter("A", 0), true);
+    assert_eq!(Deroffer::letter("Z", 0), true);
+    assert_eq!(Deroffer::letter("_", 0), true);
+    // str_at needs to be fixed for the following to work
+    // assert_eq!(Deroffer::letter("ï", 0), true);
+    assert_eq!(Deroffer::letter("", 1), false);
+    assert_eq!(Deroffer::letter("a", 1), false);
+    assert_eq!(Deroffer::letter(" ", 2), false);
+    assert_eq!(Deroffer::letter("1", 0), false);
+    assert_eq!(Deroffer::letter("🗻", 0), false);
+}
 //     def __init__(self):
 //         self.reg_table = {}
 //         self.tr_from = ''
@@ -781,10 +803,6 @@ fn test_is_white() {
 //                     self.condputs(self.str_at(0))
 //                     self.skip_char()
 //         return True
-
-//     def letter(self, idx):
-//         ch = self.str_at(idx)
-//         return ch.isalpha() or ch == '_' # underscore is used in C identifiers
 
 //     def digit(self, idx):
 //         ch = self.str_at(idx)
