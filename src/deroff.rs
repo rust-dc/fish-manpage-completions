@@ -1271,21 +1271,6 @@ fn test_is_white() {
 //             if not self.do_line():
 //                 break
 
-// def deroff_files(files):
-//     for arg in files:
-//         sys.stderr.write(arg + '\n')
-//         if arg.endswith('.gz'):
-//             f = gzip.open(arg, 'r')
-//             str = f.read()
-//             if IS_PY3: str = str.decode('latin-1')
-//         else:
-//             f = open(arg, 'r')
-//             str = f.read()
-//         d = Deroffer()
-//         d.deroff(str)
-//         d.flush_output(sys.stdout)
-//         f.close()
-
 // if __name__ == "__main__":
 //     import gzip
 //     paths = sys.argv[1:]
