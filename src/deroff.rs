@@ -792,10 +792,6 @@ fn test_is_white() {
 //                     self.skip_char()
 //         return True
 
-//     def letter(self, idx):
-//         ch = self.str_at(idx)
-//         return ch.isalpha() or ch == '_' # underscore is used in C identifiers
-
 //     def digit(self, idx):
 //         ch = self.str_at(idx)
 //         return ch.isdigit()
