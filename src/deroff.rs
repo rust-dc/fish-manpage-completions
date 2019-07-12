@@ -535,7 +535,7 @@ impl Deroffer {
 
 fn deroff_files(files: &[String]) -> std::io::Result<()> {
     for arg in files {
-        eprintln!("{}", arg);
+        eprintln!("processing deroff file: {}", arg);
 
         let mut file = File::open(arg)?;
         let mut string = String::new();
