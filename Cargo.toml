@@ -10,3 +10,7 @@ itertools = "*"
 regex = "*"
 lazy_static = "*"
 bstr = "*"
+libflate = "*"
+
+[dev-dependencies]
+pretty_assertions = "*"

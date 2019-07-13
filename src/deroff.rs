@@ -1,8 +1,11 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/deroff.py
 // """ Deroff.py, ported to Python from the venerable deroff.c """
+use libflate::gzip::Decoder;
 use regex::Regex;
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 
 type TODO_TYPE = u8;
 type TODO_NUMBER_TYPE = i8;
@@ -528,6 +531,35 @@ impl Deroffer {
             .map(|string| " \t\n".contains(string))
             .unwrap_or_default()
     }
+
+    fn deroff(&mut self, string: String) {
+        unimplemented!()
+    }
+
+    fn flush_output<W: std::io::Write>(&mut self, write: W) {
+        unimplemented!()
+    }
+}
+
+fn deroff_files(files: &[String]) -> std::io::Result<()> {
+    for arg in files {
+        eprintln!("processing deroff file: {}", arg);
+
+        let mut file = File::open(arg)?;
+        let mut string = String::new();
+        if arg.ends_with(".gz") {
+            let mut decoder = Decoder::new(file).unwrap();
+            decoder.read_to_string(&mut string);
+        } else {
+            file.read_to_string(&mut string)?;
+        }
+        let mut d = Deroffer::new();
+        println!("string: {}", string);
+
+        d.deroff(string);
+        d.flush_output(std::io::stdout());
+    }
+    Ok(())
 }
 
 #[test]
@@ -1246,21 +1278,6 @@ fn test_is_white() {
 //             self.s = line + '\n'
 //             if not self.do_line():
 //                 break
-
-// def deroff_files(files):
-//     for arg in files:
-//         sys.stderr.write(arg + '\n')
-//         if arg.endswith('.gz'):
-//             f = gzip.open(arg, 'r')
-//             str = f.read()
-//             if IS_PY3: str = str.decode('latin-1')
-//         else:
-//             f = open(arg, 'r')
-//             str = f.read()
-//         d = Deroffer()
-//         d.deroff(str)
-//         d.flush_output(sys.stdout)
-//         f.close()
 
 // if __name__ == "__main__":
 //     import gzip
