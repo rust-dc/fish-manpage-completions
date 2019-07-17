@@ -362,7 +362,7 @@ impl Deroffer {
         s.trim_start()
     }
 
-    fn str_at(string: &str, idx: usize) -> &str {
+    fn str_at(string: &str, idx: usize) -> Option<char> {
         // Note: If we don't care about strings with multi-byte chars, the
         // following would suffice:
         // s.get(idx..idx + 1).unwrap_or("")
@@ -370,19 +370,13 @@ impl Deroffer {
         // Note: We're not yet sure whether our roff inputs will generally be
         // ASCII or UTF-8. If they are ASCII (and can be treated as containing
         // only single-byte characters), it would be faster to just use `get()`
-        string
-            .char_indices()
-            .skip(idx)
-            .next()
-            .map(|(idx, charr)| &string[idx..(idx + charr.len_utf8())]) // Okay to directly index based on idx/charr construction.
-            .unwrap_or_default()
+        string.chars().skip(idx).next()
     }
 
-    fn is_white<'a>(s: &'a str, idx: usize) -> bool {
-        match Self::str_at(s, idx) {
-            "" => false,
-            c => c.chars().all(|c| c.is_whitespace()),
-        }
+    fn is_white(s: &str, idx: usize) -> bool {
+        Self::str_at(s, idx)
+            .map(char::is_whitespace)
+            .unwrap_or_default()
     }
 
     // Replaces the g_macro_dict lookup in the Python code
@@ -581,11 +575,11 @@ fn test_not_whitespace() {
 
 #[test]
 fn test_str_at() {
-    assert_eq!(Deroffer::str_at("", 1), "");
-    assert_eq!(Deroffer::str_at("ab cd", 42), "");
-    assert_eq!(Deroffer::str_at("ab cd", 1), "b");
-    assert_eq!(Deroffer::str_at("🗻", 0), "🗻");
-    assert_eq!(Deroffer::str_at("🗻", 1), "");
+    assert_eq!(Deroffer::str_at("", 1), None);
+    assert_eq!(Deroffer::str_at("ab cd", 42), None);
+    assert_eq!(Deroffer::str_at("ab cd", 1), Some('b'));
+    assert_eq!(Deroffer::str_at("🗻", 0), Some('🗻'));
+    assert_eq!(Deroffer::str_at("🗻", 1), None);
 }
 
 #[test]
