@@ -545,8 +545,8 @@ impl Deroffer {
         unimplemented!()
     }
 
-    fn flush_output<W: std::io::Write>(&mut self, write: W) {
-        unimplemented!()
+    fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
+        write.flush().unwrap()
     }
 }
 
@@ -626,11 +626,6 @@ fn test_is_white() {
 //
 //         # words is uninteresting and should be treated as false
 //
-
-//     def flush_output(self, where):
-//         if where:
-//             where.write(self.get_output())
-//         self.output[:] = []
 
 //     def get_output(self):
 //         res = ''.join(self.output)
