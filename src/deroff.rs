@@ -84,6 +84,13 @@ impl Deroffer {
             s: String::new(), // This is not explicitly defined in python code
         }
     }
+
+    fn get_output(&self, output: &[u8]) -> Result<String, String> {
+        let s = String::from_utf8(output.into())
+            .map_err(|err| format!("Bad bad bad (bad utf8)! {}", err))?;
+        Ok(self.g_re_newline_collapse.replace_all(&s, "\n").into())
+    }
+
     // for the moment, return small strings, until we figure out what
     // it should really be doing
     fn g_specs_specletter(key: &str) -> Option<&'static str> {
@@ -572,6 +579,13 @@ fn deroff_files(files: &[String]) -> std::io::Result<()> {
 }
 
 #[test]
+fn test_get_output() {
+    let deroffer = Deroffer::new();
+    assert_eq!(&deroffer.get_output(b"foo\n\nbar").unwrap(), "foo\n\nbar");
+    assert_eq!(&deroffer.get_output(b"foo\n\n\nbar").unwrap(), "foo\nbar");
+}
+
+#[test]
 fn test_not_whitespace() {
     assert_eq!(Deroffer::not_whitespace("", 0), false);
     assert_eq!(Deroffer::not_whitespace("", 9), false);
@@ -626,12 +640,6 @@ fn test_is_white() {
 //
 //         # words is uninteresting and should be treated as false
 //
-
-//     def get_output(self):
-//         res = ''.join(self.output)
-//         clean_res = Deroffer.g_re_newline_collapse.sub('\n', res)
-//         return clean_res
-
 //     # This gets swapped in in place of condputs the first time tr gets modified
 //     def condputs_tr(self, str):
 //         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
