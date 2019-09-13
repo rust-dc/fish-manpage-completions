@@ -395,7 +395,7 @@ impl Deroffer {
     // Replaces the g_macro_dict lookup in the Python code
     fn g_macro_dispatch(&mut self, s: &str) -> bool {
         match s {
-            "SH" => self.macro_sh(),
+            "SH" => self.macro_sh(s),
             "SS" => self.macro_ss_ip(),
             "IP" => self.macro_ss_ip(),
             "H " => self.macro_ss_ip(),
@@ -442,8 +442,16 @@ impl Deroffer {
         }
     }
 
-    fn macro_sh(&mut self) -> bool {
-        unimplemented!()
+    fn macro_sh(&mut self, s: &str) -> bool {
+        let headers = [" SYNOPSIS", " \"SYNOPSIS", " ‹BERSICHT", " \"‹BERSICHT"];
+        // @TODO: In the future s[2..] should care about UTF-8
+        if headers.iter().any(|header| s[2..].starts_with(header)) {
+            self.inheader = true;
+        } else {
+            self.inheader = false;
+            self.nobody = true;
+        }
+        false
     }
 
     fn macro_ss_ip(&mut self) -> bool {
