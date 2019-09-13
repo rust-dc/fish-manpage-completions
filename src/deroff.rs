@@ -525,7 +525,7 @@ impl Deroffer {
     }
 
     fn macro_so_nx(&mut self) -> bool {
-        unimplemented!()
+        true
     }
 
     fn macro_tr(&mut self) -> bool {
