@@ -495,7 +495,7 @@ impl Deroffer {
     }
 
     fn macro_i_ir(&mut self) -> bool {
-        unimplemented!()
+        false
     }
 
     fn macro_nm(&mut self) -> bool {
