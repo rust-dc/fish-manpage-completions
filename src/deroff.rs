@@ -503,7 +503,8 @@ impl Deroffer {
     }
 
     fn macro_close_bracket(&mut self) -> bool {
-        unimplemented!()
+        self.refer = false;
+        false
     }
 
     fn macro_ps(&mut self) -> bool {
