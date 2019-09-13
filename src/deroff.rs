@@ -490,7 +490,8 @@ impl Deroffer {
     }
 
     fn macro_ss_ip(&mut self) -> bool {
-        unimplemented!()
+        self.nobody = true;
+        false
     }
 
     fn macro_i_ir(&mut self) -> bool {
