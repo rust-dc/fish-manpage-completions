@@ -30,7 +30,7 @@ struct Deroffer {
     reg_table: HashMap<TODO_TYPE, TODO_TYPE>,
     tr_from: String,
     tr_to: String,
-    tr: String,
+    tr: TranslateTable,
     specletter: bool,
     refer: bool,
     r#macro: bool,
@@ -42,8 +42,10 @@ struct Deroffer {
     tblstate: TblState,
     tblTab: String,
     eqn: bool,
-    output: Vec<TODO_TYPE>,
+    output: String,
     name: String,
+    skipheaders: bool,
+    skiplists: bool,
 
     s: String, // This is not explicitly defined in python code
 }
@@ -66,7 +68,7 @@ impl Deroffer {
             reg_table: HashMap::new(),
             tr_from: String::new(),
             tr_to: String::new(),
-            tr: String::new(),
+            tr: TranslateTable::new(),
             specletter: false,
             refer: false,
             r#macro: false,
@@ -78,8 +80,10 @@ impl Deroffer {
             tblstate: TblState::Options,
             tblTab: String::new(),
             eqn: false,
-            output: Vec::new(),
+            output: String::new(),
             name: String::new(),
+            skipheaders: false,
+            skiplists: false,
 
             s: String::new(), // This is not explicitly defined in python code
         }
@@ -91,6 +95,31 @@ impl Deroffer {
         Ok(self.g_re_newline_collapse.replace_all(&s, "\n").into())
     }
 
+    // Could probably do this with fn pointers and avoid the branch
+    fn condputs(&mut self, s: &str) {
+        let special = self.pic
+            || self.eqn
+            || self.refer
+            || self.r#macro
+            || (self.skiplists && self.inlist)
+            || (self.skipheaders && self.inheader);
+        if self.tr.is_empty() {
+            self._condputs(s, special);
+        } else {
+            self._condputs_tr(s, special);
+        }
+    }
+    fn _condputs(&mut self, s: &str, special: bool) {
+        if !special {
+            self.output.push_str(s);
+        }
+    }
+
+    fn _condputs_tr(&mut self, s: &str, special: bool) {
+        if !special {
+            self.output.push_str(&*self.tr.translate(s));
+        }
+    }
     // for the moment, return small strings, until we figure out what
     // it should really be doing
     fn g_specs_specletter(key: &str) -> Option<&'static str> {
@@ -487,7 +516,7 @@ impl Deroffer {
         //  if self.is_white(2): self.pic = False
         //  self.condputs('\n')
         //  return True
-        
+
         unimplemented!()
     }
 
@@ -756,12 +785,12 @@ fn test_is_white() {
 //     def condputs_tr(self, str):
 //         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
 //         if not special:
-//             self.output.append(str.translate(self.tr))
+//             self.output.push_str(str.translate(self.tr))
 
 //     def condputs(self, str):
 //         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
 //         if not special:
-//             self.output.append(str)
+//             self.output.push_str(str)
 
 //     def str_eq(offset, other, len):
 //         return self.s[offset:offset+len] == other[:len]
@@ -1274,3 +1303,42 @@ fn test_is_white() {
 //         p = pstats.Stats('fooprof')
 //         p.sort_stats('time').print_stats(100)
 //         #p.sort_stats('calls').print_callers(.5, 'startswith')
+
+struct TranslateTable {
+    // map holds a char=>char replacement map. However, since Rust doesn't really have a
+    // str::replace(char, char) and instead uses str::replace(str, str) we end up having to use
+    // Strings.
+    //
+    // For perf:
+    // Using byte strings would probably be way better since we only need to store a single
+    // character, and even UTF-8 it'd be just [u8; 4] which we can freely convert to &[u8] instead
+    // of a using String (24 bytes each)...@TODO
+    map: HashMap<String, String>,
+}
+
+impl TranslateTable {
+    fn new() -> TranslateTable {
+        TranslateTable {
+            map: HashMap::new(),
+        }
+    }
+    fn maketrans(&mut self, from: &str, to: &str) {
+        if from.len() != to.len() {
+            panic!("from and to must be the same length");
+        }
+        for (f, t) in from.chars().zip(to.chars()) {
+            self.map.insert(f.to_string(), t.to_string());
+        }
+    }
+    fn translate(&self, s: &str) -> String {
+        let mut s = s.to_owned();
+        for (k, v) in self.map.iter() {
+            s = (&*s).replace(k, v);
+        }
+        s
+    }
+
+    fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+}
