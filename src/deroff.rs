@@ -700,6 +700,20 @@ impl Deroffer {
     fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
         write.flush().unwrap()
     }
+
+    fn do_line(&self, s: &str) -> bool {
+        match s.chars().nth(0) {
+            Some('.') | Some('\'') => !request_or_macro(s),
+            Some(c) => {
+                if self.tbl {
+                    do_tbl(s)
+                } else {
+                    text(s)
+                }
+            }
+            None => unreachable!(),
+        }
+    }
 }
 
 fn deroff_files(files: &[String]) -> std::io::Result<()> {
@@ -925,6 +939,10 @@ fn test_is_white() {
 //
 //         return got_something
 
+fn text(s: &str) -> bool {
+    unimplemented!()
+}
+
 //     def text(self):
 //         while True:
 //             idx = self.s.find('\\')
@@ -1035,6 +1053,9 @@ fn test_is_white() {
 //         self.condputs = self.condputs_tr
 //         return True
 
+fn request_or_macro(s: &str) -> bool {
+    unimplemented!()
+}
 //     def request_or_macro(self):
 //         # s[0] is period or open single quote
 //         self.skip_char()
@@ -1229,6 +1250,9 @@ fn test_is_white() {
 //                 else:
 //                     return True
 
+fn do_tbl(s: &str) -> bool {
+    unimplemented!()
+}
 //     def do_tbl(self):
 //         if self.tblstate == self.OPTIONS:
 //             while self.s and self.str_at(0) != ';' and self.str_at(0) != '\n':
