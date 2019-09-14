@@ -440,7 +440,7 @@ impl Deroffer {
             "AB" => self.macro_i_ir(),
             "Nm" => self.macro_nm(),
             "] " => self.macro_close_bracket(),
-            "PS" => self.macro_ps(),
+            "PS" => self.macro_ps(s),
             "PE" => self.macro_pe(),
             "TS" => self.macro_ts(),
             "T&" => self.macro_t_and(),
@@ -507,8 +507,12 @@ impl Deroffer {
         false
     }
 
-    fn macro_ps(&mut self) -> bool {
-        unimplemented!()
+    fn macro_ps(&mut self, s: &str) -> bool {
+        if Self::is_white(s, 2) {
+            self.pic = true;
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_pe(&mut self) -> bool {
