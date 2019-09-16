@@ -9,7 +9,7 @@ structopt = "*"
 itertools = "*"
 regex = "*"
 lazy_static = "*"
-bstr = "*"
+bstr = "0.2"
 libflate = "*"
 
 [dev-dependencies]
