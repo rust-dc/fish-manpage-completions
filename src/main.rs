@@ -1,7 +1,11 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/create_manpage_completions.py
 use std::collections::{HashMap, HashSet};
-use std::io::{Read, Write};
+use std::env;
+use std::ffi::OsString;
+use std::fs::{self, File};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use itertools::Itertools;
 use structopt::StructOpt;
@@ -1120,9 +1124,6 @@ fn test_file_is_overwritable() {
 // Raises IOError if it cannot be opened
 fn file_is_overwritable(path: &Path) -> Result<bool, String> {
     use std::error::Error;
-    use std::fs::File;
-    use std::io::BufRead;
-    use std::io::BufReader;
     let display = path.display();
     let f = File::open(path).map_err(|error| format!("{:?}", error))?;
     let file = BufReader::new(&f);
@@ -1489,49 +1490,47 @@ impl App {
     }
 }
 
-// def get_paths_from_man_locations():
-//     # Return all the paths to man(1) and man(8) files in the manpath
-//     import subprocess, os
-//     proc = None
-//     # $MANPATH takes precedence, just like with `man` on the CLI.
-//     if os.getenv("MANPATH"):
-//         parent_paths = os.getenv("MANPATH").strip().split(':')
-//     else:
-//         # Some systems have manpath, others have `man --path` (like Haiku).
-//         for prog in [['manpath'], ['man', '--path']]:
-//             try:
-//                 proc = subprocess.Popen(prog, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-//             except OSError: # Command does not exist, keep trying
-//                 continue
-//             break # Command exists, use it.
-//         manpath, err_data = proc.communicate()
-//         parent_paths = manpath.decode().strip().split(':')
-//     if (not parent_paths) or (proc and proc.returncode > 0):
-//         # HACK: Use some fallbacks in case we can't get anything else.
-//         # `mandoc` does not provide `manpath` or `man --path` and $MANPATH might not be set.
-//         # The alternative is reading its config file (/etc/man.conf)
-//         if os.path.isfile('/etc/man.conf'):
-//             data = open('/etc/man.conf', 'r')
-//             for line in data:
-//                 if ('manpath' in line or 'MANPATH' in line):
-//                     p = line.split(' ')[1]
-//                     p = p.split()[0]
-//                     parent_paths.append(p)
-//         if (not parent_paths):
-//             sys.stderr.write("Unable to get the manpath, falling back to /usr/share/man:/usr/local/share/man. Please set $MANPATH if that is not correct.\n")
-//         parent_paths = ["/usr/share/man", "/usr/local/share/man"]
-//     result = []
-//     for parent_path in parent_paths:
-//         for section in ['man1', 'man6', 'man8']:
-//             directory_path = os.path.join(parent_path, section)
-//             try:
-//                 names = os.listdir(directory_path)
-//             except OSError as e:
-//                 names = []
-//             names.sort()
-//             for name in names:
-//                 result.append(os.path.join(directory_path, name))
-//     return result
+/// Return all the paths to man(1) and man(8) files in the manpath.
+fn get_paths_from_man_locations() -> Vec<PathBuf> {
+    // $MANPATH take precedence, just like with `man` on the CLI.
+    let mut parent_paths: Vec<_> = if let Some(paths) = env::var_os("MANPATH") {
+        env::split_paths(&paths).collect()
+    } else if let Ok(output) = Command::new("manpath").output() {
+        let output = String::from_utf8(output.stdout).unwrap();
+        env::split_paths(&output).collect()
+    } else if let Ok(output) = Command::new("man").arg("--path").output() {
+        let output = String::from_utf8(output.stdout).unwrap();
+        env::split_paths(&output).collect()
+    // HACK: Use some fallbacks in case we can't get anything else.
+    // `mandoc` does not provide `manpath` or `man --path` and $MANPATH might not be set.
+    // The alternative is reading its config file (/etc/man.conf)
+    } else if let Ok(file) = File::open("/etc/man.conf") {
+        let lines_iter = BufReader::new(file).lines().map(|line| line.unwrap());
+        lines_iter
+            .filter(|line| line.starts_with("manpath") || line.starts_with("MANPATH"))
+            .filter_map(|line| line.split_ascii_whitespace().nth(2).map(PathBuf::from))
+            .collect()
+    } else {
+        Default::default()
+    };
+    if parent_paths.is_empty() {
+        eprintln!("Unable to get the manpath, falling back to /usr/share/man:/usr/local/share/man. Please set $MANPATH if that is not correct.");
+        parent_paths.push(PathBuf::from("/usr/share/man"));
+        parent_paths.push(PathBuf::from("/usr/local/share/man"));
+    }
+    let mut paths = Vec::new();
+    for parent_path in parent_paths {
+        for section in &["man1", "man6", "man8"] {
+            let section_path = parent_path.join(section);
+            if let Ok(dir) = fs::read_dir(&section_path) {
+                for entry in dir {
+                    paths.push(section_path.join(entry.unwrap().path()));
+                }
+            }
+        }
+    }
+    paths
+}
 
 mod deroff;
 
