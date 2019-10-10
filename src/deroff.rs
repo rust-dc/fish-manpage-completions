@@ -711,7 +711,7 @@ impl Deroffer {
                     text(s)
                 }
             }
-            None => unreachable!(),
+            None => panic!("do_line` called with empty string as argument"),
         }
     }
 }
