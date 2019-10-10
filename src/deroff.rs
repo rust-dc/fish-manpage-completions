@@ -1360,8 +1360,11 @@ impl TranslateTable {
     }
     fn translate(&self, s: &str) -> String {
         let mut s = s.to_owned();
-        for (k, v) in self.map.iter() {
-            s = (&*s).replace(k, v);
+        // @TODO @perf: So. Many. String. Allocations.
+        for (i, (k, v)) in self.map.iter().enumerate() {
+            let to_rep = s.chars().skip(i).collect::<String>();
+            let after = (&*to_rep).replace(k, v);
+            s = format!("{}{}", s.chars().take(i).collect::<String>(), after);
         }
         s
     }
@@ -1369,4 +1372,11 @@ impl TranslateTable {
     fn is_empty(&self) -> bool {
         self.map.is_empty()
     }
+}
+
+#[test]
+fn test_translate_table() {
+    let mut tbl = TranslateTable::new();
+    tbl.maketrans("abc", "bca");
+    assert_eq!(tbl.translate("abc"), "bca");
 }
