@@ -548,6 +548,70 @@ impl Deroffer {
     fn flush_output<W: std::io::Write>(&mut self, write: W) {
         unimplemented!()
     }
+
+    fn esc_char_backslash(&self, s: &str) -> Option<&str> {
+        unimplemented!()
+    }
+
+    fn number(&self, s: &str) -> Option<&str> {
+        unimplemented!()
+    }
+
+    fn word(&self, s: &str) -> Option<&str> {
+        unimplemented!()
+    }
+
+    fn esc_char(&self, s: &str) -> Option<&str> {
+        if s.is_empty() {
+            return None;
+        }
+        if let Some(ch) = s.get(0..1) {
+            if ch == "\\" {
+                self.esc_char_backslash(s)
+            } else {
+                if let Some(ns) = self.word(s) {
+                    Some(ns)
+                } else {
+                    self.number(s)
+                }
+            }
+        } else {
+            None
+        }
+    }
+
+    fn condputs(&self, string: &str) -> bool {
+        unimplemented!()
+    }
+
+    fn quoted_arg(&self, string: &str) -> bool {
+        if !string.is_empty() && Deroffer::str_at(string, 0) == "\"" {
+            let mut string = self.skip_char(string, Some(1));
+            while !string.is_empty() && Deroffer::str_at(string, 0) != "\"" {
+                if let Some(ns) = self.esc_char(string) {
+                    string = ns;
+                } else {
+                    self.condputs(Deroffer::str_at(string, 0));
+                    string = self.skip_char(string, Some(1));
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    //     def quoted_arg(self):
+    //         if self.str_at(0) == '"':
+    //             self.skip_char()
+    //             while self.s and self.str_at(0) != '"':
+    //                 if not self.esc_char():
+    //                     if self.s:
+    //                         self.condputs(self.str_at(0))
+    //                         self.skip_char()
+    //             return True
+    //         else:
+    //             return False
 }
 
 fn deroff_files(files: &[String]) -> std::io::Result<()> {
@@ -826,23 +890,6 @@ fn test_is_white() {
 //             return self.spec()
 //         else:
 //             return self.esc()
-
-//     def esc_char(self):
-//         if self.s[0:1] == '\\':
-//             return self.esc_char_backslash()
-//         return self.word() or self.number()
-
-//     def quoted_arg(self):
-//         if self.str_at(0) == '"':
-//             self.skip_char()
-//             while self.s and self.str_at(0) != '"':
-//                 if not self.esc_char():
-//                     if self.s:
-//                         self.condputs(self.str_at(0))
-//                         self.skip_char()
-//             return True
-//         else:
-//             return False
 
 //     def text_arg(self):
 //         # PCA: The deroff.c textArg() disallowed quotes at the start of an argument
