@@ -42,6 +42,8 @@ struct Deroffer {
     tblstate: TblState,
     tblTab: String,
     eqn: bool,
+    skipheaders: bool,
+    skiplists: bool,
     output: Vec<TODO_TYPE>,
     name: String,
 
@@ -79,6 +81,8 @@ impl Deroffer {
             tblstate: TblState::Options,
             tblTab: String::new(),
             eqn: false,
+            skipheaders: false,
+            skiplists: false,
             output: Vec::new(),
             name: String::new(),
 
@@ -642,35 +646,6 @@ fn test_digit() {
     assert_eq!(Deroffer::digit("a", 0), false);
     assert_eq!(Deroffer::digit(" ", 0), false);
 }
-//     def __init__(self):
-//         self.reg_table = {}
-//         self.tr_from = ''
-//         self.tr_to = ''
-//         self.tr = ''
-//         self.nls = 2
-//         self.specletter = False
-//         self.refer = False
-//         self.macro = 0
-//         self.nobody = False
-//         self.inlist = False
-//         self.inheader = False
-//         self.pic = False
-//         self.tbl = False
-//         self.tblstate = 0
-//         self.tblTab = ''
-//         self.eqn = False
-//         self.skipheaders = False
-//         self.skiplists = False
-//         self.ignore_sonx = False
-//         self.output = []
-//         self.name = ''
-//
-//         self.OPTIONS = 0
-//         self.FORMAT = 1
-//         self.DATA = 2
-//
-//         # words is uninteresting and should be treated as false
-//
 //     # This gets swapped in in place of condputs the first time tr gets modified
 //     def condputs_tr(self, str):
 //         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
