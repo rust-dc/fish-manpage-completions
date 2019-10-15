@@ -11,6 +11,7 @@ regex = "*"
 lazy_static = "*"
 bstr = "*"
 libflate = "*"
+bitflags = "1.2.1"
 
 [dev-dependencies]
 pretty_assertions = "*"

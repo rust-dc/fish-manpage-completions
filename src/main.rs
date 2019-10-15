@@ -1656,6 +1656,7 @@ fn program_name() -> String {
 }
 
 fn main() -> Result<(), String> {
+
     let opts = Opts::from_args();
 
     if opts.completions {
