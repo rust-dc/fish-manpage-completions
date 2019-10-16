@@ -61,7 +61,8 @@ impl Deroffer {
                     (\(\S{2})  | # Open paren, then two printable chars
                     (\[\S*?\]) | # Open bracket, zero or more printable characters, then close bracket
                     \S)          # Any printable character
-                   "##),
+                   "##
+            ),
 
             reg_table: HashMap::new(),
             tr_from: String::new(),
@@ -360,8 +361,14 @@ impl Deroffer {
         })
     }
 
-    fn skip_char<'a>(&self, s: &'a str, amount: Option<usize>) -> &'a str {
-        let amount = amount.unwrap_or(1);
+    fn comment<'a>(&self, mut s: &'a str) -> &'a str {
+        while Self::str_at(&s, 0) != "\n" {
+            s = self.skip_char(&s, 1);
+        }
+        s
+    }
+
+    fn skip_char<'a>(&self, s: &'a str, amount: usize) -> &'a str {
         s.get(amount..).unwrap_or("")
     }
 
@@ -564,6 +571,14 @@ impl Deroffer {
     }
 }
 
+#[test]
+fn test_comment() {
+    let deroffer = Deroffer::new();
+    assert_eq!(deroffer.comment("\n"), "\n");
+    assert_eq!(deroffer.comment("hello\n"), "\n");
+    assert_eq!(deroffer.comment("hello\nworld"), "\nworld");
+}
+
 fn deroff_files(files: &[String]) -> std::io::Result<()> {
     for arg in files {
         eprintln!("processing deroff file: {}", arg);
@@ -674,11 +689,6 @@ fn test_digit() {
 //         match = Deroffer.g_re_font.match(self.s)
 //         if not match: return False
 //         self.skip_char(match.end())
-//         return True
-
-//     def comment(self):
-//         # Here we require that the string start with \"
-//         while self.str_at(0) and self.str_at(0) != '\n': self.skip_char()
 //         return True
 
 //     def numreq(self):
