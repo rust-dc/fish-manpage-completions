@@ -16,7 +16,7 @@ use std::{
 
 /// Helper for `translate`, does the same thing as string.maketrans in python
 /// requires that f and t are the same length, or it takes the shorter one
-pub fn maketrans(f: String, t: String) -> HashMap<u8, char> {
+pub fn maketrans(f: &str, t: &str) -> HashMap<u8, char> {
     HashMap::from_iter(f.bytes().zip(t.chars()))
 }
 
@@ -43,8 +43,8 @@ fn test_maketrans() {
     expected.insert(0x63, 'f');
     assert_eq!(
         maketrans(
-            "abc".to_owned(),
-            "def".to_owned(),
+            "abc",
+            "def",
         ),
         expected
     );
@@ -61,8 +61,8 @@ fn test_translate() {
         translate(
             "Hello World!".to_owned(),
             maketrans(
-                "HlW".to_owned(),
-                "aBc".to_owned(),
+                "HlW",
+                "aBc",
             )
         ),
         expected,
