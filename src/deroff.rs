@@ -539,7 +539,10 @@ impl Deroffer {
         unimplemented!()
     }
 
-
+    /// `condputs` (cond)itionally (puts) `s` into `self.output`
+    /// if `self.tr` is set, instead of putting `s` into `self.output` directly, 
+    /// it `translate`s it using the set translation table and puts the result
+    /// into `self.output`
     fn condputs(&mut self, s: &str) {
         let is_special = {
             self.pic     ||
@@ -552,10 +555,11 @@ impl Deroffer {
 
         if !is_special {
             if let Some(table) = self.tr.clone() {
-                let s: &str = translate(s.into(), table).as_str();
+                self.output.push_str(translate(s.into(), table).as_str());
+            } else {
+                self.output.push_str(s);
             }
 
-            self.output.push_str(s);
         }
 
     }
@@ -631,6 +635,26 @@ fn test_is_white() {
     assert_eq!(Deroffer::is_white("ab cd", 1), false);
     assert_eq!(Deroffer::is_white("ab cd", 2), true);
     assert_eq!(Deroffer::is_white("ab cd", 3), false);
+}
+
+#[test]
+fn test_condputs() {
+    let mut d = Deroffer::new();
+    
+    assert_eq!(d.output, String::new());
+    d.condputs("Hello World!\n");
+    assert_eq!(d.output, "Hello World!\n".to_owned());
+    d.pic = true;
+    d.condputs("This won't go to output");
+    assert_eq!(d.output, "Hello World!\n".to_owned());
+    d.pic = false;
+    d.condputs("This will go to output :)");
+    assert_eq!(d.output, "Hello World!\nThis will go to output :)".to_owned());
+
+    // Test the translation check
+    d.tr = Some(maketrans("Ttr", "AAA"));
+    d.condputs("Translate test");
+    assert_eq!(d.output, "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned());
 }
 
 //     def __init__(self):
