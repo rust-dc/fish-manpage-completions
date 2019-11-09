@@ -6,6 +6,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use crate::util::{ maketrans, translate };
 
 type TODO_TYPE = u8;
 type TODO_NUMBER_TYPE = i8;
@@ -30,7 +31,7 @@ struct Deroffer {
     reg_table: HashMap<TODO_TYPE, TODO_TYPE>,
     tr_from: String,
     tr_to: String,
-    tr: String,
+    tr: Option<HashMap<u8, char>>,
     specletter: bool,
     refer: bool,
     r#macro: bool,
@@ -42,7 +43,7 @@ struct Deroffer {
     tblstate: TblState,
     tblTab: String,
     eqn: bool,
-    output: Vec<TODO_TYPE>,
+    output: String,
     name: String,
 
     s: String, // This is not explicitly defined in python code
@@ -66,7 +67,7 @@ impl Deroffer {
             reg_table: HashMap::new(),
             tr_from: String::new(),
             tr_to: String::new(),
-            tr: String::new(),
+            tr: None,
             specletter: false,
             refer: false,
             r#macro: false,
@@ -78,7 +79,7 @@ impl Deroffer {
             tblstate: TblState::Options,
             tblTab: String::new(),
             eqn: false,
-            output: Vec::new(),
+            output: String::new(),
             name: String::new(),
 
             s: String::new(), // This is not explicitly defined in python code
@@ -536,6 +537,27 @@ impl Deroffer {
 
     fn macro_other(&mut self) -> bool {
         unimplemented!()
+    }
+
+
+    fn condputs(&mut self, s: &str) {
+        let is_special = {
+            self.pic     ||
+            self.eqn     ||
+            self.refer   ||
+            self.r#macro ||
+            self.inlist  ||
+            self.inheader
+        };
+
+        if !is_special {
+            if let Some(table) = self.tr.clone() {
+                let s: &str = translate(s.into(), table).as_str();
+            }
+
+            self.output.push_str(s);
+        }
+
     }
 
     fn not_whitespace(s: &str, idx: usize) -> bool {
