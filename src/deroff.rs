@@ -31,7 +31,7 @@ struct Deroffer {
     reg_table: HashMap<TODO_TYPE, TODO_TYPE>,
     tr_from: String,
     tr_to: String,
-    tr: Option<HashMap<u8, char>>,
+    tr: Option<HashMap<char, char>>,
     specletter: bool,
     refer: bool,
     r#macro: bool,
