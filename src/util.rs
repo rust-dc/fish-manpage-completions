@@ -16,31 +16,22 @@ use std::{
 
 /// Helper for `translate`, does the same thing as string.maketrans in python
 /// requires that f and t are the same length, or it takes the shorter one
-pub fn maketrans(f: &str, t: &str) -> HashMap<u8, char> {
-    HashMap::from_iter(f.bytes().zip(t.chars()))
+pub fn maketrans(f: &str, t: &str) -> HashMap<char, char> {
+    HashMap::from_iter(f.chars().zip(t.chars()))
 }
 
 /// Does effectively the same as string.translate in python, in 
 /// conjunction with `maketrans`, basically just replaces
-pub fn translate(s: String, table: HashMap<u8, char>) -> String {
-    let mut output = String::new();
-    for byte in s.bytes() {
-        if let Some(c) = table.get(&byte) {
-            output.push(*c);
-        } else {
-            output.push(byte as char);
-        }
-    }
-
-    output
+pub fn translate(s: String, table: HashMap<char, char>) -> String {
+    s.chars().map(|c| *table.get(&c).unwrap_or(&c)).collect::<String>()
 }
 
 #[test]
 fn test_maketrans() {
     let mut expected = HashMap::new();
-    expected.insert(0x61, 'd');
-    expected.insert(0x62, 'e');
-    expected.insert(0x63, 'f');
+    expected.insert('a', 'd');
+    expected.insert('b', 'e');
+    expected.insert('c', 'f');
     assert_eq!(
         maketrans(
             "abc",
