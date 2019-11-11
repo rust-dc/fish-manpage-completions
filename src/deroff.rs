@@ -444,99 +444,222 @@ impl Deroffer {
     }
 
     fn macro_sh(&mut self) -> bool {
-        unimplemented!()
+        let mut broke_out = false;
+        for header_str in [" SYNOPSIS", " \"SYNOPSIS", " ‹BERSICHT", " \"‹BERSICHT"].iter() {
+            if self.s[2..].starts_with(header_str) {
+                self.inheader = true;
+                broke_out = true;
+                break;
+            }
+        }
+        if !broke_out {
+            self.inheader = false;
+            self.nobody = true;
+        }
+
+        true
     }
 
     fn macro_ss_ip(&mut self) -> bool {
-        unimplemented!()
+        self.nobody = true;
+        false
     }
 
     fn macro_i_ir(&mut self) -> bool {
-        unimplemented!()
+        false
     }
 
     fn macro_nm(&mut self) -> bool {
-        unimplemented!()
+        if self.s == "Nm\n" {
+            self.condputs(self.name.clone().as_str());
+        } else {
+            let mut s = String::new();
+            s.push_str(self.s[3..].trim());
+            s.push(' ');
+            self.name = s;
+        }
+
+        true
     }
 
     fn macro_close_bracket(&mut self) -> bool {
-        unimplemented!()
+        self.refer = false;
+        false  
     }
 
     fn macro_ps(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            self.pic = true
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_pe(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            self.pic = false
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_ts(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            self.tbl = true;
+            self.tblstate = TblState::Options;
+        }
+            
+        self.condputs("\n");
+        true
     }
 
     fn macro_t_and(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            self.tbl = true;
+            self.tblstate = TblState::Format;
+        }
+            
+        self.condputs("\n");
+        true
     }
 
     fn macro_te(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            self.tbl = false
+        }
+
+        self.condputs("\n");
+        true
     }
 
     fn macro_eq(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            self.eqn = true
+        }
+
+        self.condputs("\n");
+        true
     }
 
     fn macro_en(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            self.eqn = false
+        }
+
+        self.condputs("\n");
+        true
     }
 
     fn macro_r1(&mut self) -> bool {
-        unimplemented!()
+        // NOTE: self.refer2 is never used in the python source, so this and macro_r2 are 
+        // pretty much worthless
+        if Self::is_white(self.s.as_str(), 2) {
+            // self.refer2 = true;
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_r2(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            // NOTE: See macro_r1
+            // self.refer2 = false;
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_de(&mut self) -> bool {
-        unimplemented!()
+        self.r#macro = true;
+        self.condputs("\n");
+        true
     }
 
     fn macro_bl_vl(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            self.inlist = true
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_bv(&mut self) -> bool {
-        unimplemented!()
+        /*
+        `self.white` doesn't exist in the source, and the argument type is wrong 
+        for `self.is_white`, so I don't know what function its supposed to be
+        if self.str_at(2) == "L" and self.white(self.str_at(3)):
+            self.inlist = true
+        } */
+        self.condputs("\n");
+        true
     }
 
     fn macro_le(&mut self) -> bool {
-        unimplemented!()
+        if Self::is_white(self.s.as_str(), 2) {
+            self.inlist = false;
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_lp_pp(&mut self) -> bool {
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     fn macro_ds(&mut self) -> bool {
-        unimplemented!()
+        // self.skip_char(2);
+        // self.skip_leading_whitespace();
+        // if self.str_at(0) {
+
+        //     // Split at whitespace
+        //     let comps = self.s.split(None, 2)
+        //     if comps.len() == 2:
+        //         name, value = comps
+        //         value = value.rstrip()
+        //         self.reg_table[name] = value
+        // }
+        // self.condputs("\n")
+        true
     }
 
     fn macro_so_nx(&mut self) -> bool {
-        unimplemented!()
+        /*  # We always ignore include directives
+            # deroff.c for some reason allowed this to fall through to the 'tr' case
+            # I think that was just a bug so I won't replicate it */ 
+        true
     }
 
     fn macro_tr(&mut self) -> bool {
-        unimplemented!()
+        let s = self.s.clone();
+        let s = s.as_str();
+        self.s = self.skip_char(s, Some(2)).to_owned();
+        self.s = self.skip_leading_whitespace(s).to_owned();
+        while !self.s.is_empty() && Self::str_at(s, 0) != "\n" {
+            let c = Self::str_at(s, 0);
+            let mut ns = Self::str_at(s, 1);
+            self.s = self.skip_char(self.s.as_str(), Some(2)).to_owned();
+            if ns.is_empty() || ns == "\n" {
+                ns = " ";
+            }
+
+            self.tr_from.push_str(c);
+            self.tr_to.push_str(ns);
+        }
+
+        // Update our table, then swap in the slower tr-savvy condputs
+        self.tr = Some(maketrans(self.tr_from.as_str(), self.tr_to.as_str()));
+        true
     }
 
     fn macro_s(&mut self) -> bool {
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     fn macro_other(&mut self) -> bool {
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     /// `condputs` (cond)itionally (puts) `s` into `self.output`
