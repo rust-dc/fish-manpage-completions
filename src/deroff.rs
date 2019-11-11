@@ -369,7 +369,11 @@ impl Deroffer {
         s.trim_start()
     }
 
-    fn str_at(string: &str, idx: usize) -> &str {
+    fn str_at(&mut self, idx: usize) -> Option<char> {
+        self.s.chars().nth(idx)
+    }
+
+    /* fn str_at(string: &str, idx: usize) -> &str {
         // Note: If we don't care about strings with multi-byte chars, the
         // following would suffice:
         // s.get(idx..idx + 1).unwrap_or("")
@@ -383,13 +387,14 @@ impl Deroffer {
             .next()
             .map(|(idx, charr)| &string[idx..(idx + charr.len_utf8())]) // Okay to directly index based on idx/charr construction.
             .unwrap_or_default()
-    }
+    } */
 
     fn is_white<'a>(s: &'a str, idx: usize) -> bool {
-        match Self::str_at(s, idx) {
-            "" => false,
-            c => c.chars().all(|c| c.is_whitespace()),
-        }
+        s
+          .chars()  // Chars
+          .nth(idx) // Option<char>
+          .unwrap_or('a') // char
+          .is_whitespace() // bool
     }
 
     // Replaces the g_macro_dict lookup in the Python code
@@ -595,11 +600,18 @@ fn test_not_whitespace() {
 
 #[test]
 fn test_str_at() {
-    assert_eq!(Deroffer::str_at("", 1), "");
-    assert_eq!(Deroffer::str_at("ab cd", 42), "");
-    assert_eq!(Deroffer::str_at("ab cd", 1), "b");
-    assert_eq!(Deroffer::str_at("🗻", 0), "🗻");
-    assert_eq!(Deroffer::str_at("🗻", 1), "");
+    let mut d = Deroffer::new();
+
+    // d.s == ""
+    assert_eq!(d.str_at(1), None);
+    
+    d.s = String::from("ab cd");
+    assert_eq!(d.str_at(42), None);
+    assert_eq!(d.str_at(1), Some('b'));
+
+    d.s = String::from("🗻");
+    assert_eq!(d.str_at(0), Some('🗻'));
+    assert_eq!(d.str_at(1), None);
 }
 
 #[test]
