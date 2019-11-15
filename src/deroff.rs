@@ -767,6 +767,9 @@ impl Deroffer {
             
             if comps.len() == 2 {
                 let name: String = comps.get(0).unwrap().to_owned();
+                /* 
+                This is a reminder to google stuff before you go implementing stuff badly
+
                 // This is horrible I know but it's meant to do string.rstrip()
                 // If you can think of a better way I am more than willing to switch it
                 let value: String = comps
@@ -782,7 +785,9 @@ impl Deroffer {
                 // A note on the badness of this code,
                 // The reason for `.collect().rev().chars().collect()` exists is 
                 // `skip_while` returns a `SkipWhile` which doesnt impl `DoubleEndedIterator`
-                // which is required for `rev` :(
+                // which is required for `rev` :( */
+                
+                let value = comps.get(1).unwrap().as_str().trim_end().to_owned();
                     
                 self.reg_table.insert(name, value);
             }
