@@ -444,19 +444,15 @@ impl Deroffer {
     }
 
     fn macro_sh(&mut self) -> bool {
-        let mut broke_out = false;
         for header_str in [" SYNOPSIS", " \"SYNOPSIS", " ‹BERSICHT", " \"‹BERSICHT"].iter() {
             if self.s[2..].starts_with(header_str) {
                 self.inheader = true;
-                broke_out = true;
-                break;
+                return true;
             }
         }
-        if !broke_out {
-            self.inheader = false;
-            self.nobody = true;
-        }
 
+        self.inheader = false;
+        self.nobody = true;
         true
     }
 
@@ -466,6 +462,7 @@ impl Deroffer {
     }
 
     fn macro_i_ir(&mut self) -> bool {
+        // why does this exist
         false
     }
 
@@ -473,8 +470,7 @@ impl Deroffer {
         if self.s == "Nm\n" {
             self.condputs(self.name.clone().as_str());
         } else {
-            let mut s = String::new();
-            s.push_str(self.s[3..].trim());
+            let mut s = self.s[3..].trim().to_owned();
             s.push(' ');
             self.name = s;
         }
