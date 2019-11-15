@@ -369,7 +369,7 @@ impl Deroffer {
         s.trim_start()
     }
 
-    fn str_at(&mut self, idx: usize) -> Option<char> {
+    fn str_at(&self, idx: usize) -> Option<char> {
         self.s.chars().nth(idx)
     }
 
@@ -387,6 +387,15 @@ impl Deroffer {
             .next()
             .map(|(idx, charr)| &string[idx..(idx + charr.len_utf8())]) // Okay to directly index based on idx/charr construction.
             .unwrap_or_default()
+    } */
+
+
+    /* fn is_white(&self, idx: usize) -> bool {
+        self.s               // String
+            .chars()         // Chars
+            .nth(idx)        // Option<char>
+            .unwrap_or('a')  // char
+            .is_whitespace() // bool
     } */
 
     fn is_white<'a>(s: &'a str, idx: usize) -> bool {
