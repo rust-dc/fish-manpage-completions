@@ -552,6 +552,72 @@ impl Deroffer {
         unimplemented!()
     }
 
+    fn request_or_macro(&mut self) -> bool {
+
+        // self.skip_char();
+        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+
+        let s0 = &self.s[1..2];
+
+        match s0 {
+            "\\" => {
+                if self.str_at(1) == Some('"') {
+                    // self.condputs("\n");
+                    return true;
+                }
+            },
+            "[" => {
+                self.refer = true;
+                // self.condputs("\n");
+                return true;
+            },
+            "]" => {
+                self.refer = false;
+                // self.skip_char();
+                self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                // return self.text();
+            },
+            "." => {
+                self.r#macro = false;
+                // self.condputs("\n");
+                return true;
+            },
+            _ => {()}
+        };
+
+        self.nobody = false;
+        let s0s1 = self.s[..2].to_owned();
+
+        if self.g_macro_dispatch(s0s1.as_str()) {
+            return true;
+        }
+
+        if SKIP_HEADERS && self.nobody {
+            return true;
+        }
+
+        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
+        while !self.s.is_empty() && !Self::is_white(self.s.as_str(), 0) {
+            self.s = self.skip_char(self.s.as_str(), None).to_owned();
+        }
+
+        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
+
+        loop {
+            if !self.quoted_arg() && !self.text_arg() {
+                if !self.s.is_empty() {
+                    self.condputs(self.str_at(0));
+                    self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                } else {
+                    return true;
+                }
+            }
+        }
+
+
+        false
+    }
+
     fn not_whitespace(s: &str, idx: usize) -> bool {
         // # Note that this return False for the empty string (idx >= len(self.s))
         // ch = self.s[idx:idx+1]
