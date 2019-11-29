@@ -27,7 +27,7 @@ struct Deroffer {
     g_re_newline_collapse: &'static Regex,
     g_re_font: &'static Regex,
 
-    reg_table: HashMap<TODO_TYPE, TODO_TYPE>,
+    reg_table: HashMap<String, String>,
     tr_from: String,
     tr_to: String,
     tr: String,
@@ -536,6 +536,241 @@ impl Deroffer {
 
     fn macro_other(&mut self) -> bool {
         unimplemented!()
+    }
+
+    fn font(&mut self) -> bool {
+        if let Some(m) = self.g_re_font.find(self.s.as_str()) {
+            self.s = self.skip_char(self.s.as_str(), Some(m.end())).to_owned();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn comment(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn numreq(&mut self) -> bool {
+        // In the python, it has a check that is already handled in esc_char_backslash, which is 
+        // the only place it gets called, so I'll omit that check here
+
+        // This is written as `self.macro += 1` in the source, but I dont know why
+        // it does the same thing (false -> true, true -> still true) :shrug:
+        // self.r#macro = true;
+        // Upon further investigation, this is the weirdest function ever
+        // This is just a state placeholder thing
+        let mut m = self.r#macro as u8 + 1;
+
+        // self.skip_char(3);
+        self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+
+        // There's this, which has a comment explaining my thoughts right now
+        /* 
+        while self.str_at(0) != "'" and self.esc_char():
+            pass  # Weird
+        */
+        // And I dont know what the purpose of it would even be, if you can tell, lmk
+
+        // if self.str_at(0) == '\'' {
+        if Self::str_at(self.s.as_str(), 0) == "'" {
+            // self.skip_char(1);
+            self.s = self.skip_char(self.s.as_str(), None).to_owned();
+        }
+
+        m -= 1;
+        self.r#macro = m != 0;
+
+        true
+    }
+    
+    fn prch(&self, _: usize) -> bool {
+        unimplemented!()
+    }
+
+    fn text_arg(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn var(&mut self) -> bool {
+
+        let mut reg = String::new();
+        let s0s1 = &self.s[0..2];
+        match s0s1 {
+            "\\n" => {
+                if let Some("dy") = self.s.get(3..5) {
+                    // self.skip_char(5);
+                    self.s = self.skip_char(self.s.as_str(), Some(5)).to_owned();
+                    true
+                // } else if self.str_at(2) == "(" && self.prch(3) && self.prch(4) {
+                } else if Self::str_at(self.s.as_str(), 2) == "(" && self.prch(3) && self.prch(4) {
+                    // self.skip_char(5);
+                    self.s = self.skip_char(self.s.as_str(), Some(5)).to_owned();
+                    true
+                // } else if self.str_at(2) == "[" && self.prch(3) {
+                } else if Self::str_at(self.s.as_str(), 2) == "[" && self.prch(3) {
+                    // self.skip_char(3);
+                    self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+                    // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
+                    while !Self::str_at(self.s.as_str(), 0).is_empty() && Self::str_at(self.s.as_str(), 0) != "]" {
+                        // self.skip_char(1);
+                        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                    }
+                    true
+                } else if self.prch(2) {
+                    // self.skip_char(3);
+                    self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+                    true
+                } else {
+                    false
+                }
+            },
+            "\\*" => {
+                let mut reg = String::new();
+                // if self.str_at(2) == "(" && self.prch(3) && self.prch(4) {
+                if Self::str_at(self.s.as_str(), 2) == "(" && self.prch(3) && self.prch(4) {
+                    reg = self.s[3..5].to_owned();
+                    // self.skip_char(5);
+                    self.s = self.skip_char(self.s.as_str(), Some(5)).to_owned();
+                    true
+                // } else if self.str_at(2) == "[" && self.prch(3) {
+                } else if Self::str_at(self.s.as_str(), 2) == "[" && self.prch(3) {
+                    // self.skip_char(3);
+                    self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+                    // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
+                    while !Self::str_at(self.s.as_str(), 0).is_empty() && Self::str_at(self.s.as_str(), 0) != "]" {
+                        // reg.push_str(self.str_at(0));
+                        reg.push_str(Self::str_at(self.s.as_str(), 0));
+                        // self.skip_char(1);
+                        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                    }
+                    if let Some("]") = self.s.get(0..1) {
+                        // self.skip_char(1);
+                        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+
+                        if self.reg_table.contains_key(&reg) {
+                            // This unwrap is safe because of the if
+                            self.s = self.reg_table.get(&reg).unwrap().to_owned();
+                            self.text_arg();
+                            true
+                        } else {
+                            false
+                        }
+
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+
+            },
+            _ => false,
+        }
+    }
+
+    fn digit(&self, _: usize) -> bool {
+        unimplemented!()
+    }
+
+    fn size(&mut self) -> bool {
+        /* # We require that the string starts with \s */
+        if self.digit(2) || ( "-+".contains(Self::str_at(self.s.as_str(), 2)) && self.digit(3)) {
+            // self.skip_char(3);
+            self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+            while self.digit(0) {
+                // self.skip_char(1);
+                self.s = self.skip_char(self.s.as_str(), None).to_owned();
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    fn condputs(&self, _: &str) {
+        unimplemented!()
+    }
+    
+    fn esc(&mut self) -> bool {
+        /* # We require that the string start with backslash */
+        if let Some(c) = self.s.get(1..2) {
+            match c {
+                "e" | "E"             => self.condputs("\\"),
+                "t"                   => self.condputs("\t"),
+                "0" | "~"             => self.condputs(" "),
+                "|" | "^" | "&" | ":" => (),
+                _                     => self.condputs(c),
+            };
+            // self.skip_char(2);
+            self.s = self.skip_char(self.s.as_str(), Some(2)).to_owned();
+            true
+        } else {
+            false
+        }
+    }
+    
+    
+    fn word(&mut self) -> bool {
+        let mut got_something = false;
+        loop {
+            if let Some(m) = self.g_re_word.find(self.s.as_str()) {
+                got_something = true;
+                self.condputs(m.as_str());
+                // self.skip_char(m.end());
+                self.s = self.skip_char(self.s.as_str(), Some(m.end())).to_owned();
+
+                while self.spec() {
+                    if !self.specletter {
+                        break;
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+        got_something
+    }
+    
+    fn text(&mut self) -> bool {
+        loop {
+            if let Some(idx) = self.s.find("\\") {
+                self.condputs(&self.s[..idx]);
+                // self.skip_char(idx);
+                if !self.esc_char_backslash() {
+                    // self.condputs(self.str_at(0));
+                    self.condputs(Self::str_at(self.s.as_str(), 0));
+                    // self.skip_char(1);
+                    self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                }
+            } else {
+                self.condputs(self.s.as_str());
+                self.s = String::new();
+                break;
+            }
+        }
+        true
+    }
+
+
+    fn spec(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn esc_char_backslash(&mut self) -> bool {
+        if let Some(c) = self.s.get(1..2) {
+            match c {
+                "\"" => self.comment(),
+                "f" => self.font(),
+                "s" => self.size(),
+                "h" | "v" | "w" | "u" | "d" => self.numreq(),
+                "n" | "*" => self.var(),
+                "(" => self.spec(),
+                _ => self.esc(),
+            }
+        } else {
+            false
+        }
     }
 
     fn not_whitespace(s: &str, idx: usize) -> bool {
