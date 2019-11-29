@@ -652,10 +652,6 @@ impl Deroffer {
 
         true
     }
-    
-    fn prch(&self, _: usize) -> bool {
-        unimplemented!()
-    }
 
     fn text_arg(&self) -> bool {
         unimplemented!()
@@ -671,13 +667,13 @@ impl Deroffer {
                     // self.skip_char(5);
                     self.s = self.skip_char(self.s.as_str(), Some(5)).to_owned();
                     true
-                // } else if self.str_at(2) == "(" && self.prch(3) && self.prch(4) {
-                } else if Self::str_at(self.s.as_str(), 2) == "(" && self.prch(3) && self.prch(4) {
+                // } else if self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4) {
+                } else if Self::str_at(self.s.as_str(), 2) == "(" && Self::not_whitespace(self.s.as_str(), 3) && Self::not_whitespace(self.s.as_str(), 4) {
                     // self.skip_char(5);
                     self.s = self.skip_char(self.s.as_str(), Some(5)).to_owned();
                     true
-                // } else if self.str_at(2) == "[" && self.prch(3) {
-                } else if Self::str_at(self.s.as_str(), 2) == "[" && self.prch(3) {
+                // } else if self.str_at(2) == "[" && self.not_whitespace(3) {
+                } else if Self::str_at(self.s.as_str(), 2) == "[" && Self::not_whitespace(self.s.as_str(), 3) {
                     // self.skip_char(3);
                     self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
                     // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
@@ -686,7 +682,8 @@ impl Deroffer {
                         self.s = self.skip_char(self.s.as_str(), None).to_owned();
                     }
                     true
-                } else if self.prch(2) {
+                // } else if self.not_whitespace(2) {
+                } else if Self::not_whitespace(self.s.as_str(), 2) {
                     // self.skip_char(3);
                     self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
                     true
@@ -696,14 +693,14 @@ impl Deroffer {
             },
             "\\*" => {
                 let mut reg = String::new();
-                // if self.str_at(2) == "(" && self.prch(3) && self.prch(4) {
-                if Self::str_at(self.s.as_str(), 2) == "(" && self.prch(3) && self.prch(4) {
+                // if self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4) {
+                if Self::str_at(self.s.as_str(), 2) == "(" && Self::not_whitespace(self.s.as_str(), 3) && Self::not_whitespace(self.s.as_str(), 4) {
                     reg = self.s[3..5].to_owned();
                     // self.skip_char(5);
                     self.s = self.skip_char(self.s.as_str(), Some(5)).to_owned();
                     true
-                // } else if self.str_at(2) == "[" && self.prch(3) {
-                } else if Self::str_at(self.s.as_str(), 2) == "[" && self.prch(3) {
+                // } else if self.str_at(2) == "[" && self.not_whitespace(3) {
+                } else if Self::str_at(self.s.as_str(), 2) == "[" && Self::not_whitespace(self.s.as_str(), 3) {
                     // self.skip_char(3);
                     self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
                     // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
