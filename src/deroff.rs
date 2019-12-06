@@ -545,14 +545,14 @@ impl Deroffer {
     fn request_or_macro(&mut self) -> bool {
 
         // self.skip_char();
-        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+        self.s = self.skip_char(&self.s, None).to_owned();
 
         let s0 = &self.s[1..2];
 
         match s0 {
             "\\" => {
                 // if self.str_at(1) == Some('"') {
-                if Self::str_at(self.s.as_str(), 1) == "\"" {
+                if Self::str_at(&self.s, 1) == "\"" {
                     // self.condputs("\n");
                     return true;
                 }
@@ -565,7 +565,7 @@ impl Deroffer {
             "]" => {
                 self.refer = false;
                 // self.skip_char();
-                self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                self.s = self.skip_char(&self.s, None).to_owned();
                 // return self.text();
             },
             "." => {
@@ -587,19 +587,19 @@ impl Deroffer {
             return true;
         }
 
-        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
-        while !self.s.is_empty() && !Self::is_white(self.s.as_str(), 0) {
-            self.s = self.skip_char(self.s.as_str(), None).to_owned();
+        self.s = self.skip_leading_whitespace(&self.s).to_owned();
+        while !self.s.is_empty() && !Self::is_white(&self.s, 0) {
+            self.s = self.skip_char(&self.s, None).to_owned();
         }
 
-        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
+        self.s = self.skip_leading_whitespace(&self.s).to_owned();
 
         loop {
             if !self.quoted_arg() && !self.text_arg() {
                 if !self.s.is_empty() {
                     // self.condputs(self.str_at(0));
-                    self.condputs(Self::str_at(self.s.as_str(), 0));
-                    self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                    self.condputs(Self::str_at(&self.s, 0));
+                    self.s = self.skip_char(&self.s, None).to_owned();
                 } else {
                     return true;
                 }
@@ -608,8 +608,8 @@ impl Deroffer {
     }
 
     fn font(&mut self) -> bool {
-        if let Some(m) = self.g_re_font.find(self.s.as_str()) {
-            self.s = self.skip_char(self.s.as_str(), Some(m.end())).to_owned();
+        if let Some(m) = self.g_re_font.find(&self.s) {
+            self.s = self.skip_char(&self.s, Some(m.end())).to_owned();
             true
         } else {
             false
@@ -632,7 +632,7 @@ impl Deroffer {
         let mut m = self.r#macro as u8 + 1;
 
         // self.skip_char(3);
-        self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+        self.s = self.skip_char(&self.s, Some(3)).to_owned();
 
         // There's this, which has a comment explaining my thoughts right now
         /* 
@@ -642,9 +642,9 @@ impl Deroffer {
         // And I dont know what the purpose of it would even be, if you can tell, lmk
 
         // if self.str_at(0) == '\'' {
-        if Self::str_at(self.s.as_str(), 0) == "'" {
+        if Self::str_at(&self.s, 0) == "'" {
             // self.skip_char(1);
-            self.s = self.skip_char(self.s.as_str(), None).to_owned();
+            self.s = self.skip_char(&self.s, None).to_owned();
         }
 
         m -= 1;
@@ -665,27 +665,27 @@ impl Deroffer {
             "\\n" => {
                 if let Some("dy") = self.s.get(3..5) {
                     // self.skip_char(5);
-                    self.s = self.skip_char(self.s.as_str(), Some(5)).to_owned();
+                    self.s = self.skip_char(&self.s, Some(5)).to_owned();
                     true
                 // } else if self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4) {
-                } else if Self::str_at(self.s.as_str(), 2) == "(" && Self::not_whitespace(self.s.as_str(), 3) && Self::not_whitespace(self.s.as_str(), 4) {
+                } else if Self::str_at(&self.s, 2) == "(" && Self::not_whitespace(&self.s, 3) && Self::not_whitespace(&self.s, 4) {
                     // self.skip_char(5);
-                    self.s = self.skip_char(self.s.as_str(), Some(5)).to_owned();
+                    self.s = self.skip_char(&self.s, Some(5)).to_owned();
                     true
                 // } else if self.str_at(2) == "[" && self.not_whitespace(3) {
-                } else if Self::str_at(self.s.as_str(), 2) == "[" && Self::not_whitespace(self.s.as_str(), 3) {
+                } else if Self::str_at(&self.s, 2) == "[" && Self::not_whitespace(&self.s, 3) {
                     // self.skip_char(3);
-                    self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+                    self.s = self.skip_char(&self.s, Some(3)).to_owned();
                     // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
-                    while !Self::str_at(self.s.as_str(), 0).is_empty() && Self::str_at(self.s.as_str(), 0) != "]" {
+                    while !Self::str_at(&self.s, 0).is_empty() && Self::str_at(&self.s, 0) != "]" {
                         // self.skip_char(1);
-                        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                        self.s = self.skip_char(&self.s, None).to_owned();
                     }
                     true
                 // } else if self.not_whitespace(2) {
-                } else if Self::not_whitespace(self.s.as_str(), 2) {
+                } else if Self::not_whitespace(&self.s, 2) {
                     // self.skip_char(3);
-                    self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+                    self.s = self.skip_char(&self.s, Some(3)).to_owned();
                     true
                 } else {
                     false
@@ -694,25 +694,25 @@ impl Deroffer {
             "\\*" => {
                 let mut reg = String::new();
                 // if self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4) {
-                if Self::str_at(self.s.as_str(), 2) == "(" && Self::not_whitespace(self.s.as_str(), 3) && Self::not_whitespace(self.s.as_str(), 4) {
+                if Self::str_at(&self.s, 2) == "(" && Self::not_whitespace(&self.s, 3) && Self::not_whitespace(&self.s, 4) {
                     reg = self.s[3..5].to_owned();
                     // self.skip_char(5);
-                    self.s = self.skip_char(self.s.as_str(), Some(5)).to_owned();
+                    self.s = self.skip_char(&self.s, Some(5)).to_owned();
                     true
                 // } else if self.str_at(2) == "[" && self.not_whitespace(3) {
-                } else if Self::str_at(self.s.as_str(), 2) == "[" && Self::not_whitespace(self.s.as_str(), 3) {
+                } else if Self::str_at(&self.s, 2) == "[" && Self::not_whitespace(&self.s, 3) {
                     // self.skip_char(3);
-                    self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+                    self.s = self.skip_char(&self.s, Some(3)).to_owned();
                     // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
-                    while !Self::str_at(self.s.as_str(), 0).is_empty() && Self::str_at(self.s.as_str(), 0) != "]" {
+                    while !Self::str_at(&self.s, 0).is_empty() && Self::str_at(&self.s, 0) != "]" {
                         // reg.push_str(self.str_at(0));
-                        reg.push_str(Self::str_at(self.s.as_str(), 0));
+                        reg.push_str(Self::str_at(&self.s, 0));
                         // self.skip_char(1);
-                        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                        self.s = self.skip_char(&self.s, None).to_owned();
                     }
                     if let Some("]") = self.s.get(0..1) {
                         // self.skip_char(1);
-                        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                        self.s = self.skip_char(&self.s, None).to_owned();
 
                         if self.reg_table.contains_key(&reg) {
                             // This unwrap is safe because of the if
@@ -741,12 +741,12 @@ impl Deroffer {
 
     fn size(&mut self) -> bool {
         /* # We require that the string starts with \s */
-        if self.digit(2) || ( "-+".contains(Self::str_at(self.s.as_str(), 2)) && self.digit(3)) {
+        if self.digit(2) || ( "-+".contains(Self::str_at(&self.s, 2)) && self.digit(3)) {
             // self.skip_char(3);
-            self.s = self.skip_char(self.s.as_str(), Some(3)).to_owned();
+            self.s = self.skip_char(&self.s, Some(3)).to_owned();
             while self.digit(0) {
                 // self.skip_char(1);
-                self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                self.s = self.skip_char(&self.s, None).to_owned();
             }
             true
         } else {
@@ -769,7 +769,7 @@ impl Deroffer {
                 _                     => self.condputs(c),
             };
             // self.skip_char(2);
-            self.s = self.skip_char(self.s.as_str(), Some(2)).to_owned();
+            self.s = self.skip_char(&self.s, Some(2)).to_owned();
             true
         } else {
             false
@@ -780,11 +780,11 @@ impl Deroffer {
     fn word(&mut self) -> bool {
         let mut got_something = false;
         loop {
-            if let Some(m) = self.g_re_word.find(self.s.as_str()) {
+            if let Some(m) = self.g_re_word.find(&self.s) {
                 got_something = true;
                 self.condputs(m.as_str());
                 // self.skip_char(m.end());
-                self.s = self.skip_char(self.s.as_str(), Some(m.end())).to_owned();
+                self.s = self.skip_char(&self.s, Some(m.end())).to_owned();
 
                 while self.spec() {
                     if !self.specletter {
@@ -805,12 +805,12 @@ impl Deroffer {
                 // self.skip_char(idx);
                 if !self.esc_char_backslash() {
                     // self.condputs(self.str_at(0));
-                    self.condputs(Self::str_at(self.s.as_str(), 0));
+                    self.condputs(Self::str_at(&self.s, 0));
                     // self.skip_char(1);
-                    self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                    self.s = self.skip_char(&self.s, None).to_owned();
                 }
             } else {
-                self.condputs(self.s.as_str());
+                self.condputs(&self.s);
                 self.s = String::new();
                 break;
             }
