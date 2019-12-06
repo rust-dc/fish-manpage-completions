@@ -663,7 +663,7 @@ impl Deroffer {
         let s0s1 = &self.s[0..2];
         match s0s1 {
             "\\n" => {
-                if Some("dy") = self.s.get(3..5) {
+                if Some("dy") == self.s.get(3..5) {
                     // self.skip_char(5);
                     self.s = self.skip_char(&self.s, Some(5)).to_owned();
                     true
