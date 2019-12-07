@@ -657,82 +657,91 @@ impl Deroffer {
         unimplemented!()
     }
 
+    fn prch(&self, idx: usize) -> bool {
+        self.s.get(idx..(idx+1))
+            .map(|c| !" \t\n".contains(c))
+            .unwrap_or_default()
+    }
+
+    // This function is the worst, there are a few comments explaining some of it in the test (test_var)
+    // its so hard to briefly put into words what this function does, basically depending on the state
+    // of self.s, it will either, change self.s to "", a part of self.s, or a value in self.reg_table 
+    // which corresponds to a key that is part of self.s.
+    // This should be like 2 or 3 functions, but it's only one. So there's that. :-)
+    // NOTE: there is a call to text_arg that is commented out because it's not implemented, so the
+    // tests will need revised when it gets implemented
     fn var(&mut self) -> bool {
 
-        let mut reg = String::new();
         let s0s1 = &self.s[0..2];
-        match s0s1 {
-            "\\n" => {
-                if Some("dy") == self.s.get(3..5) {
-                    // self.skip_char(5);
-                    self.s = self.skip_char(&self.s, Some(5)).to_owned();
-                    true
-                // } else if self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4) {
-                } else if Self::str_at(&self.s, 2) == "(" && Self::not_whitespace(&self.s, 3) && Self::not_whitespace(&self.s, 4) {
-                    // self.skip_char(5);
-                    self.s = self.skip_char(&self.s, Some(5)).to_owned();
-                    true
-                // } else if self.str_at(2) == "[" && self.not_whitespace(3) {
-                } else if Self::str_at(&self.s, 2) == "[" && Self::not_whitespace(&self.s, 3) {
-                    // self.skip_char(3);
-                    self.s = self.skip_char(&self.s, Some(3)).to_owned();
-                    // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
-                    while !Self::str_at(&self.s, 0).is_empty() && Self::str_at(&self.s, 0) != "]" {
-                        // self.skip_char(1);
-                        self.s = self.skip_char(&self.s, None).to_owned();
-                    }
-                    true
-                // } else if self.not_whitespace(2) {
-                } else if Self::not_whitespace(&self.s, 2) {
-                    // self.skip_char(3);
-                    self.s = self.skip_char(&self.s, Some(3)).to_owned();
-                    true
-                } else {
-                    false
+        if s0s1 == "\\n" {
+            if Some("dy") == self.s.get(3..5) {
+                // self.skip_char(5);
+                self.s = self.skip_char(&self.s, Some(5)).to_owned();
+                return true;
+            // } else if self.str_at(2) == "(" && self.prch(3) && self.prch(4) {
+            } else if Self::str_at(&self.s, 2) == "(" && self.prch(3) && self.prch(4) {
+                // self.skip_char(5);
+                self.s = self.skip_char(&self.s, Some(5)).to_owned();
+                return true;
+            // } else if self.str_at(2) == "[" && self.prch(3) {
+            } else if Self::str_at(&self.s, 2) == "[" && self.prch(3) {
+                // self.skip_char(3);
+                self.s = self.skip_char(&self.s, Some(3)).to_owned();
+                // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
+                while !Self::str_at(&self.s, 0).is_empty() && Self::str_at(&self.s, 0) != "]" {
+                    // self.skip_char(1);
+                    self.s = self.skip_char(&self.s, None).to_owned();
                 }
-            },
-            "\\*" => {
-                let mut reg = String::new();
-                // if self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4) {
-                if Self::str_at(&self.s, 2) == "(" && Self::not_whitespace(&self.s, 3) && Self::not_whitespace(&self.s, 4) {
-                    reg = self.s[3..5].to_owned();
-                    // self.skip_char(5);
-                    self.s = self.skip_char(&self.s, Some(5)).to_owned();
-                    true
-                // } else if self.str_at(2) == "[" && self.not_whitespace(3) {
-                } else if Self::str_at(&self.s, 2) == "[" && Self::not_whitespace(&self.s, 3) {
-                    // self.skip_char(3);
-                    self.s = self.skip_char(&self.s, Some(3)).to_owned();
-                    // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
-                    while !Self::str_at(&self.s, 0).is_empty() && Self::str_at(&self.s, 0) != "]" {
-                        // reg.push_str(self.str_at(0));
-                        reg.push_str(Self::str_at(&self.s, 0));
-                        // self.skip_char(1);
-                        self.s = self.skip_char(&self.s, None).to_owned();
-                    }
-                    if let Some("]") = self.s.get(0..1) {
-                        // self.skip_char(1);
-                        self.s = self.skip_char(&self.s, None).to_owned();
-
-                        if self.reg_table.contains_key(&reg) {
-                            // This unwrap is safe because of the if
-                            self.s = self.reg_table.get(&reg).unwrap().to_owned();
-                            self.text_arg();
-                            true
-                        } else {
-                            false
-                        }
-
-                    } else {
-                        false
-                    }
-                } else {
-                    false
+                return true;
+            // } else if self.prch(2) {
+            } else if self.prch(2) {
+                // self.skip_char(3);
+                self.s = self.skip_char(&self.s, Some(3)).to_owned();
+                return true;
+            } else {
+                return false;
+            }
+        } else if s0s1 == "\\*" {
+            let mut reg = String::new();
+            // if self.str_at(2) == "(" && self.prch(3) && self.prch(4) {
+            if Self::str_at(&self.s, 2) == "(" && self.prch(3) && self.prch(4) {
+                reg = self.s[3..5].to_owned();
+                // self.skip_char(5); 
+                self.s = self.skip_char(&self.s, Some(5)).to_owned();
+            // } else if self.str_at(2) == "[" && self.prch(3) {
+            } else if Self::str_at(&self.s, 2) == "[" && self.prch(3) {
+                // self.skip_char(3);
+                self.s = self.skip_char(&self.s, Some(3)).to_owned();
+                // while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
+                while !Self::str_at(&self.s, 0).is_empty() && Self::str_at(&self.s, 0) != "]" {
+                    // reg.push_str(self.str_at(0));
+                    reg.push_str(Self::str_at(&self.s, 0));
+                    // self.skip_char(1);
+                    self.s = self.skip_char(&self.s, None).to_owned();
                 }
+                if let Some("]") = self.s.get(0..1) {
+                    // self.skip_char(1);
+                    self.s = self.skip_char(&self.s, None).to_owned();
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
 
-            },
-            _ => false,
+            if self.reg_table.contains_key(&reg) {
+                // This unwrap is safe because of the if
+                self.s = self.reg_table.get(&reg).unwrap().to_owned();
+                // This is unimplemented, so tests fail:
+                // self.text_arg();
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
         }
+
     }
 
     fn digit(&self, _: usize) -> bool {
@@ -910,6 +919,168 @@ fn test_is_white() {
     assert_eq!(Deroffer::is_white("ab cd", 1), false);
     assert_eq!(Deroffer::is_white("ab cd", 2), true);
     assert_eq!(Deroffer::is_white("ab cd", 3), false);
+}
+
+#[test]
+fn test_var() {
+    let mut d = Deroffer::new();
+
+    // "\n" successes
+    d.s = "\\n dyHello".to_owned();
+    assert!(d.var() == true);
+    assert!(d.s == "Hello");
+
+    d.s = "\\n(aaHello".to_owned();
+    assert!(d.var() == true);
+    assert!(d.s == "Hello");
+
+    d.s = "\\n[skipme] Hello".to_owned();
+    assert!(d.var() == true);
+    assert!(d.s == "] Hello");
+
+    d.s = "\\naHello".to_owned();
+    assert!(d.var() == true);
+    assert!(d.s == "Hello");
+
+    // "\n" errors
+    d.s = "\\n".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "\\n");
+
+    d.s = "\\n a".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "\\n a");
+
+    d.s = "\\n da".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "\\n da");
+
+    // "\*" successes
+    
+    // these blocks are more for me to understand the code,
+    // but, I think they're probably helpful for you guys, 
+    // so here they are. On another note, I cannot WAIT to
+    // reformat this entire project
+
+    /* 
+    AA is two non whitespace characters
+    "\*(AA" => {
+        if AA in self.reg_table => {
+            self.s = self.reg_table.get(AA);
+            return true;
+        } else => {
+            self.s = self.s.get(5..);
+            return false;
+        }
+    } */
+    d.s = "\\*(traaaaaaaaaaaaa".to_owned();
+    d.reg_table.insert("tr".to_owned(), "Hello World!".to_owned());
+    assert!(d.var() == true);
+    assert!(d.s == "Hello World!");
+    // assert!(d.s == " World!");
+    // assert!(d.output.contains("Hello"))
+
+    d.s = "\\*(aaHello World!".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "Hello World!");
+
+    /*
+    A is a string that does not start with whitespace
+    "\*[A" => {
+        if A ends with "]" => {
+            let B = A[..-1];
+            
+            if B in self.reg_table {
+                self.s = self.reg_table.get(B);
+                return true;
+            } else {
+                +1 to skip the "]" as well
+                self.s = self.s[len(B)+1..];
+                return false;
+            }
+        } else => {
+            self.s = "";
+            return false;
+        }
+    }
+    */
+
+    // ideal case, B is in reg_table
+    d.s = "\\*[test_reg]".to_owned();
+    d.reg_table.insert("test_reg".to_owned(), "It me!".to_owned());
+    assert!(d.var() == true);
+    assert!(d.s == "It me!");
+    // assert!(d.s == " me!");
+    // assert!(d.output.contains("It"));
+
+
+    // no "]"
+    d.s = "\\*[foo bar :)".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "");
+    
+    // B not in reg_table
+    d.s = "\\*[foo bar]abcd".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "abcd");
+    
+    // Here's a python version of these tests
+    /* 
+    d.s = "\\n dyHello"
+    print(d.var() == True)
+    print(d.s == "Hello")
+
+    d.s = "\\n(aaHello"
+    print(d.var() == True)
+    print(d.s == "Hello")
+
+    d.s = "\\n[skipme] Hello"
+    print(d.var() == True)
+    print(d.s == "] Hello")
+
+    d.s = "\\naHello"
+    print(d.var() == True)
+    print(d.s == "Hello")
+
+    d.s = "\\n"
+    print(d.var() == False)
+    print(d.s == "\\n")
+
+    d.s = "\\n a"
+    print(d.var() == False)
+    print(d.s == "\\n a")
+
+    d.s = "\\n da"
+    print(d.var() == False)
+    print(d.s == "\\n da")
+
+    d.s = "\\*(traaaaaaaaaaaaa"
+    d.reg_table["tr"] = "Hello World!"
+    print(d.var() == True)
+    print(d.s == " World!")
+    print("Hello" in d.output)
+
+    d.s = "\\*(aaHello World!"
+    print(d.var() == False)
+    print(d.s == "Hello World!")
+
+    d.s = "\\*[test_reg]"
+    d.reg_table["test_reg"] = "It me!"
+    print(d.var() == True)
+    print(d.s == " me!")
+    print("It" in d.output)
+
+    d.s = "\\*[foo bar :)"
+    print(d.var() == False)
+    print(d.s == "")
+
+    d.s = "\\*[foo bar]abcd"
+    print(d.var() == False)
+    print(d.s == "abcd")
+
+    print(d.output) 
+*/
+
 }
 
 //     def __init__(self):
