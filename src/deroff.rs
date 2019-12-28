@@ -361,17 +361,30 @@ impl Deroffer {
         })
     }
 
-    fn skip_char<'a>(&self, s: &'a str, amount: Option<usize>) -> &'a str {
+    fn skip_char(&mut self, amount: usize) {
+        self.s = self.s.get(amount..).unwrap_or("").to_owned();
+    }
+
+    /* fn skip_char<'a>(&self, s: &'a str, amount: Option<usize>) -> &'a str {
         let amount = amount.unwrap_or(1);
         s.get(amount..).unwrap_or("")
+    } */
+
+    fn skip_leading_whitespace(&mut self) {
+        self.s = self.s.trim_start().to_owned();
     }
 
-    fn skip_leading_whitespace<'a>(&self, s: &'a str) -> &'a str {
+    /* fn skip_leading_whitespace<'a>(&self, s: &'a str) -> &'a str {
         s.trim_start()
-    }
+    } */
 
-    fn str_at(&self, idx: usize) -> Option<char> {
-        self.s.chars().nth(idx)
+    fn str_at(&mut self, idx: usize) -> &str {
+        let s = &self.s;
+        s.char_indices()
+            .skip(idx)
+            .next()
+            .map(|(i, c)| &s[i..(i + c.len_utf8())])
+            .unwrap_or("")
     }
 
     /* fn str_at(string: &str, idx: usize) -> &str {
@@ -391,21 +404,36 @@ impl Deroffer {
     } */
 
 
-    /* fn is_white(&self, idx: usize) -> bool {
+    fn is_white(&self, idx: usize) -> bool {
         self.s               // String
             .chars()         // Chars
             .nth(idx)        // Option<char>
             .unwrap_or('a')  // char
             .is_whitespace() // bool
-    } */
+    }
 
-    fn is_white<'a>(s: &'a str, idx: usize) -> bool {
+    /* fn is_white<'a>(s: &'a str, idx: usize) -> bool {
         s
           .chars()  // Chars
           .nth(idx) // Option<char>
           .unwrap_or('a') // char
           .is_whitespace() // bool
+    } */
+
+    // This is also known as `prch` apparently
+    fn not_whitespace(&self, idx: usize) -> bool {
+        !" \t\n".contains(self.s.get(idx..idx+1).unwrap_or_default())
     }
+
+    /* fn not_whitespace(s: &str, idx: usize) -> bool {
+        // # Note that this return False for the empty string (idx >= len(self.s))
+        // ch = self.s[idx:idx+1]
+        // return ch not in ' \t\n'
+        // TODO Investigate checking for ASCII whitespace after mvp
+        s.get(idx..(idx + 1))
+            .map(|string| " \t\n".contains(string))
+            .unwrap_or_default()
+    } */
 
     // Replaces the g_macro_dict lookup in the Python code
     fn g_macro_dispatch(&mut self, s: &str) -> bool {
@@ -965,16 +993,6 @@ impl Deroffer {
         false
     }
 
-    fn not_whitespace(s: &str, idx: usize) -> bool {
-        // # Note that this return False for the empty string (idx >= len(self.s))
-        // ch = self.s[idx:idx+1]
-        // return ch not in ' \t\n'
-        // TODO Investigate checking for ASCII whitespace after mvp
-        s.get(idx..(idx + 1))
-            .map(|string| " \t\n".contains(string))
-            .unwrap_or_default()
-    }
-
     fn deroff(&mut self, string: String) {
         unimplemented!()
     }
@@ -1014,10 +1032,13 @@ fn test_get_output() {
 
 #[test]
 fn test_not_whitespace() {
-    assert_eq!(Deroffer::not_whitespace("", 0), false);
-    assert_eq!(Deroffer::not_whitespace("", 9), false);
-    assert_eq!(Deroffer::not_whitespace("ab d", 2), true);
-    assert_eq!(Deroffer::not_whitespace("ab d", 3), false);
+    let mut d = Deroffer::new();
+
+    assert_eq!(d.not_whitespace(0), false);
+    assert_eq!(d.not_whitespace(9), false);
+    d.s = "ab cd".to_owned();
+    assert_eq!(d.not_whitespace(2), false);
+    assert_eq!(d.not_whitespace(3), true);
 }
 
 #[test]
@@ -1025,24 +1046,27 @@ fn test_str_at() {
     let mut d = Deroffer::new();
 
     // d.s == ""
-    assert_eq!(d.str_at(1), None);
+    assert_eq!(d.str_at(1), "");
     
     d.s = String::from("ab cd");
-    assert_eq!(d.str_at(42), None);
-    assert_eq!(d.str_at(1), Some('b'));
+    assert_eq!(d.str_at(42), "");
+    assert_eq!(d.str_at(1), "b");
 
     d.s = String::from("🗻");
-    assert_eq!(d.str_at(0), Some('🗻'));
-    assert_eq!(d.str_at(1), None);
+    assert_eq!(d.str_at(0), "🗻");
+    assert_eq!(d.str_at(1), "");
 }
 
 #[test]
 fn test_is_white() {
-    assert_eq!(Deroffer::is_white("", 1), false);
-    assert_eq!(Deroffer::is_white("ab cd", 42), false);
-    assert_eq!(Deroffer::is_white("ab cd", 1), false);
-    assert_eq!(Deroffer::is_white("ab cd", 2), true);
-    assert_eq!(Deroffer::is_white("ab cd", 3), false);
+    let mut d = Deroffer::new();
+    assert_eq!(d.is_white(1), false);
+
+    d.s = "ab cd".to_owned();
+    assert_eq!(d.is_white(42), false); // OOB
+    assert_eq!(d.is_white(1), false);  // "b"
+    assert_eq!(d.is_white(2), true);   // " "
+    assert_eq!(d.is_white(3), false);  // "c"
 }
 
 #[test]
