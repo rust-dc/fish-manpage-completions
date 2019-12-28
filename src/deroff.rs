@@ -370,7 +370,11 @@ impl Deroffer {
         s.trim_start()
     }
 
-    fn str_at(string: &str, idx: usize) -> &str {
+    fn str_at(&self, idx: usize) -> Option<char> {
+        self.s.chars().nth(idx)
+    }
+
+    /* fn str_at(string: &str, idx: usize) -> &str {
         // Note: If we don't care about strings with multi-byte chars, the
         // following would suffice:
         // s.get(idx..idx + 1).unwrap_or("")
@@ -384,13 +388,23 @@ impl Deroffer {
             .next()
             .map(|(idx, charr)| &string[idx..(idx + charr.len_utf8())]) // Okay to directly index based on idx/charr construction.
             .unwrap_or_default()
-    }
+    } */
+
+
+    /* fn is_white(&self, idx: usize) -> bool {
+        self.s               // String
+            .chars()         // Chars
+            .nth(idx)        // Option<char>
+            .unwrap_or('a')  // char
+            .is_whitespace() // bool
+    } */
 
     fn is_white<'a>(s: &'a str, idx: usize) -> bool {
-        match Self::str_at(s, idx) {
-            "" => false,
-            c => c.chars().all(|c| c.is_whitespace()),
-        }
+        s
+          .chars()  // Chars
+          .nth(idx) // Option<char>
+          .unwrap_or('a') // char
+          .is_whitespace() // bool
     }
 
     // Replaces the g_macro_dict lookup in the Python code
@@ -885,6 +899,72 @@ impl Deroffer {
 
     }
 
+    fn request_or_macro(&mut self) -> bool {
+
+        // self.skip_char();
+        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+
+        let s0 = &self.s[1..2];
+
+        match s0 {
+            "\\" => {
+                if self.str_at(1) == Some('"') {
+                    // self.condputs("\n");
+                    return true;
+                }
+            },
+            "[" => {
+                self.refer = true;
+                // self.condputs("\n");
+                return true;
+            },
+            "]" => {
+                self.refer = false;
+                // self.skip_char();
+                self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                // return self.text();
+            },
+            "." => {
+                self.r#macro = false;
+                // self.condputs("\n");
+                return true;
+            },
+            _ => {()}
+        };
+
+        self.nobody = false;
+        let s0s1 = self.s[..2].to_owned();
+
+        if self.g_macro_dispatch(s0s1.as_str()) {
+            return true;
+        }
+
+        if SKIP_HEADERS && self.nobody {
+            return true;
+        }
+
+        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
+        while !self.s.is_empty() && !Self::is_white(self.s.as_str(), 0) {
+            self.s = self.skip_char(self.s.as_str(), None).to_owned();
+        }
+
+        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
+
+        loop {
+            if !self.quoted_arg() && !self.text_arg() {
+                if !self.s.is_empty() {
+                    self.condputs(self.str_at(0));
+                    self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                } else {
+                    return true;
+                }
+            }
+        }
+
+
+        false
+    }
+
     fn not_whitespace(s: &str, idx: usize) -> bool {
         // # Note that this return False for the empty string (idx >= len(self.s))
         // ch = self.s[idx:idx+1]
@@ -942,11 +1022,18 @@ fn test_not_whitespace() {
 
 #[test]
 fn test_str_at() {
-    assert_eq!(Deroffer::str_at("", 1), "");
-    assert_eq!(Deroffer::str_at("ab cd", 42), "");
-    assert_eq!(Deroffer::str_at("ab cd", 1), "b");
-    assert_eq!(Deroffer::str_at("🗻", 0), "🗻");
-    assert_eq!(Deroffer::str_at("🗻", 1), "");
+    let mut d = Deroffer::new();
+
+    // d.s == ""
+    assert_eq!(d.str_at(1), None);
+    
+    d.s = String::from("ab cd");
+    assert_eq!(d.str_at(42), None);
+    assert_eq!(d.str_at(1), Some('b'));
+
+    d.s = String::from("🗻");
+    assert_eq!(d.str_at(0), Some('🗻'));
+    assert_eq!(d.str_at(1), None);
 }
 
 #[test]
