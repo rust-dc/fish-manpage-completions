@@ -397,8 +397,7 @@ impl Deroffer {
         // only single-byte characters), it would be faster to just use `get()`
         string
             .char_indices()
-            .skip(idx)
-            .next()
+            .nth(idx)
             .map(|(idx, charr)| &string[idx..(idx + charr.len_utf8())]) // Okay to directly index based on idx/charr construction.
             .unwrap_or_default()
     } */
@@ -577,8 +576,7 @@ impl Deroffer {
             self.condputs("\n")
             return True
         */
-
-        if Self::is_white(self.s.as_str(), 2) {
+        if self.is_white(2) {
             self.pic = false
         }
         self.condputs("\n");
@@ -594,7 +592,7 @@ impl Deroffer {
             return True
         */
 
-        if Self::is_white(self.s.as_str(), 2) {
+        if self.is_white(2) {
             self.tbl = true;
             self.tblstate = TblState::Options;
         }
@@ -612,7 +610,7 @@ impl Deroffer {
             return True
         */
 
-        if Self::is_white(self.s.as_str(), 2) {
+        if self.is_white(2) {
             self.tbl = true;
             self.tblstate = TblState::Format;
         }
@@ -630,7 +628,7 @@ impl Deroffer {
             return True
         */
 
-        if Self::is_white(self.s.as_str(), 2) {
+        if self.is_white(2) {
             self.tbl = false
         }
 
@@ -647,7 +645,7 @@ impl Deroffer {
             return True
         */
 
-        if Self::is_white(self.s.as_str(), 2) {
+        if self.is_white(2) {
             self.eqn = true
         }
 
@@ -664,7 +662,7 @@ impl Deroffer {
             return True
         */
 
-        if Self::is_white(self.s.as_str(), 2) {
+        if self.is_white(2) {
             self.eqn = false
         }
 
@@ -728,7 +726,7 @@ impl Deroffer {
             return True
         */
 
-        if Self::is_white(self.s.as_str(), 2) {
+        if self.is_white(2) {
             self.inlist = true
         }
         self.condputs("\n");
@@ -763,7 +761,7 @@ impl Deroffer {
             self.condputs("\n")
             return True
         */
-        if Self::is_white(self.s.as_str(), 2) {
+        if self.is_white(2) {
             self.inlist = false;
         }
         self.condputs("\n");
@@ -797,11 +795,10 @@ impl Deroffer {
             return True
         */
 
-        // Yuck
-        self.s = self.skip_char(self.s.as_str(), Some(2)).to_owned();
-        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
+        self.skip_char(2);
+        self.skip_leading_whitespace();
 
-        if !Self::str_at(self.s.as_str(), 0).is_empty() {
+        if !self.str_at(0).is_empty() {
             let comps: Vec<String> = self.s
                                         .splitn(2, " ")
                                         .map(|s| s.to_owned())
@@ -927,37 +924,38 @@ impl Deroffer {
 
     }
 
-    fn request_or_macro(&mut self) -> bool {
+    fn quoted_arg(&self) -> bool {
+        unimplemented!()
+    }
 
-        // self.skip_char();
-        self.s = self.skip_char(self.s.as_str(), None).to_owned();
+    fn request_or_macro(&mut self) -> bool {
+        self.skip_char(1);
 
         let s0 = &self.s[1..2];
 
         match s0 {
             "\\" => {
-                if self.str_at(1) == Some('"') {
-                    // self.condputs("\n");
+                if self.str_at(1) == "\"" {
+                    self.condputs("\n");
                     return true;
                 }
             },
             "[" => {
                 self.refer = true;
-                // self.condputs("\n");
+                self.condputs("\n");
                 return true;
             },
             "]" => {
                 self.refer = false;
-                // self.skip_char();
-                self.s = self.skip_char(self.s.as_str(), None).to_owned();
-                // return self.text();
+                self.skip_char(1);
+                return self.text();
             },
             "." => {
                 self.r#macro = false;
-                // self.condputs("\n");
+                self.condputs("\n");
                 return true;
-            },
-            _ => {()}
+            }
+            _ => (),
         };
 
         self.nobody = false;
@@ -971,26 +969,232 @@ impl Deroffer {
             return true;
         }
 
-        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
-        while !self.s.is_empty() && !Self::is_white(self.s.as_str(), 0) {
-            self.s = self.skip_char(self.s.as_str(), None).to_owned();
+        self.skip_leading_whitespace();
+
+        while !self.s.is_empty() && !self.is_white(0) {
+            self.skip_char(1);
         }
 
-        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
+        self.skip_leading_whitespace();
 
         loop {
             if !self.quoted_arg() && !self.text_arg() {
                 if !self.s.is_empty() {
-                    self.condputs(self.str_at(0));
-                    self.s = self.skip_char(self.s.as_str(), None).to_owned();
+                    // This is bad
+                    let s = &self.str_at(0).to_owned();
+                    self.condputs(s);
+                    self.skip_char(1);
                 } else {
                     return true;
                 }
             }
         }
+    }
 
+    fn font(&mut self) -> bool {
+        if let Some(m) = self.g_re_font.find(&self.s.to_owned()) {
+            self.skip_char(m.end());
+            true
+        } else {
+            false
+        }
+    }
 
-        false
+    fn comment(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn numreq(&mut self) -> bool {
+        // In the python, it has a check that is already handled in esc_char_backslash, which is
+        // the only place it gets called, so I'll omit that check here
+
+        // This is written as `self.macro += 1` in the source, but I dont know why
+        // it does the same thing (false -> true, true -> still true) :shrug:
+        // self.r#macro = true;
+        // Upon further investigation, this is the weirdest function ever
+        // This is just a state placeholder thing
+        let mut m = self.r#macro as u8 + 1;
+
+        self.skip_char(3);
+
+        // There's this, which has a comment explaining my thoughts right now
+        /*
+        while self.str_at(0) != "'" and self.esc_char():
+            pass  # Weird
+        */
+        // And I dont know what the purpose of it would even be, if you can tell, lmk
+
+        if self.str_at(0) == "\'" {
+            self.skip_char(1);
+        }
+
+        m -= 1;
+        self.r#macro = m != 0;
+
+        true
+    }
+
+    fn text_arg(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn prch(&self, idx: usize) -> bool {
+        self.s
+            .get(idx..=idx)
+            .map(|c| !" \t\n".contains(c))
+            .unwrap_or_default()
+    }
+
+    // This function is the worst, there are a few comments explaining some of it in the test (test_var)
+    // its so hard to briefly put into words what this function does, basically depending on the state
+    // of self.s, it will either, change self.s to "", a part of self.s, or a value in self.reg_table
+    // which corresponds to a key that is part of self.s.
+    // This should be like 2 or 3 functions, but it's only one. So there's that. :-)
+    // NOTE: there is a call to text_arg that is commented out because it's not implemented, so the
+    // tests will need revised when it gets implemented
+    fn var(&mut self) -> bool {
+        let s0s1 = &self.s[0..2];
+        if s0s1 == "\\n" {
+            if Some("dy") == self.s.get(3..5)
+                || (self.str_at(2) == "(" && self.prch(3) && self.prch(4))
+            {
+                self.skip_char(5);
+                return true;
+            } else if self.str_at(2) == "[" && self.prch(3) {
+                self.skip_char(3);
+                while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
+                    self.skip_char(1);
+                }
+                return true;
+            } else if self.prch(2) {
+                self.skip_char(3);
+                return true;
+            } else {
+                return false;
+            }
+        } else if s0s1 == "\\*" {
+            let mut reg = String::new();
+            if self.str_at(2) == "(" && self.prch(3) && self.prch(4) {
+                reg = self.s[3..5].to_owned();
+                self.skip_char(5);
+            } else if self.str_at(2) == "[" && self.prch(3) {
+                self.skip_char(3);
+                while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
+                    reg.push_str(self.str_at(0));
+                    self.skip_char(1);
+                }
+                if let Some("]") = self.s.get(0..1) {
+                    self.skip_char(1);
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+
+            if self.reg_table.contains_key(&reg) {
+                // This unwrap is safe because of the if
+                self.s = self.reg_table.get(&reg).unwrap().to_owned();
+                // This is unimplemented, so tests fail:
+                // self.text_arg();
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    fn digit(&self, _: usize) -> bool {
+        unimplemented!()
+    }
+
+    fn size(&mut self) -> bool {
+        /* # We require that the string starts with \s */
+        if self.digit(2) || ("-+".contains(self.str_at(2)) && self.digit(3)) {
+            self.skip_char(3);
+            while self.digit(0) {
+                self.skip_char(1);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    fn esc(&mut self) -> bool {
+        /* # We require that the string start with backslash */
+        // self.s.get(1..2).
+        match self.s.to_owned().get(1..2) {
+            Some(a) => {
+                match a {
+                    "e" | "E" => self.condputs("\\"),
+                    "t" => self.condputs("\t"),
+                    "0" | "~" => self.condputs(" "),
+                    "|" | "^" | "" | ":" => (),
+                    o => self.condputs(o),
+                }
+            }
+            None => return false,
+        };
+        self.skip_char(2);
+        true
+        
+    }
+
+    fn word(&mut self) -> bool {
+        let mut got_something = false;
+        while let Some(m) = self.g_re_word.find(&self.s.clone()) {
+            got_something = true;
+            self.condputs(m.as_str());
+            self.skip_char(m.end());
+
+            while self.spec() {
+                if !self.specletter {
+                    break;
+                }
+            }
+        }
+        got_something
+    }
+
+    fn text(&mut self) -> bool {
+        loop {
+            if let Some(idx) = self.s.clone().find("\\") {
+                self.condputs(self.s.clone().get(..idx).unwrap_or("")); // TODO: Fix! this may cause bugs later
+                self.skip_char(idx);
+                if !self.esc_char_backslash() {
+                    self.condputs(self.s.clone().get(0..1).unwrap_or("")); // TODO: Fix! this may cause bugs later
+                    self.skip_char(1);
+                }
+            } else {
+                self.condputs(&self.s.clone());
+                self.s = String::new();
+                break;
+            }
+        }
+        true
+    }
+
+    fn spec(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn esc_char_backslash(&mut self) -> bool {
+        if let Some(c) = self.s.get(1..2) {
+            match c {
+                "\"" => self.comment(),
+                "f" => self.font(),
+                "s" => self.size(),
+                "h" | "v" | "w" | "u" | "d" => self.numreq(),
+                "n" | "*" => self.var(),
+                "(" => self.spec(),
+                _ => self.esc(),
+            }
+        } else {
+            false
+        }
     }
 
     fn deroff(&mut self, string: String) {
@@ -1087,6 +1291,168 @@ fn test_condputs() {
     d.tr = Some(maketrans("Ttr", "AAA"));
     d.condputs("Translate test");
     assert_eq!(d.output, "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned());
+}
+
+#[test]
+fn test_var() {
+    let mut d = Deroffer::new();
+
+    // "\n" successes
+    d.s = "\\n dyHello".to_owned();
+    assert!(d.var() == true);
+    assert!(d.s == "Hello");
+
+    d.s = "\\n(aaHello".to_owned();
+    assert!(d.var() == true);
+    assert!(d.s == "Hello");
+
+    d.s = "\\n[skipme] Hello".to_owned();
+    assert!(d.var() == true);
+    assert!(d.s == "] Hello");
+
+    d.s = "\\naHello".to_owned();
+    assert!(d.var() == true);
+    assert!(d.s == "Hello");
+
+    // "\n" errors
+    d.s = "\\n".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "\\n");
+
+    d.s = "\\n a".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "\\n a");
+
+    d.s = "\\n da".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "\\n da");
+
+    // "\*" successes
+
+    // these blocks are more for me to understand the code,
+    // but, I think they're probably helpful for you guys,
+    // so here they are. On another note, I cannot WAIT to
+    // reformat this entire project
+
+    /*
+    AA is two non whitespace characters
+    "\*(AA" => {
+        if AA in self.reg_table => {
+            self.s = self.reg_table.get(AA);
+            return true;
+        } else => {
+            self.s = self.s.get(5..);
+            return false;
+        }
+    } */
+    d.s = "\\*(traaaaaaaaaaaaa".to_owned();
+    d.reg_table
+        .insert("tr".to_owned(), "Hello World!".to_owned());
+    assert!(d.var() == true);
+    assert!(d.s == "Hello World!");
+    // assert!(d.s == " World!");
+    // assert!(d.output.contains("Hello"))
+
+    d.s = "\\*(aaHello World!".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "Hello World!");
+
+    /*
+    A is a string that does not start with whitespace
+    "\*[A" => {
+        if A ends with "]" => {
+            let B = A[..-1];
+
+            if B in self.reg_table {
+                self.s = self.reg_table.get(B);
+                return true;
+            } else {
+                +1 to skip the "]" as well
+                self.s = self.s[len(B)+1..];
+                return false;
+            }
+        } else => {
+            self.s = "";
+            return false;
+        }
+    }
+    */
+
+    // ideal case, B is in reg_table
+    d.s = "\\*[test_reg]".to_owned();
+    d.reg_table
+        .insert("test_reg".to_owned(), "It me!".to_owned());
+    assert!(d.var() == true);
+    assert!(d.s == "It me!");
+    // assert!(d.s == " me!");
+    // assert!(d.output.contains("It"));
+
+    // no "]"
+    d.s = "\\*[foo bar :)".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "");
+
+    // B not in reg_table
+    d.s = "\\*[foo bar]abcd".to_owned();
+    assert!(d.var() == false);
+    assert!(d.s == "abcd");
+
+    // Here's a python version of these tests
+    /*
+        d.s = "\\n dyHello"
+        print(d.var() == True)
+        print(d.s == "Hello")
+
+        d.s = "\\n(aaHello"
+        print(d.var() == True)
+        print(d.s == "Hello")
+
+        d.s = "\\n[skipme] Hello"
+        print(d.var() == True)
+        print(d.s == "] Hello")
+
+        d.s = "\\naHello"
+        print(d.var() == True)
+        print(d.s == "Hello")
+
+        d.s = "\\n"
+        print(d.var() == False)
+        print(d.s == "\\n")
+
+        d.s = "\\n a"
+        print(d.var() == False)
+        print(d.s == "\\n a")
+
+        d.s = "\\n da"
+        print(d.var() == False)
+        print(d.s == "\\n da")
+
+        d.s = "\\*(traaaaaaaaaaaaa"
+        d.reg_table["tr"] = "Hello World!"
+        print(d.var() == True)
+        print(d.s == " World!")
+        print("Hello" in d.output)
+
+        d.s = "\\*(aaHello World!"
+        print(d.var() == False)
+        print(d.s == "Hello World!")
+
+        d.s = "\\*[test_reg]"
+        d.reg_table["test_reg"] = "It me!"
+        print(d.var() == True)
+        print(d.s == " me!")
+        print("It" in d.output)
+
+        d.s = "\\*[foo bar :)"
+        print(d.var() == False)
+        print(d.s == "")
+
+        d.s = "\\*[foo bar]abcd"
+        print(d.var() == False)
+        print(d.s == "abcd")
+
+        print(d.output)
+    */
 }
 
 //     def __init__(self):
