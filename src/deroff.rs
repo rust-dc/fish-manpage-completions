@@ -421,7 +421,7 @@ impl Deroffer {
 
     // This is also known as `prch` apparently
     fn not_whitespace(&self, idx: usize) -> bool {
-        !" \t\n".contains(self.s.get(idx..idx+1).unwrap_or_default())
+        self.s.get(idx..idx+1).map_or(false, |s| !" \t\n".contains(s))
     }
 
     /* fn not_whitespace(s: &str, idx: usize) -> bool {
