@@ -361,7 +361,7 @@ impl Deroffer {
     }
 
     fn skip_char(&mut self, amount: usize) {
-        self.s = self.s.get(amount..).unwrap_or("").to_owned();
+        self.s.drain(..amount);
     }
 
     /* fn skip_char<'a>(&self, s: &'a str, amount: Option<usize>) -> &'a str {
