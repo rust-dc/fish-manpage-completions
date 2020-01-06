@@ -1,17 +1,18 @@
+#![allow(dead_code)]
+
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/create_manpage_completions.py
 use std::collections::{HashMap, HashSet};
 use std::env;
-use std::ffi::OsString;
+
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use itertools::Itertools;
 use structopt::StructOpt;
 
 #[cfg(test)]
-use pretty_assertions::{assert_eq, assert_ne};
+use pretty_assertions::assert_eq;
 
 mod util;
 
@@ -516,12 +517,12 @@ fn test_remove_groff_formatting() {
 }
 
 trait ManParser {
-    fn is_my_type(&self, manpage: &str) -> bool {
+    fn is_my_type(&self, _manpage: &str) -> bool {
         false
     }
 
     // TODO Is this the right type signature?
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, _manpage: &str) -> Option<String> {
         None
     }
 }
@@ -534,7 +535,7 @@ impl ManParser for Type1 {
         manpage.contains(r#".SH "OPTIONS""#)
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, _manpage: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -615,7 +616,7 @@ impl ManParser for Type1 {
 //         return True
 
 impl Type1 {
-    fn fallback(&self, options_section: &str) -> bool {
+    fn fallback(&self, _options_section: &str) -> bool {
         unimplemented!()
     }
 }
@@ -657,7 +658,7 @@ impl Type1 {
 //         return True
 
 impl Type1 {
-    fn fallback2(&self, options_section: &str) -> bool {
+    fn fallback2(&self, _options_section: &str) -> bool {
         unimplemented!()
     }
 }
@@ -670,7 +671,7 @@ impl ManParser for Type2 {
         manpage.contains(".SH OPTIONS")
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, _manpage: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -721,7 +722,7 @@ impl ManParser for Type3 {
         manpage.contains(".SH DESCRIPTION")
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, _manpage: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -772,7 +773,7 @@ impl ManParser for Type4 {
         manpage.contains(".SH FUNCTION LETTERS")
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, _manpage: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -825,7 +826,7 @@ impl ManParser for TypeDarwin {
         regex!(r##"\.S[hH] DESCRIPTION"##).is_match(manpage)
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, _manpage: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -905,7 +906,7 @@ fn test_TypeDarwin_count_argument_dashes() {
 
 impl TypeDarwin {
     fn count_argument_dashes(line: &str) -> u32 {
-        let (string, result) = replace_all(&line);
+        let (_string, result) = replace_all(&line);
         result
     }
 }
@@ -1004,14 +1005,14 @@ impl TypeDarwin {
 struct TypeDeroff;
 
 impl ManParser for TypeDeroff {
-    fn is_my_type(&self, manpage: &str) -> bool {
+    fn is_my_type(&self, _manpage: &str) -> bool {
         // TODO Revisit post-MVP
         // I think this is just to account for TypeDeroff being the last ManParser implementation
         // that is checked; it's the fallback.
         true
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, _manpage: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -1127,7 +1128,6 @@ fn test_file_is_overwritable() {
 // Return whether the file at the given path is overwritable
 // Raises IOError if it cannot be opened
 fn file_is_overwritable(path: &Path) -> Result<bool, String> {
-    use std::error::Error;
     let display = path.display();
     let f = File::open(path).map_err(|error| format!("{:?}", error))?;
     let file = BufReader::new(&f);
