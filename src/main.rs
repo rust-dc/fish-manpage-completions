@@ -387,12 +387,16 @@ fn test_truncated_description() {
     );
 
     assert_eq!(
-        truncated_description(r"The description for the command is so long. This second sentence will be dropped, in fact, because it is too long to be displayed comfortably."),
+        truncated_description(
+            r"The description for the command is so long. This second sentence will be dropped, in fact, because it is too long to be displayed comfortably."
+        ),
         r"'The description for the command is so long.'"
     );
 
     assert_eq!(
-        truncated_description(r"This single, initial sentence exceeds the `MAX_DESCRIPTION_WIDTH` and so it will not be displayed in its entirety, which is a crying shame."),
+        truncated_description(
+            r"This single, initial sentence exceeds the `MAX_DESCRIPTION_WIDTH` and so it will not be displayed in its entirety, which is a crying shame."
+        ),
         r"'This single, initial sentence exceeds the `MAX_DESCRIPTION_WIDTH` and so it w…'"
     );
 
