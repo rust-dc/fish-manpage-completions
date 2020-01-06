@@ -3,10 +3,10 @@
 use libflate::gzip::Decoder;
 use regex::Regex;
 
+use crate::util::{maketrans, translate};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use crate::util::{ maketrans, translate };
 
 type TODO_TYPE = u8;
 type TODO_NUMBER_TYPE = i8;
@@ -554,18 +554,12 @@ impl Deroffer {
     }
 
     /// `condputs` (cond)itionally (puts) `s` into `self.output`
-    /// if `self.tr` is set, instead of putting `s` into `self.output` directly, 
+    /// if `self.tr` is set, instead of putting `s` into `self.output` directly,
     /// it `translate`s it using the set translation table and puts the result
     /// into `self.output`
     fn condputs(&mut self, s: &str) {
-        let is_special = {
-            self.pic     ||
-            self.eqn     ||
-            self.refer   ||
-            self.r#macro ||
-            self.inlist  ||
-            self.inheader
-        };
+        let is_special =
+            { self.pic || self.eqn || self.refer || self.r#macro || self.inlist || self.inheader };
 
         if !is_special {
             if let Some(table) = self.tr.clone() {
@@ -573,9 +567,7 @@ impl Deroffer {
             } else {
                 self.output.push_str(s);
             }
-
         }
-
     }
 
     fn not_whitespace(s: &str, idx: usize) -> bool {
@@ -662,7 +654,7 @@ fn test_is_white() {
 #[test]
 fn test_condputs() {
     let mut d = Deroffer::new();
-    
+
     assert_eq!(d.output, String::new());
     d.condputs("Hello World!\n");
     assert_eq!(d.output, "Hello World!\n".to_owned());
@@ -671,12 +663,18 @@ fn test_condputs() {
     assert_eq!(d.output, "Hello World!\n".to_owned());
     d.pic = false;
     d.condputs("This will go to output :)");
-    assert_eq!(d.output, "Hello World!\nThis will go to output :)".to_owned());
+    assert_eq!(
+        d.output,
+        "Hello World!\nThis will go to output :)".to_owned()
+    );
 
     // Test the translation check
     d.tr = Some(maketrans("Ttr", "AAA"));
     d.condputs("Translate test");
-    assert_eq!(d.output, "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned());
+    assert_eq!(
+        d.output,
+        "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned()
+    );
 }
 
 #[test]
