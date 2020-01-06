@@ -3,7 +3,7 @@
 use libflate::gzip::Decoder;
 use regex::Regex;
 
-use crate::util::{TranslationTable};
+use crate::util::TranslationTable;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
