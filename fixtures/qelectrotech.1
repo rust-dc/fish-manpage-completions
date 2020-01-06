@@ -1,6 +1,6 @@
-.TH QELECTROTECH 1 "AOÛT 2008" QElectroTech "Manuel utilisateur"
+.TH QELECTROTECH 1 "AOÃ›T 2008" QElectroTech "Manuel utilisateur"
 .SH NOM
-qelectrotech \- Éditeur de schémas électriques
+qelectrotech \- Ã‰diteur de schÃ©mas Ã©lectriques
 .SH SYNOPSIS
 .B qelectrotech
 .B [\-\-common\-elements\-dir\fR=\fIREP\fB]
@@ -12,17 +12,17 @@ qelectrotech \- Éditeur de schémas électriques
 .B [\fIFICHIER\fB]...
 
 .SH DESCRIPTION
-QElectroTech est un éditeur de schémas électriques. Les schémas (*.qet) et les éléments électriques (*.elmt) sont enregistrés au format XML.
-Les éléments disposables sur le schéma peuvent provenir de la collection commune ou de la collection utilisateur.
-Typiquement, la collection commune est accessible à tous les utilisateurs mais elle n'est pas éditable par eux.
-La collection utilisateur est propre à chaque utilisateur et peut être modifiée comme bon lui semble.
+QElectroTech est un Ã©diteur de schÃ©mas Ã©lectriques. Les schÃ©mas (*.qet) et les Ã©lÃ©ments Ã©lectriques (*.elmt) sont enregistrÃ©s au format XML.
+Les Ã©lÃ©ments disposables sur le schÃ©ma peuvent provenir de la collection commune ou de la collection utilisateur.
+Typiquement, la collection commune est accessible Ã  tous les utilisateurs mais elle n'est pas Ã©ditable par eux.
+La collection utilisateur est propre Ã  chaque utilisateur et peut Ãªtre modifiÃ©e comme bon lui semble.
 .SH OPTIONS
 .TP
 \fB\-\-common\-elements\-dir\fR=\fIREP\fR
-Utilise le dossier REP comme racine de la collection d'éléments commune. Note : cette option n'est activée que si la directive QET_ALLOW_OVERRIDE_CED_OPTION a été spécifiée durant la compilation.
+Utilise le dossier REP comme racine de la collection d'Ã©lÃ©ments commune. Note : cette option n'est activÃ©e que si la directive QET_ALLOW_OVERRIDE_CED_OPTION a Ã©tÃ© spÃ©cifiÃ©e durant la compilation.
 .TP
 \fB\-\-config\-dir\fR=\fIREP\fR
-Utilise le dossier REP comme dossier de configuration de l'utilisateur courant. Ce dossier accueille un fichier qelectrotech.conf contenant la configuration de l'application et un sous\-dossier elements contenant la collection d'éléments de l'utilisateur.  Note : cette option n'est activée que si la directive QET_ALLOW_OVERRIDE_CD_OPTION a été spécifiée durant la compilation.
+Utilise le dossier REP comme dossier de configuration de l'utilisateur courant. Ce dossier accueille un fichier qelectrotech.conf contenant la configuration de l'application et un sous\-dossier elements contenant la collection d'Ã©lÃ©ments de l'utilisateur.  Note : cette option n'est activÃ©e que si la directive QET_ALLOW_OVERRIDE_CD_OPTION a Ã©tÃ© spÃ©cifiÃ©e durant la compilation.
 .TP
 \fB\-\-lang\-dir\fR=\fIREP\fR
 Recherche les fichiers de traduction de l'application dans le dossier REP.
@@ -37,13 +37,13 @@ Affiche la version de l'application (exemple : 0.1).
 Affiche la licence de l'application (GNU/GPL).
 
 .P
-À noter que si l'une des trois dernières options est specifiée dans la ligne de commande, le programme s'arrête après affichage de l'information correspondante.
-Si une instance de l'application a déjà été lancée par l'utilisateur, c'est celle\-ci qui prendra en compte la ligne de commande, et notamment les fichiers à ouvrir.
-Les options redéfinissant les dossiers (collection commune, répertoire de configuration et fichiers de langue) ne seront toutefois pas pris en compte.
-Si le nom d'un fichier à ouvrir se termine par .elmt, QElectroTech essaiera de l'ouvrir dans un éditeur d'élément.
-Autrement, il les considérera comme des schémas.
+Ã€ noter que si l'une des trois derniÃ¨res options est specifiÃ©e dans la ligne de commande, le programme s'arrÃªte aprÃ¨s affichage de l'information correspondante.
+Si une instance de l'application a dÃ©jÃ  Ã©tÃ© lancÃ©e par l'utilisateur, c'est celle\-ci qui prendra en compte la ligne de commande, et notamment les fichiers Ã  ouvrir.
+Les options redÃ©finissant les dossiers (collection commune, rÃ©pertoire de configuration et fichiers de langue) ne seront toutefois pas pris en compte.
+Si le nom d'un fichier Ã  ouvrir se termine par .elmt, QElectroTech essaiera de l'ouvrir dans un Ã©diteur d'Ã©lÃ©ment.
+Autrement, il les considÃ©rera comme des schÃ©mas.
 .SH AUTEURS
-Benoît Ansieau <benoit@qelectrotech.org>
+BenoÃ®t Ansieau <benoit@qelectrotech.org>
 .br
 Xavier Guerrin <xavier@qelectrotech.org>
 .br
@@ -55,10 +55,10 @@ Cyril.frausti <cyril@qelectrotech.org>
 
 
 .SH SIGNALER DES BUGS
-Si vous rencontrez un comportement qui vous paraît anormal dans l'application, consultez notre FAQ <http://qelectrotech.org/wiki/doku.php?id=doc:faq> et notre BugTracker <http://qelectrotech.org/bugtracker/> pour voir si le problème n'est pas déjà connu. Dans la négative, soumettez un rapport de bug via le BugTracker.
+Si vous rencontrez un comportement qui vous paraÃ®t anormal dans l'application, consultez notre FAQ <http://qelectrotech.org/wiki/doku.php?id=doc:faq> et notre BugTracker <http://qelectrotech.org/bugtracker/> pour voir si le problÃ¨me n'est pas dÃ©jÃ  connu. Dans la nÃ©gative, soumettez un rapport de bug via le BugTracker.
 
 .SH COPYRIGHT
-Copyright © Les développeurs de QElectroTech
+Copyright Â© Les dÃ©veloppeurs de QElectroTech
 .br
 Licence : GNU/GPL v2+ : <http://www.gnu.org/licenses/old\-licenses/gpl\-2.0.html>
 .br
