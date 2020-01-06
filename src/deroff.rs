@@ -3,7 +3,7 @@
 use libflate::gzip::Decoder;
 use regex::Regex;
 
-use crate::util::{maketrans, translate};
+use crate::util::{TranslationTable};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -31,7 +31,7 @@ struct Deroffer {
     reg_table: HashMap<TODO_TYPE, TODO_TYPE>,
     tr_from: String,
     tr_to: String,
-    tr: Option<HashMap<char, char>>,
+    tr: Option<TranslationTable>,
     specletter: bool,
     refer: bool,
     r#macro: bool,
@@ -566,8 +566,8 @@ impl Deroffer {
             { self.pic || self.eqn || self.refer || self.r#macro || self.inlist || self.inheader };
 
         if !is_special {
-            if let Some(table) = self.tr.clone() {
-                self.output.push_str(translate(s.into(), table).as_str());
+            if let Some(table) = &self.tr {
+                self.output.push_str(&table.translate(s.into()));
             } else {
                 self.output.push_str(s);
             }
@@ -673,7 +673,7 @@ fn test_condputs() {
     );
 
     // Test the translation check
-    d.tr = Some(maketrans("Ttr", "AAA"));
+    d.tr = TranslationTable::new("Ttr", "AAA").ok();
     d.condputs("Translate test");
     assert_eq!(
         d.output,
@@ -690,17 +690,6 @@ fn test_digit() {
     assert_eq!(Deroffer::digit("a", 0), false);
     assert_eq!(Deroffer::digit(" ", 0), false);
 }
-
-//     # This gets swapped in in place of condputs the first time tr gets modified
-//     def condputs_tr(self, str):
-//         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
-//         if not special:
-//             self.output.append(str.translate(self.tr))
-
-//     def condputs(self, str):
-//         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
-//         if not special:
-//             self.output.append(str)
 
 //     def str_eq(offset, other, len):
 //         return self.s[offset:offset+len] == other[:len]
