@@ -42,6 +42,8 @@ struct Deroffer {
     tblstate: TblState,
     tblTab: String,
     eqn: bool,
+    skipheaders: bool,
+    skiplists: bool,
     output: Vec<TODO_TYPE>,
     name: String,
 
@@ -61,7 +63,8 @@ impl Deroffer {
                     (\(\S{2})  | # Open paren, then two printable chars
                     (\[\S*?\]) | # Open bracket, zero or more printable characters, then close bracket
                     \S)          # Any printable character
-                   "##),
+                   "##
+            ),
 
             reg_table: HashMap::new(),
             tr_from: String::new(),
@@ -78,12 +81,21 @@ impl Deroffer {
             tblstate: TblState::Options,
             tblTab: String::new(),
             eqn: false,
+            skipheaders: false,
+            skiplists: false,
             output: Vec::new(),
             name: String::new(),
 
             s: String::new(), // This is not explicitly defined in python code
         }
     }
+
+    fn get_output(&self, output: &[u8]) -> Result<String, String> {
+        let s = String::from_utf8(output.into())
+            .map_err(|err| format!("Bad bad bad (bad utf8)! {}", err))?;
+        Ok(self.g_re_newline_collapse.replace_all(&s, "\n").into())
+    }
+
     // for the moment, return small strings, until we figure out what
     // it should really be doing
     fn g_specs_specletter(key: &str) -> Option<&'static str> {
@@ -353,8 +365,14 @@ impl Deroffer {
         })
     }
 
-    fn skip_char<'a>(&self, s: &'a str, amount: Option<usize>) -> &'a str {
-        let amount = amount.unwrap_or(1);
+    fn comment<'a>(&self, mut s: &'a str) -> &'a str {
+        while Self::str_at(&s, 0) != "\n" {
+            s = self.skip_char(&s, 1);
+        }
+        s
+    }
+
+    fn skip_char<'a>(&self, s: &'a str, amount: usize) -> &'a str {
         s.get(amount..).unwrap_or("")
     }
 
@@ -382,6 +400,13 @@ impl Deroffer {
         match Self::str_at(s, idx) {
             "" => false,
             c => c.chars().all(|c| c.is_whitespace()),
+        }
+    }
+
+    fn digit(s: &str, idx: usize) -> bool {
+        match Self::str_at(s, idx) {
+            "" => false,
+            c => c.chars().all(|c| c.is_digit(10)),
         }
     }
 
@@ -545,8 +570,8 @@ impl Deroffer {
         unimplemented!()
     }
 
-    fn flush_output<W: std::io::Write>(&mut self, write: W) {
-        unimplemented!()
+    fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
+        write.flush().unwrap()
     }
 
     fn esc_char_backslash<'a>(&self, s: &'a str) -> Option<&'a str> {
@@ -619,7 +644,7 @@ impl Deroffer {
             // We've now entered a portion of the source that should be
             // surrounded by double quotes. (We've found the first one—really
             // hoping we find its mate later).
-            let mut string = self.skip_char(string, Some(1));
+            let mut string = self.skip_char(string, 1);
             while !string.is_empty() && Deroffer::str_at(string, 0) != "\"" {
                 // Our string starts with _any_ char other than a double-quote
                 if let Some(ns) = self.esc_char(string) {
@@ -628,7 +653,7 @@ impl Deroffer {
                     string = ns;
                 } else {
                     self.condputs(Deroffer::str_at(string, 0));
-                    string = self.skip_char(string, Some(1));
+                    string = self.skip_char(string, 1);
                 }
             }
             // We've run past the end of the string OR we've found the closing
@@ -640,6 +665,14 @@ impl Deroffer {
             None
         }
     }
+}
+
+#[test]
+fn test_comment() {
+    let deroffer = Deroffer::new();
+    assert_eq!(deroffer.comment("\n"), "\n");
+    assert_eq!(deroffer.comment("hello\n"), "\n");
+    assert_eq!(deroffer.comment("hello\nworld"), "\nworld");
 }
 
 fn deroff_files(files: &[String]) -> std::io::Result<()> {
@@ -661,6 +694,13 @@ fn deroff_files(files: &[String]) -> std::io::Result<()> {
         d.flush_output(std::io::stdout());
     }
     Ok(())
+}
+
+#[test]
+fn test_get_output() {
+    let deroffer = Deroffer::new();
+    assert_eq!(&deroffer.get_output(b"foo\n\nbar").unwrap(), "foo\n\nbar");
+    assert_eq!(&deroffer.get_output(b"foo\n\n\nbar").unwrap(), "foo\nbar");
 }
 
 #[test]
@@ -689,46 +729,15 @@ fn test_is_white() {
     assert_eq!(Deroffer::is_white("ab cd", 3), false);
 }
 
-//     def __init__(self):
-//         self.reg_table = {}
-//         self.tr_from = ''
-//         self.tr_to = ''
-//         self.tr = ''
-//         self.nls = 2
-//         self.specletter = False
-//         self.refer = False
-//         self.macro = 0
-//         self.nobody = False
-//         self.inlist = False
-//         self.inheader = False
-//         self.pic = False
-//         self.tbl = False
-//         self.tblstate = 0
-//         self.tblTab = ''
-//         self.eqn = False
-//         self.skipheaders = False
-//         self.skiplists = False
-//         self.ignore_sonx = False
-//         self.output = []
-//         self.name = ''
-//
-//         self.OPTIONS = 0
-//         self.FORMAT = 1
-//         self.DATA = 2
-//
-//         # words is uninteresting and should be treated as false
-//
-
-//     def flush_output(self, where):
-//         if where:
-//             where.write(self.get_output())
-//         self.output[:] = []
-
-//     def get_output(self):
-//         res = ''.join(self.output)
-//         clean_res = Deroffer.g_re_newline_collapse.sub('\n', res)
-//         return clean_res
-
+#[test]
+fn test_digit() {
+    assert_eq!(Deroffer::digit("0", 0), true);
+    assert_eq!(Deroffer::digit("9", 0), true);
+    assert_eq!(Deroffer::digit("", 1), false);
+    assert_eq!(Deroffer::digit("1", 1), false);
+    assert_eq!(Deroffer::digit("a", 0), false);
+    assert_eq!(Deroffer::digit(" ", 0), false);
+}
 //     # This gets swapped in in place of condputs the first time tr gets modified
 //     def condputs_tr(self, str):
 //         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
@@ -747,11 +756,6 @@ fn test_is_white() {
 //         match = Deroffer.g_re_font.match(self.s)
 //         if not match: return False
 //         self.skip_char(match.end())
-//         return True
-
-//     def comment(self):
-//         # Here we require that the string start with \"
-//         while self.str_at(0) and self.str_at(0) != '\n': self.skip_char()
 //         return True
 
 //     def numreq(self):
@@ -868,14 +872,6 @@ fn test_is_white() {
 //                     self.condputs(self.str_at(0))
 //                     self.skip_char()
 //         return True
-
-//     def letter(self, idx):
-//         ch = self.str_at(idx)
-//         return ch.isalpha() or ch == '_' # underscore is used in C identifiers
-
-//     def digit(self, idx):
-//         ch = self.str_at(idx)
-//         return ch.isdigit()
 
 //     def text_arg(self):
 //         # PCA: The deroff.c textArg() disallowed quotes at the start of an argument
