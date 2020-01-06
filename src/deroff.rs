@@ -367,16 +367,12 @@ impl Deroffer {
     }
 
     fn skip_char(&mut self, amount: usize) {
-        self.s = self.s.get(amount..).unwrap_or("").to_owned();
+        self.s.drain(..amount);
     }
 
     fn skip_leading_whitespace(&mut self) {
         self.s = self.s.trim_start().to_owned();
     }
-
-    /* fn skip_leading_whitespace<'a>(&self, s: &'a str) -> &'a str {
-        s.trim_start()
-    } */
 
     fn str_at(&self, idx: usize) -> &str {
         let s = &self.s;
@@ -387,21 +383,6 @@ impl Deroffer {
             .unwrap_or("")
     }
 
-    /* fn str_at(string: &str, idx: usize) -> &str {
-        // Note: If we don't care about strings with multi-byte chars, the
-        // following would suffice:
-        // s.get(idx..idx + 1).unwrap_or("")
-        //
-        // Note: We're not yet sure whether our roff inputs will generally be
-        // ASCII or UTF-8. If they are ASCII (and can be treated as containing
-        // only single-byte characters), it would be faster to just use `get()`
-        string
-            .char_indices()
-            .nth(idx)
-            .map(|(idx, charr)| &string[idx..(idx + charr.len_utf8())]) // Okay to directly index based on idx/charr construction.
-            .unwrap_or_default()
-    } */
-
     fn is_white(&self, idx: usize) -> bool {
         self.s // String
             .chars() // Chars
@@ -409,14 +390,6 @@ impl Deroffer {
             .unwrap_or('a') // char
             .is_whitespace() // bool
     }
-
-    /* fn is_white<'a>(s: &'a str, idx: usize) -> bool {
-        s
-          .chars()  // Chars
-          .nth(idx) // Option<char>
-          .unwrap_or('a') // char
-          .is_whitespace() // bool
-    } */
 
     // This is also known as `prch` apparently
     fn not_whitespace(&self, idx: usize) -> bool {
@@ -428,6 +401,10 @@ impl Deroffer {
             "" => false,
             c => c.chars().all(|c| c.is_digit(10)),
         }
+    }
+
+    fn prch(&self, idx: usize) -> bool {
+        self.s.get(idx..=idx).map_or(false, |s| !" \t\n".contains(s))
     }
 
     // Replaces the g_macro_dict lookup in the Python code
@@ -1018,13 +995,6 @@ impl Deroffer {
 
     fn text_arg(&self) -> bool {
         unimplemented!()
-    }
-
-    fn prch(&self, idx: usize) -> bool {
-        self.s
-            .get(idx..=idx)
-            .map(|c| !" \t\n".contains(c))
-            .unwrap_or_default()
     }
 
     // This function is the worst, there are a few comments explaining some of it in the test (test_var)
