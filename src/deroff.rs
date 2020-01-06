@@ -3,10 +3,10 @@
 use libflate::gzip::Decoder;
 use regex::Regex;
 
+use crate::util::TranslationTable;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use crate::util::{ maketrans, translate };
 
 type TODO_TYPE = u8;
 type TODO_NUMBER_TYPE = i8;
@@ -31,7 +31,7 @@ struct Deroffer {
     reg_table: HashMap<String, String>,
     tr_from: String,
     tr_to: String,
-    tr: Option<HashMap<char, char>>,
+    tr: Option<TranslationTable>,
     specletter: bool,
     refer: bool,
     r#macro: bool,
@@ -44,6 +44,8 @@ struct Deroffer {
     tblTab: String,
     eqn: bool,
     output: String,
+    skipheaders: bool,
+    skiplists: bool,
     name: String,
 
     s: String, // This is not explicitly defined in python code
@@ -62,7 +64,8 @@ impl Deroffer {
                     (\(\S{2})  | # Open paren, then two printable chars
                     (\[\S*?\]) | # Open bracket, zero or more printable characters, then close bracket
                     \S)          # Any printable character
-                   "##),
+                   "##
+            ),
 
             reg_table: HashMap::new(),
             tr_from: String::new(),
@@ -80,6 +83,8 @@ impl Deroffer {
             tblTab: String::new(),
             eqn: false,
             output: String::new(),
+            skipheaders: false,
+            skiplists: false,
             name: String::new(),
 
             s: String::new(), // This is not explicitly defined in python code
@@ -365,11 +370,6 @@ impl Deroffer {
         self.s = self.s.get(amount..).unwrap_or("").to_owned();
     }
 
-    /* fn skip_char<'a>(&self, s: &'a str, amount: Option<usize>) -> &'a str {
-        let amount = amount.unwrap_or(1);
-        s.get(amount..).unwrap_or("")
-    } */
-
     fn skip_leading_whitespace(&mut self) {
         self.s = self.s.trim_start().to_owned();
     }
@@ -378,7 +378,7 @@ impl Deroffer {
         s.trim_start()
     } */
 
-    fn str_at(&mut self, idx: usize) -> &str {
+    fn str_at(&self, idx: usize) -> &str {
         let s = &self.s;
         s.char_indices()
             .skip(idx)
@@ -402,12 +402,11 @@ impl Deroffer {
             .unwrap_or_default()
     } */
 
-
     fn is_white(&self, idx: usize) -> bool {
-        self.s               // String
-            .chars()         // Chars
-            .nth(idx)        // Option<char>
-            .unwrap_or('a')  // char
+        self.s // String
+            .chars() // Chars
+            .nth(idx) // Option<char>
+            .unwrap_or('a') // char
             .is_whitespace() // bool
     }
 
@@ -421,18 +420,15 @@ impl Deroffer {
 
     // This is also known as `prch` apparently
     fn not_whitespace(&self, idx: usize) -> bool {
-        !" \t\n".contains(self.s.get(idx..idx+1).unwrap_or_default())
+        !" \t\n".contains(self.s.get(idx..idx + 1).unwrap_or_default())
     }
 
-    /* fn not_whitespace(s: &str, idx: usize) -> bool {
-        // # Note that this return False for the empty string (idx >= len(self.s))
-        // ch = self.s[idx:idx+1]
-        // return ch not in ' \t\n'
-        // TODO Investigate checking for ASCII whitespace after mvp
-        s.get(idx..(idx + 1))
-            .map(|string| " \t\n".contains(string))
-            .unwrap_or_default()
-    } */
+    fn digit(&self, idx: usize) -> bool {
+        match self.str_at(idx) {
+            "" => false,
+            c => c.chars().all(|c| c.is_digit(10)),
+        }
+    }
 
     // Replaces the g_macro_dict lookup in the Python code
     fn g_macro_dispatch(&mut self, s: &str) -> bool {
@@ -487,8 +483,8 @@ impl Deroffer {
     fn macro_sh(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_sh(&mut self) -> bool {
         for header_str in [" SYNOPSIS", " \"SYNOPSIS", " ‹BERSICHT", " \"‹BERSICHT"].iter() {
@@ -506,8 +502,8 @@ impl Deroffer {
     fn macro_ss_ip(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_ss_ip(&mut self) -> bool {
         self.nobody = true;
@@ -517,8 +513,8 @@ impl Deroffer {
     fn macro_i_ir(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_i_ir(&mut self) -> bool {
         // why does this exist
@@ -528,8 +524,8 @@ impl Deroffer {
     fn macro_nm(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_nm(&mut self) -> bool {
         if self.s == "Nm\n" {
@@ -546,19 +542,19 @@ impl Deroffer {
     fn macro_close_bracket(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_close_bracket(&mut self) -> bool {
         self.refer = false;
-        false  
+        false
     } */
 
     fn macro_ps(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_ps(&mut self) -> bool {
         if Self::is_white(self.s.as_str(), 2) {
@@ -596,7 +592,7 @@ impl Deroffer {
             self.tbl = true;
             self.tblstate = TblState::Options;
         }
-            
+
         self.condputs("\n");
         true
     }
@@ -614,7 +610,7 @@ impl Deroffer {
             self.tbl = true;
             self.tblstate = TblState::Format;
         }
-            
+
         self.condputs("\n");
         true
     }
@@ -679,7 +675,7 @@ impl Deroffer {
             return True
         */
 
-        // NOTE: self.refer2 is never used in the python source, so this and macro_r2 are 
+        // NOTE: self.refer2 is never used in the python source, so this and macro_r2 are
         // pretty much worthless
         // if Self::is_white(self.s.as_str(), 2) {
         //     self.refer2 = true;
@@ -734,7 +730,6 @@ impl Deroffer {
     }
 
     fn macro_bv(&mut self) -> bool {
-
         /*
         def macro_bv(self):
             if self.str_at(2) == "L" and self.white(self.str_at(3)):
@@ -744,7 +739,7 @@ impl Deroffer {
         */
 
         /*
-        `self.white` doesn't exist in the source, and the argument type is wrong 
+        `self.white` doesn't exist in the source, and the argument type is wrong
         for `self.is_white`, so I don't know what function its supposed to be
         if self.str_at(2) == "L" and self.white(self.str_at(3)):
             self.inlist = true
@@ -772,14 +767,13 @@ impl Deroffer {
         /*
         def macro_lp_pp(self):
             self.condputs("\n")
-            return True 
+            return True
         */
         self.condputs("\n");
         true
     }
 
     fn macro_ds(&mut self) -> bool {
-
         /*
         def macro_ds(self):
             self.skip_char(2)
@@ -799,14 +793,11 @@ impl Deroffer {
         self.skip_leading_whitespace();
 
         if !self.str_at(0).is_empty() {
-            let comps: Vec<String> = self.s
-                                        .splitn(2, " ")
-                                        .map(|s| s.to_owned())
-                                        .collect();
-            
+            let comps: Vec<String> = self.s.splitn(2, " ").map(|s| s.to_owned()).collect();
+
             if comps.len() == 2 {
                 let name: String = comps.get(0).unwrap().to_owned();
-                /* 
+                /*
                 This is a reminder to google stuff before you go implementing stuff badly
 
                 // This is horrible I know but it's meant to do string.rstrip()
@@ -822,15 +813,14 @@ impl Deroffer {
                             .rev() // make the string face the right way
                             .collect(); // put it back in a String
                 // A note on the badness of this code,
-                // The reason for `.collect().rev().chars().collect()` exists is 
+                // The reason for `.collect().rev().chars().collect()` exists is
                 // `skip_while` returns a `SkipWhile` which doesnt impl `DoubleEndedIterator`
                 // which is required for `rev` :( */
-                
+
                 let value = comps.get(1).unwrap().as_str().trim_end().to_owned();
-                    
+
                 self.reg_table.insert(name, value);
             }
-
         }
 
         self.condputs("\n");
@@ -845,12 +835,12 @@ impl Deroffer {
         unimplemented!()
     }
 
-    /* 
+    /*
     handled by Kevin
     fn macro_so_nx(&mut self) -> bool {
         /*  # We always ignore include directives
             # deroff.c for some reason allowed this to fall through to the 'tr' case
-            # I think that was just a bug so I won't replicate it */ 
+            # I think that was just a bug so I won't replicate it */
         true
     }
 
@@ -900,28 +890,20 @@ impl Deroffer {
     }
 
     /// `condputs` (cond)itionally (puts) `s` into `self.output`
-    /// if `self.tr` is set, instead of putting `s` into `self.output` directly, 
+    /// if `self.tr` is set, instead of putting `s` into `self.output` directly,
     /// it `translate`s it using the set translation table and puts the result
     /// into `self.output`
     fn condputs(&mut self, s: &str) {
-        let is_special = {
-            self.pic     ||
-            self.eqn     ||
-            self.refer   ||
-            self.r#macro ||
-            self.inlist  ||
-            self.inheader
-        };
+        let is_special =
+            { self.pic || self.eqn || self.refer || self.r#macro || self.inlist || self.inheader };
 
         if !is_special {
-            if let Some(table) = self.tr.clone() {
-                self.output.push_str(translate(s.into(), table).as_str());
+            if let Some(table) = &self.tr {
+                self.output.push_str(&table.translate(s.into()));
             } else {
                 self.output.push_str(s);
             }
-
         }
-
     }
 
     fn quoted_arg(&self) -> bool {
@@ -939,17 +921,17 @@ impl Deroffer {
                     self.condputs("\n");
                     return true;
                 }
-            },
+            }
             "[" => {
                 self.refer = true;
                 self.condputs("\n");
                 return true;
-            },
+            }
             "]" => {
                 self.refer = false;
                 self.skip_char(1);
                 return self.text();
-            },
+            }
             "." => {
                 self.r#macro = false;
                 self.condputs("\n");
@@ -1106,10 +1088,6 @@ impl Deroffer {
         }
     }
 
-    fn digit(&self, _: usize) -> bool {
-        unimplemented!()
-    }
-
     fn size(&mut self) -> bool {
         /* # We require that the string starts with \s */
         if self.digit(2) || ("-+".contains(self.str_at(2)) && self.digit(3)) {
@@ -1127,20 +1105,17 @@ impl Deroffer {
         /* # We require that the string start with backslash */
         // self.s.get(1..2).
         match self.s.to_owned().get(1..2) {
-            Some(a) => {
-                match a {
-                    "e" | "E" => self.condputs("\\"),
-                    "t" => self.condputs("\t"),
-                    "0" | "~" => self.condputs(" "),
-                    "|" | "^" | "" | ":" => (),
-                    o => self.condputs(o),
-                }
-            }
+            Some(a) => match a {
+                "e" | "E" => self.condputs("\\"),
+                "t" => self.condputs("\t"),
+                "0" | "~" => self.condputs(" "),
+                "|" | "^" | "" | ":" => (),
+                o => self.condputs(o),
+            },
             None => return false,
         };
         self.skip_char(2);
         true
-        
     }
 
     fn word(&mut self) -> bool {
@@ -1251,7 +1226,7 @@ fn test_str_at() {
 
     // d.s == ""
     assert_eq!(d.str_at(1), "");
-    
+
     d.s = String::from("ab cd");
     assert_eq!(d.str_at(42), "");
     assert_eq!(d.str_at(1), "b");
@@ -1268,15 +1243,15 @@ fn test_is_white() {
 
     d.s = "ab cd".to_owned();
     assert_eq!(d.is_white(42), false); // OOB
-    assert_eq!(d.is_white(1), false);  // "b"
-    assert_eq!(d.is_white(2), true);   // " "
-    assert_eq!(d.is_white(3), false);  // "c"
+    assert_eq!(d.is_white(1), false); // "b"
+    assert_eq!(d.is_white(2), true); // " "
+    assert_eq!(d.is_white(3), false); // "c"
 }
 
 #[test]
 fn test_condputs() {
     let mut d = Deroffer::new();
-    
+
     assert_eq!(d.output, String::new());
     d.condputs("Hello World!\n");
     assert_eq!(d.output, "Hello World!\n".to_owned());
@@ -1285,12 +1260,18 @@ fn test_condputs() {
     assert_eq!(d.output, "Hello World!\n".to_owned());
     d.pic = false;
     d.condputs("This will go to output :)");
-    assert_eq!(d.output, "Hello World!\nThis will go to output :)".to_owned());
+    assert_eq!(
+        d.output,
+        "Hello World!\nThis will go to output :)".to_owned()
+    );
 
     // Test the translation check
-    d.tr = Some(maketrans("Ttr", "AAA"));
+    d.tr = TranslationTable::new("Ttr", "AAA").ok();
     d.condputs("Translate test");
-    assert_eq!(d.output, "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned());
+    assert_eq!(
+        d.output,
+        "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned()
+    );
 }
 
 #[test]
@@ -1504,11 +1485,6 @@ fn test_var() {
 //         self.skip_char(match.end())
 //         return True
 
-//     def comment(self):
-//         # Here we require that the string start with \"
-//         while self.str_at(0) and self.str_at(0) != '\n': self.skip_char()
-//         return True
-
 //     def numreq(self):
 //         # We require that the string starts with backslash
 //         if self.str_at(1) in 'hvwud' and self.str_at(2) == '\'':
@@ -1638,10 +1614,6 @@ fn test_var() {
 //                     self.condputs(self.str_at(0))
 //                     self.skip_char()
 //         return True
-
-//     def digit(self, idx):
-//         ch = self.str_at(idx)
-//         return ch.isdigit()
 
 //     def number(self):
 //         match = Deroffer.g_re_number.match(self.s)

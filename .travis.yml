@@ -1,14 +1,12 @@
 language: rust
 rust:
   - stable
-  - nightly
-matrix:
-  allow_failures:
-    rust: 
-      - nightly
 before_script:
   - rustup component add rustfmt
+# Only build for commits in PRs for the master branch
+branches:
+  only:
+    master
 script:
   - cargo fmt --all -- --check --verbose
-  - cargo build --verbose --all
   - cargo test --verbose --all
