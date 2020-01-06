@@ -573,6 +573,98 @@ impl Deroffer {
     fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
         write.flush().unwrap()
     }
+
+    fn esc_char_backslash<'a>(&self, s: &'a str) -> Option<&'a str> {
+        unimplemented!()
+    }
+    //     def esc_char_backslash(self):
+    //         # Like esc_char, but we know the string starts with a backslash
+    //         c = self.s[1:2]
+    //         if c == '"':
+    //             return self.comment()
+    //         elif c == 'f':
+    //             return self.font()
+    //         elif c == 's':
+    //             return self.size()
+    //         elif c in 'hvwud':
+    //             return self.numreq()
+    //         elif c in 'n*':
+    //             return self.var()
+    //         elif c == '(':
+    //             return self.spec()
+    //         else:
+    //             return self.esc()
+
+    fn number<'a>(&self, s: &'a str) -> Option<&'a str> {
+        unimplemented!()
+    }
+    //     def number(self):
+    //         match = Deroffer.g_re_number.match(self.s)
+    //         if not match:
+    //             return False
+    //         else:
+    //             self.condputs(match.group(0))
+    //             self.skip_char(match.end())
+    //             return True
+
+    fn word<'a>(&self, s: &'a str) -> Option<&'a str> {
+        unimplemented!()
+    }
+    //     def word(self):
+    //         got_something = False
+    //         while True:
+    //             match = Deroffer.g_re_word.match(self.s)
+    //             if not match: break
+    //             got_something = True
+    //             self.condputs(match.group(0))
+    //             self.skip_char(match.end(0))
+    //
+    //             # Consume all specials
+    //             while self.spec():
+    //                 if not self.specletter: break
+    //
+    //         return got_something
+
+    fn esc_char<'a>(&self, s: &'a str) -> Option<&'a str> {
+        s.get(0..1).and_then(|ch| {
+            if ch == "\\" {
+                self.esc_char_backslash(s)
+            } else {
+                self.word(s).or_else(|| self.number(s))
+            }
+        })
+    }
+
+    fn condputs(&self, string: &str) -> bool {
+        unimplemented!()
+    }
+
+    fn quoted_arg<'a>(&self, string: &'a str) -> Option<&'a str> {
+        if Deroffer::str_at(string, 0) == "\"" {
+            // We've now entered a portion of the source that should be
+            // surrounded by double quotes. (We've found the first one—really
+            // hoping we find its mate later).
+            let mut string = self.skip_char(string, 1);
+            while !string.is_empty() && Deroffer::str_at(string, 0) != "\"" {
+                // Our string starts with _any_ char other than a double-quote
+                if let Some(ns) = self.esc_char(string) {
+                    // Our thing started with a backslash or was parseable as a
+                    // word or a number.
+                    string = ns;
+                } else {
+                    self.condputs(Deroffer::str_at(string, 0));
+                    string = self.skip_char(string, 1);
+                }
+            }
+            // We've run past the end of the string OR we've found the closing
+            // double-quote to match the initial one we found at the start of
+            // the function.
+            Some(string)
+        } else {
+            // We don't start with quotes!
+            None
+        }
+    }
 }
 
 #[test]
@@ -766,21 +858,6 @@ fn test_digit() {
 //         self.skip_char(2)
 //         return True
 
-//     def word(self):
-//         got_something = False
-//         while True:
-//             match = Deroffer.g_re_word.match(self.s)
-//             if not match: break
-//             got_something = True
-//             self.condputs(match.group(0))
-//             self.skip_char(match.end(0))
-//
-//             # Consume all specials
-//             while self.spec():
-//                 if not self.specletter: break
-//
-//         return got_something
-
 //     def text(self):
 //         while True:
 //             idx = self.s.find('\\')
@@ -795,50 +872,6 @@ fn test_digit() {
 //                     self.condputs(self.str_at(0))
 //                     self.skip_char()
 //         return True
-
-//     def number(self):
-//         match = Deroffer.g_re_number.match(self.s)
-//         if not match:
-//             return False
-//         else:
-//             self.condputs(match.group(0))
-//             self.skip_char(match.end())
-//             return True
-
-//     def esc_char_backslash(self):
-//         # Like esc_char, but we know the string starts with a backslash
-//         c = self.s[1:2]
-//         if c == '"':
-//             return self.comment()
-//         elif c == 'f':
-//             return self.font()
-//         elif c == 's':
-//             return self.size()
-//         elif c in 'hvwud':
-//             return self.numreq()
-//         elif c in 'n*':
-//             return self.var()
-//         elif c == '(':
-//             return self.spec()
-//         else:
-//             return self.esc()
-
-//     def esc_char(self):
-//         if self.s[0:1] == '\\':
-//             return self.esc_char_backslash()
-//         return self.word() or self.number()
-
-//     def quoted_arg(self):
-//         if self.str_at(0) == '"':
-//             self.skip_char()
-//             while self.s and self.str_at(0) != '"':
-//                 if not self.esc_char():
-//                     if self.s:
-//                         self.condputs(self.str_at(0))
-//                         self.skip_char()
-//             return True
-//         else:
-//             return False
 
 //     def text_arg(self):
 //         # PCA: The deroff.c textArg() disallowed quotes at the start of an argument
