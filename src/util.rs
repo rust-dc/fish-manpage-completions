@@ -59,30 +59,27 @@ fn test_translationtable_new() {
 fn test_translationtable_translate() {
     let tr = TranslationTable::new("ab!", "cd.").unwrap();
 
-    assert_eq!(tr.translate("aabb!!".into()), "ccdd..".to_owned());
+    assert_eq!(tr.translate("aabb!!"), "ccdd..".to_owned());
 
-    assert_eq!(
-        tr.translate("Hello World!".into()),
-        "Hello World.".to_owned(),
-    );
+    assert_eq!(tr.translate("Hello World!"), "Hello World.".to_owned(),);
 
-    assert_eq!(tr.translate("applebees!".into()), "cppledees.".to_owned(),);
+    assert_eq!(tr.translate("applebees!"), "cppledees.".to_owned(),);
 
     // Unicode tests
     let tr = TranslationTable::new("🗻🚀🚁", "mrh").unwrap();
 
     assert_eq!(
-        tr.translate("This 🗻 is a mountain!".into()),
+        tr.translate("This 🗻 is a mountain!"),
         "This m is a mountain!".to_owned(),
     );
 
     assert_eq!(
-        tr.translate("This 🚀 is a rocket! (rocket.rs :))".into()),
+        tr.translate("This 🚀 is a rocket! (rocket.rs :))"),
         "This r is a rocket! (rocket.rs :))".to_owned(),
     );
 
     assert_eq!(
-        tr.translate("This 🚁 is a helicopter!".into()),
+        tr.translate("This 🚁 is a helicopter!"),
         "This h is a helicopter!".to_owned(),
     )
 }
