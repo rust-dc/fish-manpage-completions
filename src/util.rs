@@ -25,7 +25,7 @@ impl TranslationTable {
         }
     }
 
-    pub fn translate(&self, s: String) -> String {
+    pub fn translate(&self, s: &str) -> String {
         s.chars()
             .map(|c| *self.table.get(&c).unwrap_or(&c))
             .collect()
