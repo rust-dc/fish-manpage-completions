@@ -567,7 +567,7 @@ impl Deroffer {
 
         if !is_special {
             if let Some(table) = &self.tr {
-                self.output.push_str(&table.translate(s.into()));
+                self.output.push_str(&table.translate(s));
             } else {
                 self.output.push_str(s);
             }
