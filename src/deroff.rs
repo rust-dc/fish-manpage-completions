@@ -404,7 +404,9 @@ impl Deroffer {
     }
 
     fn prch(&self, idx: usize) -> bool {
-        self.s.get(idx..=idx).map_or(false, |s| !" \t\n".contains(s))
+        self.s
+            .get(idx..=idx)
+            .map_or(false, |s| !" \t\n".contains(s))
     }
 
     // Replaces the g_macro_dict lookup in the Python code
