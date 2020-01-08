@@ -640,9 +640,9 @@ impl Type1 {
         cmd_name: &str,
     ) -> bool {
         // add_diagnostic("Trying last chance fallback");
-        let ix_remover_re = Regex::new(r"\.IX.*").unwrap();
-        let trailing_num_re = Regex::new(r"\d+$").unwrap();
-        let options_parts_re = Regex::new(r"\.IP ((?s:.)*?)\.IP").unwrap();
+        let ix_remover_re = regex!(r"\.IX.*");
+        let trailing_num_re = regex!(r"\d+$");
+        let options_parts_re = regex!(r"\.IP ((?s:.)*?)\.IP");
 
         let mut options_section = &*ix_remover_re.replace_all(options_section, "");
         let mut options_matched = options_parts_re.captures(&options_section);
