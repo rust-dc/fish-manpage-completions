@@ -677,10 +677,6 @@ impl Deroffer {
         })
     }
 
-    fn condputs(&self, string: &str) -> bool {
-        unimplemented!()
-    }
-
     fn quoted_arg<'a>(&mut self, string: &'a str) -> Option<&'a str> {
         if Deroffer::str_at(string, 0) == "\"" {
             // We've now entered a portion of the source that should be
