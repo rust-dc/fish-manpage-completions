@@ -8,54 +8,78 @@ macro_rules! regex {
     }};
 }
 
-use std::{
-    iter::FromIterator,
-    collections::HashMap,
-};
+use crate::char_len;
+use std::{collections::HashMap, iter::FromIterator};
 
-
-/// Helper for `translate`, does the same thing as string.maketrans in python
-/// requires that f and t are the same length, or it takes the shorter one
-pub fn maketrans(f: &str, t: &str) -> HashMap<char, char> {
-    HashMap::from_iter(f.chars().zip(t.chars()))
+pub struct TranslationTable {
+    table: HashMap<char, char>,
 }
+impl TranslationTable {
+    pub fn new(f: &str, t: &str) -> Result<Self, &'static str> {
+        if char_len(f) != char_len(t) {
+            Err("Arguments passed to `TranslationTable::new` must have equal character length")
+        } else {
+            Ok(TranslationTable {
+                table: HashMap::from_iter(f.chars().zip(t.chars())),
+            })
+        }
+    }
 
-/// Does effectively the same as string.translate in python, in 
-/// conjunction with `maketrans`, basically just replaces
-pub fn translate(s: String, table: HashMap<char, char>) -> String {
-    s.chars().map(|c| *table.get(&c).unwrap_or(&c)).collect::<String>()
+    pub fn translate(&self, s: &str) -> String {
+        s.chars()
+            .map(|c| *self.table.get(&c).unwrap_or(&c))
+            .collect()
+    }
 }
 
 #[test]
-fn test_maketrans() {
+fn test_translationtable_new() {
+    assert!(TranslationTable::new("aaa", "Incorrect Length").is_err());
+    assert!(TranslationTable::new("aaa", "bbb").is_ok());
+    let tr = TranslationTable::new("ab!", "cd.").unwrap();
+
     let mut expected = HashMap::new();
-    expected.insert('a', 'd');
-    expected.insert('b', 'e');
-    expected.insert('c', 'f');
-    assert_eq!(
-        maketrans(
-            "abc",
-            "def",
-        ),
-        expected
-    );
+    expected.insert('a', 'c');
+    expected.insert('b', 'd');
+    expected.insert('!', '.');
+
+    assert_eq!(tr.table, expected);
+
+    // Unicode tests
+    let tr = TranslationTable::new("🗻🚀🚁", "mrh").unwrap();
+    let mut expected = HashMap::new();
+    expected.insert('🗻', 'm');
+    expected.insert('🚀', 'r');
+    expected.insert('🚁', 'h');
+
+    assert_eq!(tr.table, expected);
 }
 
 #[test]
-fn test_translate() {
-    // >>> "Hello World!".translate(str.maketrans("HlW", "aBc"))
-    // 'aeBBo corBd!'
+fn test_translationtable_translate() {
+    let tr = TranslationTable::new("ab!", "cd.").unwrap();
 
-    let expected = "aeBBo corBd!".to_owned();
+    assert_eq!(tr.translate("aabb!!"), "ccdd..".to_owned());
+
+    assert_eq!(tr.translate("Hello World!"), "Hello World.".to_owned(),);
+
+    assert_eq!(tr.translate("applebees!"), "cppledees.".to_owned(),);
+
+    // Unicode tests
+    let tr = TranslationTable::new("🗻🚀🚁", "mrh").unwrap();
 
     assert_eq!(
-        translate(
-            "Hello World!".to_owned(),
-            maketrans(
-                "HlW",
-                "aBc",
-            )
-        ),
-        expected,
+        tr.translate("This 🗻 is a mountain!"),
+        "This m is a mountain!".to_owned(),
+    );
+
+    assert_eq!(
+        tr.translate("This 🚀 is a rocket! (rocket.rs :))"),
+        "This r is a rocket! (rocket.rs :))".to_owned(),
+    );
+
+    assert_eq!(
+        tr.translate("This 🚁 is a helicopter!"),
+        "This h is a helicopter!".to_owned(),
     )
 }

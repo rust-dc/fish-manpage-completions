@@ -3,10 +3,10 @@
 use libflate::gzip::Decoder;
 use regex::Regex;
 
+use crate::util::TranslationTable;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use crate::util::{ maketrans, translate };
 
 type TODO_TYPE = u8;
 type TODO_NUMBER_TYPE = i8;
@@ -31,7 +31,7 @@ struct Deroffer {
     reg_table: HashMap<String, String>,
     tr_from: String,
     tr_to: String,
-    tr: Option<HashMap<char, char>>,
+    tr: Option<TranslationTable>,
     specletter: bool,
     refer: bool,
     r#macro: bool,
@@ -44,6 +44,8 @@ struct Deroffer {
     tblTab: String,
     eqn: bool,
     output: String,
+    skipheaders: bool,
+    skiplists: bool,
     name: String,
 
     s: String, // This is not explicitly defined in python code
@@ -62,7 +64,8 @@ impl Deroffer {
                     (\(\S{2})  | # Open paren, then two printable chars
                     (\[\S*?\]) | # Open bracket, zero or more printable characters, then close bracket
                     \S)          # Any printable character
-                   "##),
+                   "##
+            ),
 
             reg_table: HashMap::new(),
             tr_from: String::new(),
@@ -80,6 +83,8 @@ impl Deroffer {
             tblTab: String::new(),
             eqn: false,
             output: String::new(),
+            skipheaders: false,
+            skiplists: false,
             name: String::new(),
 
             s: String::new(), // This is not explicitly defined in python code
@@ -361,8 +366,14 @@ impl Deroffer {
         })
     }
 
-    fn skip_char<'a>(&self, s: &'a str, amount: Option<usize>) -> &'a str {
-        let amount = amount.unwrap_or(1);
+    fn comment<'a>(&self, mut s: &'a str) -> &'a str {
+        while Self::str_at(&s, 0) != "\n" {
+            s = self.skip_char(&s, 1);
+        }
+        s
+    }
+
+    fn skip_char<'a>(&self, s: &'a str, amount: usize) -> &'a str {
         s.get(amount..).unwrap_or("")
     }
 
@@ -390,6 +401,37 @@ impl Deroffer {
         match Self::str_at(s, idx) {
             "" => false,
             c => c.chars().all(|c| c.is_whitespace()),
+        }
+    }
+
+    fn digit(s: &str, idx: usize) -> bool {
+        match Self::str_at(s, idx) {
+            "" => false,
+            c => c.chars().all(|c| c.is_digit(10)),
+        }
+    }
+
+    fn text_arg<'a>(&mut self, s: &'a str) -> bool {
+        let mut s2 = s;
+        let mut got_something = false;
+        loop {
+            let possible = self.g_re_not_backslash_or_whitespace.find(s);
+            if let Some(m) = possible {
+                // Output the characters in the match
+                self.condputs(m.as_str());
+                s2 = self.skip_char(s2, m.end());
+                got_something = true;
+            }
+
+            if s2.is_empty() || Self::is_white(s2, 0) {
+                return got_something;
+            }
+
+            if self.esc_char(s2).is_none() {
+                self.condputs(Self::str_at(s2, 0));
+                s2 = self.skip_char(s2, 1);
+                got_something = true;
+            }
         }
     }
 
@@ -446,8 +488,8 @@ impl Deroffer {
     fn macro_sh(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_sh(&mut self) -> bool {
         for header_str in [" SYNOPSIS", " \"SYNOPSIS", " ‹BERSICHT", " \"‹BERSICHT"].iter() {
@@ -465,8 +507,8 @@ impl Deroffer {
     fn macro_ss_ip(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_ss_ip(&mut self) -> bool {
         self.nobody = true;
@@ -476,8 +518,8 @@ impl Deroffer {
     fn macro_i_ir(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_i_ir(&mut self) -> bool {
         // why does this exist
@@ -487,8 +529,8 @@ impl Deroffer {
     fn macro_nm(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_nm(&mut self) -> bool {
         if self.s == "Nm\n" {
@@ -505,19 +547,19 @@ impl Deroffer {
     fn macro_close_bracket(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_close_bracket(&mut self) -> bool {
         self.refer = false;
-        false  
+        false
     } */
 
     fn macro_ps(&self) -> bool {
         unimplemented!()
     }
-    
-    /* 
+
+    /*
     Handled by Kevin
     fn macro_ps(&mut self) -> bool {
         if Self::is_white(self.s.as_str(), 2) {
@@ -556,7 +598,7 @@ impl Deroffer {
             self.tbl = true;
             self.tblstate = TblState::Options;
         }
-            
+
         self.condputs("\n");
         true
     }
@@ -574,7 +616,7 @@ impl Deroffer {
             self.tbl = true;
             self.tblstate = TblState::Format;
         }
-            
+
         self.condputs("\n");
         true
     }
@@ -639,7 +681,7 @@ impl Deroffer {
             return True
         */
 
-        // NOTE: self.refer2 is never used in the python source, so this and macro_r2 are 
+        // NOTE: self.refer2 is never used in the python source, so this and macro_r2 are
         // pretty much worthless
         // if Self::is_white(self.s.as_str(), 2) {
         //     self.refer2 = true;
@@ -694,7 +736,6 @@ impl Deroffer {
     }
 
     fn macro_bv(&mut self) -> bool {
-
         /*
         def macro_bv(self):
             if self.str_at(2) == "L" and self.white(self.str_at(3)):
@@ -704,7 +745,7 @@ impl Deroffer {
         */
 
         /*
-        `self.white` doesn't exist in the source, and the argument type is wrong 
+        `self.white` doesn't exist in the source, and the argument type is wrong
         for `self.is_white`, so I don't know what function its supposed to be
         if self.str_at(2) == "L" and self.white(self.str_at(3)):
             self.inlist = true
@@ -732,14 +773,13 @@ impl Deroffer {
         /*
         def macro_lp_pp(self):
             self.condputs("\n")
-            return True 
+            return True
         */
         self.condputs("\n");
         true
     }
 
     fn macro_ds(&mut self) -> bool {
-
         /*
         def macro_ds(self):
             self.skip_char(2)
@@ -756,18 +796,15 @@ impl Deroffer {
         */
 
         // Yuck
-        self.s = self.skip_char(self.s.as_str(), Some(2)).to_owned();
+        self.s = self.skip_char(self.s.as_str(), 2).to_owned();
         self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
 
         if !Self::str_at(self.s.as_str(), 0).is_empty() {
-            let comps: Vec<String> = self.s
-                                        .splitn(2, " ")
-                                        .map(|s| s.to_owned())
-                                        .collect();
-            
+            let comps: Vec<String> = self.s.splitn(2, " ").map(|s| s.to_owned()).collect();
+
             if comps.len() == 2 {
                 let name: String = comps.get(0).unwrap().to_owned();
-                /* 
+                /*
                 This is a reminder to google stuff before you go implementing stuff badly
 
                 // This is horrible I know but it's meant to do string.rstrip()
@@ -783,15 +820,14 @@ impl Deroffer {
                             .rev() // make the string face the right way
                             .collect(); // put it back in a String
                 // A note on the badness of this code,
-                // The reason for `.collect().rev().chars().collect()` exists is 
+                // The reason for `.collect().rev().chars().collect()` exists is
                 // `skip_while` returns a `SkipWhile` which doesnt impl `DoubleEndedIterator`
                 // which is required for `rev` :( */
-                
+
                 let value = comps.get(1).unwrap().as_str().trim_end().to_owned();
-                    
+
                 self.reg_table.insert(name, value);
             }
-
         }
 
         self.condputs("\n");
@@ -806,12 +842,12 @@ impl Deroffer {
         unimplemented!()
     }
 
-    /* 
+    /*
     handled by Kevin
     fn macro_so_nx(&mut self) -> bool {
         /*  # We always ignore include directives
             # deroff.c for some reason allowed this to fall through to the 'tr' case
-            # I think that was just a bug so I won't replicate it */ 
+            # I think that was just a bug so I won't replicate it */
         true
     }
 
@@ -861,28 +897,20 @@ impl Deroffer {
     }
 
     /// `condputs` (cond)itionally (puts) `s` into `self.output`
-    /// if `self.tr` is set, instead of putting `s` into `self.output` directly, 
+    /// if `self.tr` is set, instead of putting `s` into `self.output` directly,
     /// it `translate`s it using the set translation table and puts the result
     /// into `self.output`
     fn condputs(&mut self, s: &str) {
-        let is_special = {
-            self.pic     ||
-            self.eqn     ||
-            self.refer   ||
-            self.r#macro ||
-            self.inlist  ||
-            self.inheader
-        };
+        let is_special =
+            { self.pic || self.eqn || self.refer || self.r#macro || self.inlist || self.inheader };
 
         if !is_special {
-            if let Some(table) = self.tr.clone() {
-                self.output.push_str(translate(s.into(), table).as_str());
+            if let Some(table) = &self.tr {
+                self.output.push_str(&table.translate(s));
             } else {
                 self.output.push_str(s);
             }
-
         }
-
     }
 
     fn not_whitespace(s: &str, idx: usize) -> bool {
@@ -902,6 +930,102 @@ impl Deroffer {
     fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
         write.flush().unwrap()
     }
+
+    fn esc_char_backslash<'a>(&mut self, s: &'a str) -> Option<&'a str> {
+        unimplemented!()
+    }
+    //     def esc_char_backslash(self):
+    //         # Like esc_char, but we know the string starts with a backslash
+    //         c = self.s[1:2]
+    //         if c == '"':
+    //             return self.comment()
+    //         elif c == 'f':
+    //             return self.font()
+    //         elif c == 's':
+    //             return self.size()
+    //         elif c in 'hvwud':
+    //             return self.numreq()
+    //         elif c in 'n*':
+    //             return self.var()
+    //         elif c == '(':
+    //             return self.spec()
+    //         else:
+    //             return self.esc()
+
+    fn number<'a>(&mut self, s: &'a str) -> Option<&'a str> {
+        unimplemented!()
+    }
+    //     def number(self):
+    //         match = Deroffer.g_re_number.match(self.s)
+    //         if not match:
+    //             return False
+    //         else:
+    //             self.condputs(match.group(0))
+    //             self.skip_char(match.end())
+    //             return True
+
+    fn word<'a>(&mut self, s: &'a str) -> Option<&'a str> {
+        unimplemented!()
+    }
+    //     def word(self):
+    //         got_something = False
+    //         while True:
+    //             match = Deroffer.g_re_word.match(self.s)
+    //             if not match: break
+    //             got_something = True
+    //             self.condputs(match.group(0))
+    //             self.skip_char(match.end(0))
+    //
+    //             # Consume all specials
+    //             while self.spec():
+    //                 if not self.specletter: break
+    //
+    //         return got_something
+
+    fn esc_char<'a>(&mut self, s: &'a str) -> Option<&'a str> {
+        s.get(0..1).and_then(|ch| {
+            if ch == "\\" {
+                self.esc_char_backslash(s)
+            } else {
+                self.word(s).or_else(|| self.number(s))
+            }
+        })
+    }
+
+    fn quoted_arg<'a>(&mut self, string: &'a str) -> Option<&'a str> {
+        if Deroffer::str_at(string, 0) == "\"" {
+            // We've now entered a portion of the source that should be
+            // surrounded by double quotes. (We've found the first one—really
+            // hoping we find its mate later).
+            let mut string = self.skip_char(string, 1);
+            while !string.is_empty() && Deroffer::str_at(string, 0) != "\"" {
+                // Our string starts with _any_ char other than a double-quote
+                if let Some(ns) = self.esc_char(string) {
+                    // Our thing started with a backslash or was parseable as a
+                    // word or a number.
+                    string = ns;
+                } else {
+                    self.condputs(Deroffer::str_at(string, 0));
+                    string = self.skip_char(string, 1);
+                }
+            }
+            // We've run past the end of the string OR we've found the closing
+            // double-quote to match the initial one we found at the start of
+            // the function.
+            Some(string)
+        } else {
+            // We don't start with quotes!
+            None
+        }
+    }
+}
+
+#[test]
+fn test_comment() {
+    let deroffer = Deroffer::new();
+    assert_eq!(deroffer.comment("\n"), "\n");
+    assert_eq!(deroffer.comment("hello\n"), "\n");
+    assert_eq!(deroffer.comment("hello\nworld"), "\nworld");
 }
 
 fn deroff_files(files: &[String]) -> std::io::Result<()> {
@@ -961,7 +1085,7 @@ fn test_is_white() {
 #[test]
 fn test_condputs() {
     let mut d = Deroffer::new();
-    
+
     assert_eq!(d.output, String::new());
     d.condputs("Hello World!\n");
     assert_eq!(d.output, "Hello World!\n".to_owned());
@@ -970,53 +1094,29 @@ fn test_condputs() {
     assert_eq!(d.output, "Hello World!\n".to_owned());
     d.pic = false;
     d.condputs("This will go to output :)");
-    assert_eq!(d.output, "Hello World!\nThis will go to output :)".to_owned());
+    assert_eq!(
+        d.output,
+        "Hello World!\nThis will go to output :)".to_owned()
+    );
 
     // Test the translation check
-    d.tr = Some(maketrans("Ttr", "AAA"));
+    d.tr = TranslationTable::new("Ttr", "AAA").ok();
     d.condputs("Translate test");
-    assert_eq!(d.output, "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned());
+    assert_eq!(
+        d.output,
+        "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned()
+    );
 }
 
-//     def __init__(self):
-//         self.reg_table = {}
-//         self.tr_from = ''
-//         self.tr_to = ''
-//         self.tr = ''
-//         self.nls = 2
-//         self.specletter = False
-//         self.refer = False
-//         self.macro = 0
-//         self.nobody = False
-//         self.inlist = False
-//         self.inheader = False
-//         self.pic = False
-//         self.tbl = False
-//         self.tblstate = 0
-//         self.tblTab = ''
-//         self.eqn = False
-//         self.skipheaders = False
-//         self.skiplists = False
-//         self.ignore_sonx = False
-//         self.output = []
-//         self.name = ''
-//
-//         self.OPTIONS = 0
-//         self.FORMAT = 1
-//         self.DATA = 2
-//
-//         # words is uninteresting and should be treated as false
-//
-//     # This gets swapped in in place of condputs the first time tr gets modified
-//     def condputs_tr(self, str):
-//         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
-//         if not special:
-//             self.output.append(str.translate(self.tr))
-
-//     def condputs(self, str):
-//         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
-//         if not special:
-//             self.output.append(str)
+#[test]
+fn test_digit() {
+    assert_eq!(Deroffer::digit("0", 0), true);
+    assert_eq!(Deroffer::digit("9", 0), true);
+    assert_eq!(Deroffer::digit("", 1), false);
+    assert_eq!(Deroffer::digit("1", 1), false);
+    assert_eq!(Deroffer::digit("a", 0), false);
+    assert_eq!(Deroffer::digit(" ", 0), false);
+}
 
 //     def str_eq(offset, other, len):
 //         return self.s[offset:offset+len] == other[:len]
@@ -1025,11 +1125,6 @@ fn test_condputs() {
 //         match = Deroffer.g_re_font.match(self.s)
 //         if not match: return False
 //         self.skip_char(match.end())
-//         return True
-
-//     def comment(self):
-//         # Here we require that the string start with \"
-//         while self.str_at(0) and self.str_at(0) != '\n': self.skip_char()
 //         return True
 
 //     def numreq(self):
@@ -1132,21 +1227,6 @@ fn test_condputs() {
 //         self.skip_char(2)
 //         return True
 
-//     def word(self):
-//         got_something = False
-//         while True:
-//             match = Deroffer.g_re_word.match(self.s)
-//             if not match: break
-//             got_something = True
-//             self.condputs(match.group(0))
-//             self.skip_char(match.end(0))
-//
-//             # Consume all specials
-//             while self.spec():
-//                 if not self.specletter: break
-//
-//         return got_something
-
 //     def text(self):
 //         while True:
 //             idx = self.s.find('\\')
@@ -1161,54 +1241,6 @@ fn test_condputs() {
 //                     self.condputs(self.str_at(0))
 //                     self.skip_char()
 //         return True
-
-//     def digit(self, idx):
-//         ch = self.str_at(idx)
-//         return ch.isdigit()
-
-//     def number(self):
-//         match = Deroffer.g_re_number.match(self.s)
-//         if not match:
-//             return False
-//         else:
-//             self.condputs(match.group(0))
-//             self.skip_char(match.end())
-//             return True
-
-//     def esc_char_backslash(self):
-//         # Like esc_char, but we know the string starts with a backslash
-//         c = self.s[1:2]
-//         if c == '"':
-//             return self.comment()
-//         elif c == 'f':
-//             return self.font()
-//         elif c == 's':
-//             return self.size()
-//         elif c in 'hvwud':
-//             return self.numreq()
-//         elif c in 'n*':
-//             return self.var()
-//         elif c == '(':
-//             return self.spec()
-//         else:
-//             return self.esc()
-
-//     def esc_char(self):
-//         if self.s[0:1] == '\\':
-//             return self.esc_char_backslash()
-//         return self.word() or self.number()
-
-//     def quoted_arg(self):
-//         if self.str_at(0) == '"':
-//             self.skip_char()
-//             while self.s and self.str_at(0) != '"':
-//                 if not self.esc_char():
-//                     if self.s:
-//                         self.condputs(self.str_at(0))
-//                         self.skip_char()
-//             return True
-//         else:
-//             return False
 
 //     def text_arg(self):
 //         # PCA: The deroff.c textArg() disallowed quotes at the start of an argument
