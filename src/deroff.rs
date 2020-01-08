@@ -3,6 +3,7 @@
 use libflate::gzip::Decoder;
 use regex::Regex;
 
+use crate::util::TranslationTable;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -30,7 +31,7 @@ struct Deroffer {
     reg_table: HashMap<TODO_TYPE, TODO_TYPE>,
     tr_from: String,
     tr_to: String,
-    tr: String,
+    tr: Option<TranslationTable>,
     specletter: bool,
     refer: bool,
     r#macro: bool,
@@ -42,9 +43,9 @@ struct Deroffer {
     tblstate: TblState,
     tblTab: String,
     eqn: bool,
+    output: String,
     skipheaders: bool,
     skiplists: bool,
-    output: Vec<TODO_TYPE>,
     name: String,
 
     s: String, // This is not explicitly defined in python code
@@ -69,7 +70,7 @@ impl Deroffer {
             reg_table: HashMap::new(),
             tr_from: String::new(),
             tr_to: String::new(),
-            tr: String::new(),
+            tr: None,
             specletter: false,
             refer: false,
             r#macro: false,
@@ -81,9 +82,9 @@ impl Deroffer {
             tblstate: TblState::Options,
             tblTab: String::new(),
             eqn: false,
+            output: String::new(),
             skipheaders: false,
             skiplists: false,
-            output: Vec::new(),
             name: String::new(),
 
             s: String::new(), // This is not explicitly defined in python code
@@ -580,6 +581,23 @@ impl Deroffer {
         unimplemented!()
     }
 
+    /// `condputs` (cond)itionally (puts) `s` into `self.output`
+    /// if `self.tr` is set, instead of putting `s` into `self.output` directly,
+    /// it `translate`s it using the set translation table and puts the result
+    /// into `self.output`
+    fn condputs(&mut self, s: &str) {
+        let is_special =
+            { self.pic || self.eqn || self.refer || self.r#macro || self.inlist || self.inheader };
+
+        if !is_special {
+            if let Some(table) = &self.tr {
+                self.output.push_str(&table.translate(s));
+            } else {
+                self.output.push_str(s);
+            }
+        }
+    }
+
     fn not_whitespace(s: &str, idx: usize) -> bool {
         // # Note that this return False for the empty string (idx >= len(self.s))
         // ch = self.s[idx:idx+1]
@@ -657,10 +675,6 @@ impl Deroffer {
                 self.word(s).or_else(|| self.number(s))
             }
         })
-    }
-
-    fn condputs(&self, string: &str) -> bool {
-        unimplemented!()
     }
 
     fn quoted_arg<'a>(&mut self, string: &'a str) -> Option<&'a str> {
@@ -754,6 +768,32 @@ fn test_is_white() {
 }
 
 #[test]
+fn test_condputs() {
+    let mut d = Deroffer::new();
+
+    assert_eq!(d.output, String::new());
+    d.condputs("Hello World!\n");
+    assert_eq!(d.output, "Hello World!\n".to_owned());
+    d.pic = true;
+    d.condputs("This won't go to output");
+    assert_eq!(d.output, "Hello World!\n".to_owned());
+    d.pic = false;
+    d.condputs("This will go to output :)");
+    assert_eq!(
+        d.output,
+        "Hello World!\nThis will go to output :)".to_owned()
+    );
+
+    // Test the translation check
+    d.tr = TranslationTable::new("Ttr", "AAA").ok();
+    d.condputs("Translate test");
+    assert_eq!(
+        d.output,
+        "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned()
+    );
+}
+
+#[test]
 fn test_digit() {
     assert_eq!(Deroffer::digit("0", 0), true);
     assert_eq!(Deroffer::digit("9", 0), true);
@@ -762,16 +802,6 @@ fn test_digit() {
     assert_eq!(Deroffer::digit("a", 0), false);
     assert_eq!(Deroffer::digit(" ", 0), false);
 }
-//     # This gets swapped in in place of condputs the first time tr gets modified
-//     def condputs_tr(self, str):
-//         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
-//         if not special:
-//             self.output.append(str.translate(self.tr))
-
-//     def condputs(self, str):
-//         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
-//         if not special:
-//             self.output.append(str)
 
 //     def str_eq(offset, other, len):
 //         return self.s[offset:offset+len] == other[:len]
