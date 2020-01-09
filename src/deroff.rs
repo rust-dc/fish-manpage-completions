@@ -4,6 +4,7 @@ use libflate::gzip::Decoder;
 use regex::Regex;
 
 use crate::util::TranslationTable;
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -43,7 +44,9 @@ struct Deroffer {
     tblstate: TblState,
     tblTab: String,
     eqn: bool,
-    output: String,
+    // Make output Cell to enable interior mutability and reduce clone
+    // XXX In the future, should just store BufWriter instead
+    output: Cell<String>,
     skipheaders: bool,
     skiplists: bool,
     name: String,
@@ -82,7 +85,7 @@ impl Deroffer {
             tblstate: TblState::Options,
             tblTab: String::new(),
             eqn: false,
-            output: String::new(),
+            output: Cell::new(String::new()),
             skipheaders: false,
             skiplists: false,
             name: String::new(),
@@ -872,16 +875,18 @@ impl Deroffer {
     /// if `self.tr` is set, instead of putting `s` into `self.output` directly,
     /// it `translate`s it using the set translation table and puts the result
     /// into `self.output`
-    fn condputs(&mut self, s: &str) {
+    fn condputs(&self, s: &str) {
         let is_special =
             { self.pic || self.eqn || self.refer || self.r#macro || self.inlist || self.inheader };
 
         if !is_special {
+            let mut output = self.output.take();
             if let Some(table) = &self.tr {
-                self.output.push_str(&table.translate(s.into()));
+                output.push_str(&table.translate(s.into()));
             } else {
-                self.output.push_str(s);
+                output.push_str(s);
             }
+            self.output.set(output);
         }
     }
 
@@ -1092,10 +1097,11 @@ impl Deroffer {
 
     fn word(&mut self) -> bool {
         let mut got_something = false;
-        while let Some(m) = self.g_re_word.find(&self.s.clone()) {
+        while let Some(mat) = self.g_re_word.find(&self.s) {
             got_something = true;
-            self.condputs(m.as_str());
-            self.skip_char(m.end());
+            self.condputs(mat.as_str());
+            let end = mat.end();
+            self.skip_char(end);
 
             while self.spec() {
                 if !self.specletter {
@@ -1108,20 +1114,19 @@ impl Deroffer {
 
     fn text(&mut self) -> bool {
         loop {
-            if let Some(idx) = self.s.clone().find("\\") {
-                self.condputs(self.s.clone().get(..idx).unwrap_or("")); // TODO: Fix! this may cause bugs later
+            if let Some(idx) = self.s.find('\\') {
+                self.condputs(self.s.get(..idx).unwrap_or_default());
                 self.skip_char(idx);
                 if !self.esc_char_backslash() {
-                    self.condputs(self.s.clone().get(0..1).unwrap_or("")); // TODO: Fix! this may cause bugs later
+                    self.condputs(self.s.get(0..1).unwrap_or_default());
                     self.skip_char(1);
                 }
             } else {
-                self.condputs(&self.s.clone());
-                self.s = String::new();
-                break;
+                self.condputs(&self.s);
+                self.s.clear();
+                return true;
             }
         }
-        true
     }
 
     fn spec(&self) -> bool {
@@ -1224,24 +1229,29 @@ fn test_is_white() {
 fn test_condputs() {
     let mut d = Deroffer::new();
 
-    assert_eq!(d.output, String::new());
+    assert_eq!(d.output.take(), String::new());
     d.condputs("Hello World!\n");
-    assert_eq!(d.output, "Hello World!\n".to_owned());
+    let output = d.output.take();
+    assert_eq!(output, "Hello World!\n".to_owned());
+    d.output.set(output);
+
     d.pic = true;
     d.condputs("This won't go to output");
-    assert_eq!(d.output, "Hello World!\n".to_owned());
+    let output = d.output.take();
+    assert_eq!(output, "Hello World!\n".to_owned());
+    d.output.set(output);
+
     d.pic = false;
     d.condputs("This will go to output :)");
-    assert_eq!(
-        d.output,
-        "Hello World!\nThis will go to output :)".to_owned()
-    );
+    let output = d.output.take();
+    assert_eq!(output, "Hello World!\nThis will go to output :)".to_owned());
+    d.output.set(output);
 
     // Test the translation check
     d.tr = TranslationTable::new("Ttr", "AAA").ok();
     d.condputs("Translate test");
     assert_eq!(
-        d.output,
+        d.output.take(),
         "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned()
     );
 }
