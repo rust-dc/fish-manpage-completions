@@ -7,6 +7,7 @@ use crate::util::TranslationTable;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use std::cell::Cell;
 
 type TODO_TYPE = u8;
 type TODO_NUMBER_TYPE = i8;
@@ -43,7 +44,7 @@ struct Deroffer {
     tblstate: TblState,
     tblTab: String,
     eqn: bool,
-    output: String,
+    output: Cell<String>,
     skipheaders: bool,
     skiplists: bool,
     name: String,
@@ -82,7 +83,7 @@ impl Deroffer {
             tblstate: TblState::Options,
             tblTab: String::new(),
             eqn: false,
-            output: String::new(),
+            output: Cell::new(String::new()),
             skipheaders: false,
             skiplists: false,
             name: String::new(),
@@ -366,70 +367,71 @@ impl Deroffer {
         })
     }
 
-    fn comment<'a>(&self, mut s: &'a str) -> &'a str {
-        while Self::str_at(&s, 0) != "\n" {
-            s = self.skip_char(&s, 1);
-        }
-        s
+
+    fn skip_char(&mut self, amount: usize) {
+        self.s.drain(..amount);
     }
 
-    fn skip_char<'a>(&self, s: &'a str, amount: usize) -> &'a str {
-        s.get(amount..).unwrap_or("")
+    fn skip_leading_whitespace(&mut self) {
+        self.s = self.s.trim_start().to_owned();
     }
 
-    fn skip_leading_whitespace<'a>(&self, s: &'a str) -> &'a str {
-        s.trim_start()
-    }
-
-    fn str_at(string: &str, idx: usize) -> &str {
-        // Note: If we don't care about strings with multi-byte chars, the
-        // following would suffice:
-        // s.get(idx..idx + 1).unwrap_or("")
-        //
-        // Note: We're not yet sure whether our roff inputs will generally be
-        // ASCII or UTF-8. If they are ASCII (and can be treated as containing
-        // only single-byte characters), it would be faster to just use `get()`
-        string
-            .char_indices()
+    fn str_at(&self, idx: usize) -> &str {
+        let s = &self.s;
+        s.char_indices()
             .skip(idx)
             .next()
-            .map(|(idx, charr)| &string[idx..(idx + charr.len_utf8())]) // Okay to directly index based on idx/charr construction.
-            .unwrap_or_default()
+            .map(|(i, c)| &s[i..(i + c.len_utf8())])
+            .unwrap_or("")
     }
 
-    fn is_white<'a>(s: &'a str, idx: usize) -> bool {
-        match Self::str_at(s, idx) {
+    fn is_white(&self, idx: usize) -> bool {
+        match self.str_at(idx) {
             "" => false,
             c => c.chars().all(|c| c.is_whitespace()),
         }
     }
 
-    fn digit(s: &str, idx: usize) -> bool {
-        match Self::str_at(s, idx) {
+    // AKA `prch`
+    fn not_whitespace(&self, idx: usize) -> bool {
+        !" \t\n".contains(self.str_at(idx))
+    }
+
+    fn digit(&self, idx: usize) -> bool {
+        match self.str_at(idx) {
             "" => false,
             c => c.chars().all(|c| c.is_digit(10)),
         }
     }
 
-    fn text_arg<'a>(&mut self, s: &'a str) -> bool {
-        let mut s2 = s;
+    fn comment(&mut self) -> bool {
+        let mut s = self.str_at(0);
+        while !s.is_empty() && s != "\n" {
+            self.skip_char(1);
+            s = self.str_at(0);
+        }
+
+        true
+    }
+
+    fn text_arg(&mut self) -> bool {
         let mut got_something = false;
         loop {
-            let possible = self.g_re_not_backslash_or_whitespace.find(s);
+            let possible = self.g_re_not_backslash_or_whitespace.find(&self.s);
             if let Some(m) = possible {
                 // Output the characters in the match
                 self.condputs(m.as_str());
-                s2 = self.skip_char(s2, m.end());
+                self.skip_char(m.end());
                 got_something = true;
             }
 
-            if s2.is_empty() || Self::is_white(s2, 0) {
+            if self.s.is_empty() || self.is_white(0) {
                 return got_something;
             }
 
-            if self.esc_char(s2).is_none() {
-                self.condputs(Self::str_at(s2, 0));
-                s2 = self.skip_char(s2, 1);
+            if !self.esc_char() {
+                self.condputs(self.str_at(0));
+                self.skip_char(1);
                 got_something = true;
             }
         }
@@ -585,27 +587,19 @@ impl Deroffer {
     /// if `self.tr` is set, instead of putting `s` into `self.output` directly,
     /// it `translate`s it using the set translation table and puts the result
     /// into `self.output`
-    fn condputs(&mut self, s: &str) {
+    fn condputs(&self, s: &str) {
         let is_special =
             { self.pic || self.eqn || self.refer || self.r#macro || self.inlist || self.inheader };
 
         if !is_special {
+            let mut o = self.output.take();
             if let Some(table) = &self.tr {
-                self.output.push_str(&table.translate(s));
+                o.push_str(&table.translate(s));
             } else {
-                self.output.push_str(s);
+                o.push_str(s);
             }
+            self.output.set(o);
         }
-    }
-
-    fn not_whitespace(s: &str, idx: usize) -> bool {
-        // # Note that this return False for the empty string (idx >= len(self.s))
-        // ch = self.s[idx:idx+1]
-        // return ch not in ' \t\n'
-        // TODO Investigate checking for ASCII whitespace after mvp
-        s.get(idx..(idx + 1))
-            .map(|string| " \t\n".contains(string))
-            .unwrap_or_default()
     }
 
     fn deroff(&mut self, string: String) {
@@ -616,7 +610,7 @@ impl Deroffer {
         write.flush().unwrap()
     }
 
-    fn esc_char_backslash<'a>(&mut self, s: &'a str) -> Option<&'a str> {
+    fn esc_char_backslash(&mut self) -> bool {
         unimplemented!()
     }
     //     def esc_char_backslash(self):
@@ -637,7 +631,7 @@ impl Deroffer {
     //         else:
     //             return self.esc()
 
-    fn number<'a>(&mut self, s: &'a str) -> Option<&'a str> {
+    fn number(&mut self) -> bool {
         unimplemented!()
     }
     //     def number(self):
@@ -649,7 +643,7 @@ impl Deroffer {
     //             self.skip_char(match.end())
     //             return True
 
-    fn word<'a>(&mut self, s: &'a str) -> Option<&'a str> {
+    fn word(&mut self) -> bool {
         unimplemented!()
     }
     //     def word(self):
@@ -667,50 +661,52 @@ impl Deroffer {
     //
     //         return got_something
 
-    fn esc_char<'a>(&mut self, s: &'a str) -> Option<&'a str> {
-        s.get(0..1).and_then(|ch| {
-            if ch == "\\" {
-                self.esc_char_backslash(s)
-            } else {
-                self.word(s).or_else(|| self.number(s))
-            }
-        })
+    fn esc_char(&mut self) -> bool {
+        if self.s.get(0..=0) == Some("\\") {
+            self.esc_char_backslash()
+        } else {
+            self.word() || self.number()
+        }
     }
 
-    fn quoted_arg<'a>(&mut self, string: &'a str) -> Option<&'a str> {
-        if Deroffer::str_at(string, 0) == "\"" {
+    fn quoted_arg(&mut self) -> bool {
+        if self.str_at(0) == "\"" {
             // We've now entered a portion of the source that should be
             // surrounded by double quotes. (We've found the first one—really
             // hoping we find its mate later).
-            let mut string = self.skip_char(string, 1);
-            while !string.is_empty() && Deroffer::str_at(string, 0) != "\"" {
-                // Our string starts with _any_ char other than a double-quote
-                if let Some(ns) = self.esc_char(string) {
-                    // Our thing started with a backslash or was parseable as a
-                    // word or a number.
-                    string = ns;
-                } else {
-                    self.condputs(Deroffer::str_at(string, 0));
-                    string = self.skip_char(string, 1);
+            self.skip_char(1);
+            while !self.s.is_empty() && self.str_at(0) != "\"" {
+                if !self.esc_char() {
+                    self.condputs(self.str_at(0));
+                    self.skip_char(1);
                 }
             }
             // We've run past the end of the string OR we've found the closing
             // double-quote to match the initial one we found at the start of
             // the function.
-            Some(string)
+            true
         } else {
             // We don't start with quotes!
-            None
+            false
         }
     }
 }
 
 #[test]
 fn test_comment() {
-    let deroffer = Deroffer::new();
-    assert_eq!(deroffer.comment("\n"), "\n");
-    assert_eq!(deroffer.comment("hello\n"), "\n");
-    assert_eq!(deroffer.comment("hello\nworld"), "\nworld");
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = "\n".to_owned();
+    deroffer.comment();
+    assert_eq!(deroffer.s, "\n".to_owned());
+
+    deroffer.s = "hello\n".to_owned();
+    deroffer.comment();
+    assert_eq!(deroffer.s, "\n".to_owned());
+
+    deroffer.s = "hello\nworld".to_owned();
+    deroffer.comment();
+    assert_eq!(deroffer.s, "\nworld".to_owned());
 }
 
 fn deroff_files(files: &[String]) -> std::io::Result<()> {
@@ -743,64 +739,110 @@ fn test_get_output() {
 
 #[test]
 fn test_not_whitespace() {
-    assert_eq!(Deroffer::not_whitespace("", 0), false);
-    assert_eq!(Deroffer::not_whitespace("", 9), false);
-    assert_eq!(Deroffer::not_whitespace("ab d", 2), true);
-    assert_eq!(Deroffer::not_whitespace("ab d", 3), false);
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = "".to_owned();
+    assert_eq!(deroffer.not_whitespace(0), false);
+    assert_eq!(deroffer.not_whitespace(9), false);
+    
+    deroffer.s = "ab d".to_owned();
+    // idx 2 = " ", should be false
+    assert_eq!(deroffer.not_whitespace(2), false);
+    assert_eq!(deroffer.not_whitespace(3), true);
 }
 
 #[test]
 fn test_str_at() {
-    assert_eq!(Deroffer::str_at("", 1), "");
-    assert_eq!(Deroffer::str_at("ab cd", 42), "");
-    assert_eq!(Deroffer::str_at("ab cd", 1), "b");
-    assert_eq!(Deroffer::str_at("🗻", 0), "🗻");
-    assert_eq!(Deroffer::str_at("🗻", 1), "");
+    let mut deroffer = Deroffer::new();
+
+    assert_eq!(deroffer.str_at(1), "");
+
+    deroffer.s = "ab cd".to_owned();
+    assert_eq!(deroffer.str_at(42), "");
+    assert_eq!(deroffer.str_at(1), "b");
+
+    deroffer.s = "🗻".to_owned();
+    assert_eq!(deroffer.str_at(0), "🗻");
+    assert_eq!(deroffer.str_at(1), "");
 }
 
 #[test]
 fn test_is_white() {
-    assert_eq!(Deroffer::is_white("", 1), false);
-    assert_eq!(Deroffer::is_white("ab cd", 42), false);
-    assert_eq!(Deroffer::is_white("ab cd", 1), false);
-    assert_eq!(Deroffer::is_white("ab cd", 2), true);
-    assert_eq!(Deroffer::is_white("ab cd", 3), false);
+    let mut deroffer = Deroffer::new();
+
+    assert_eq!(deroffer.is_white(1), false);
+
+    deroffer.s = "ab cd".to_owned();
+    assert_eq!(deroffer.is_white(42), false);
+    assert_eq!(deroffer.is_white(1), false);
+    assert_eq!(deroffer.is_white(2), true);
+    assert_eq!(deroffer.is_white(3), false);
 }
 
 #[test]
 fn test_condputs() {
     let mut d = Deroffer::new();
 
-    assert_eq!(d.output, String::new());
+    let o = d.output.take();
+    assert_eq!(o, String::new());
+    d.output.set(o);
+
     d.condputs("Hello World!\n");
-    assert_eq!(d.output, "Hello World!\n".to_owned());
+    
+    let o = d.output.take();
+    assert_eq!(o, "Hello World!\n".to_owned());
+    d.output.set(o);
+    
     d.pic = true;
     d.condputs("This won't go to output");
-    assert_eq!(d.output, "Hello World!\n".to_owned());
+    
+    let o = d.output.take();
+    assert_eq!(o, "Hello World!\n".to_owned());
+    d.output.set(o);
+    
     d.pic = false;
     d.condputs("This will go to output :)");
+    let o = d.output.take();
     assert_eq!(
-        d.output,
+        o,
         "Hello World!\nThis will go to output :)".to_owned()
     );
+    d.output.set(o);
 
     // Test the translation check
     d.tr = TranslationTable::new("Ttr", "AAA").ok();
     d.condputs("Translate test");
+
+    let o = d.output.take();
     assert_eq!(
-        d.output,
+        o,
         "Hello World!\nThis will go to output :)AAanslaAe AesA".to_owned()
     );
+    d.output.set(o);
 }
 
 #[test]
 fn test_digit() {
-    assert_eq!(Deroffer::digit("0", 0), true);
-    assert_eq!(Deroffer::digit("9", 0), true);
-    assert_eq!(Deroffer::digit("", 1), false);
-    assert_eq!(Deroffer::digit("1", 1), false);
-    assert_eq!(Deroffer::digit("a", 0), false);
-    assert_eq!(Deroffer::digit(" ", 0), false);
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = "0".to_owned();
+    assert_eq!(deroffer.digit(0), true);
+
+    deroffer.s = "9".to_owned();
+    assert_eq!(deroffer.digit(0), true);
+
+    deroffer.s = "".to_owned();
+    assert_eq!(deroffer.digit(1), false);
+
+    deroffer.s = "1".to_owned();
+    assert_eq!(deroffer.digit(1), false);
+
+    deroffer.s = "a".to_owned();
+    assert_eq!(deroffer.digit(0), false);
+
+    deroffer.s = " ".to_owned();
+    assert_eq!(deroffer.digit(0), false);
+
 }
 
 //     def str_eq(offset, other, len):
