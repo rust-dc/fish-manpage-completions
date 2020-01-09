@@ -1097,10 +1097,11 @@ impl Deroffer {
 
     fn word(&mut self) -> bool {
         let mut got_something = false;
-        while let Some(m) = self.g_re_word.find(&self.s.clone()) {
+        while let Some(mat) = self.g_re_word.find(&self.s) {
             got_something = true;
-            self.condputs(m.as_str());
-            self.skip_char(m.end());
+            self.condputs(mat.as_str());
+            let end = mat.end();
+            self.skip_char(end);
 
             while self.spec() {
                 if !self.specletter {
