@@ -678,6 +678,13 @@ impl Deroffer {
         //             self.tr_from += c
         //             self.tr_to += ns
         //
+        //         # Update our table, then swap in the slower tr-savvy condputs
+        //         try: #Python2
+        //             self.tr = string.maketrans(self.tr_from, self.tr_to)
+        //         except AttributeError: #Python3
+        //             self.tr = "".maketrans(self.tr_from, self.tr_to)
+        //         self.condputs = self.condputs_tr
+        //         return True
         unimplemented!()
     }
 
