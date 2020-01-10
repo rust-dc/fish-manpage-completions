@@ -622,11 +622,9 @@ impl Deroffer {
     }
 
     fn macro_tr(&mut self) -> bool {
-        // let s = &self.s.clone();
-        // self.skip_char(2);
         self.s = self.skip_char(&self.s, 2).to_owned();
-        // self.skip_leading_whitespace();
         self.s = self.skip_leading_whitespace(&self.s).to_owned();
+
         while !self.s.is_empty() && &self.s[0..=0] != "\n" {
             self.tr_from.push_str(&self.s[0..=0]);
 
