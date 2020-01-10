@@ -381,7 +381,7 @@ impl Deroffer {
             .skip(idx)
             .next()
             .map(|(i, c)| &s[i..(i + c.len_utf8())])
-            .unwrap_or("")
+            .unwrap_or_default()
     }
 
     fn is_white(&self, idx: usize) -> bool {
