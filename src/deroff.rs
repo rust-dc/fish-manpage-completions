@@ -28,7 +28,7 @@ struct Deroffer {
     g_re_newline_collapse: &'static Regex,
     g_re_font: &'static Regex,
 
-    reg_table: HashMap<TODO_TYPE, TODO_TYPE>,
+    reg_table: HashMap<String, String>,
     tr_from: String,
     tr_to: String,
     tr: Option<TranslationTable>,
@@ -530,136 +530,139 @@ impl Deroffer {
     }
 
     fn macro_pe(&mut self) -> bool {
-        //def macro_pe(self):
-        //  if self.is_white(2): self.pic = False
-        //  self.condputs('\n')
-        //  return True
-
-        unimplemented!()
+        if Self::is_white(&self.s, 2) {
+            self.pic = false
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_ts(&mut self) -> bool {
-        //     def macro_ts(self):
-        //         if self.is_white(2): self.tbl, self.tblstate = True, self.OPTIONS
-        //         self.condputs('\n')
-        //         return True
+        if Self::is_white(&self.s, 2) {
+            self.tbl = true;
+            self.tblstate = TblState::Options;
+        }
 
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     fn macro_t_and(&mut self) -> bool {
-        //     def macro_t_and(self):
-        //         if self.is_white(2): self.tbl, self.tblstate = True, self.FORMAT
-        //         self.condputs('\n')
-        //         return True
+        if Self::is_white(&self.s, 2) {
+            self.tbl = true;
+            self.tblstate = TblState::Format;
+        }
 
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     fn macro_te(&mut self) -> bool {
-        //     def macro_te(self):
-        //         if self.is_white(2): self.tbl = False
-        //         self.condputs('\n')
-        //         return True
+        if Self::is_white(&self.s, 2) {
+            self.tbl = false
+        }
 
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     fn macro_eq(&mut self) -> bool {
-        //     def macro_eq(self):
-        //         if self.is_white(2): self.eqn = True
-        //         self.condputs('\n')
-        //         return True
+        if Self::is_white(&self.s, 2) {
+            self.eqn = true
+        }
 
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     fn macro_en(&mut self) -> bool {
-        //     def macro_en(self):
-        //         if self.is_white(2): self.eqn = False
-        //         self.condputs('\n')
-        //         return True
+        if Self::is_white(&self.s, 2) {
+            self.eqn = false
+        }
 
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     fn macro_r1(&mut self) -> bool {
-        //     def macro_r1(self):
-        //         if self.is_white(2): self.refer2 = True
-        //         self.condputs('\n')
-        //         return True
-
-        unimplemented!()
+        // NOTE: self.refer2 is never used in the python source, so this and macro_r2 are
+        // pretty much worthless
+        // if Self::is_white(&self.s, 2) {
+        //     self.refer2 = true;
+        // }
+        self.condputs("\n");
+        true
     }
 
     fn macro_r2(&mut self) -> bool {
-        //     def macro_r2(self):
-        //         if self.is_white(2): self.refer2 = False
-        //         self.condputs('\n')
-        //         return True
-
-        unimplemented!()
+        // if Self::is_white(&self.s, 2) {
+        //     NOTE: See macro_r1
+        //     self.refer2 = false;
+        // }
+        self.condputs("\n");
+        true
     }
 
     fn macro_de(&mut self) -> bool {
-        //     def macro_de(self):
-        //         macro=True
-        //         self.condputs('\n')
-        //         return True
-
-        unimplemented!()
+        self.r#macro = true;
+        self.condputs("\n");
+        true
     }
 
     fn macro_bl_vl(&mut self) -> bool {
-        //     def macro_bl_vl(self):
-        //         if self.is_white(2): self.inlist = True
-        //         self.condputs('\n')
-        //         return True
-
-        unimplemented!()
+        if Self::is_white(&self.s, 2) {
+            self.inlist = true
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_bv(&mut self) -> bool {
-        //     def macro_bv(self):
-        //         if self.str_at(2) == 'L' and self.white(self.str_at(3)): self.inlist = True
-        //         self.condputs('\n')
-        //         return True
-
-        unimplemented!()
+        // TODO: Determine whether `self.white` is a bastardization of
+        // `self.is_white`. (Was self.white converted to self.is_white
+        // but this call site was missed?)
+        //
+        // If it _were_ a valid function, the original Python source
+        // would translate roughly to:
+        //
+        //     for `self.is_white`, so I don't know what function its supposed to be
+        //     if self.str_at(2) == "L" and self.white(self.str_at(3)):
+        //         self.inlist = true
+        //     }
+        self.condputs("\n");
+        true
     }
 
     fn macro_le(&mut self) -> bool {
-        //     def macro_le(self):
-        //         if self.is_white(2): self.inlist = False
-        //         self.condputs('\n')
-        //         return True
-
-        unimplemented!()
+        if Self::is_white(&self.s, 2) {
+            self.inlist = false;
+        }
+        self.condputs("\n");
+        true
     }
 
     fn macro_lp_pp(&mut self) -> bool {
-        //     def macro_lp_pp(self):
-        //         self.condputs('\n')
-        //         return True
-
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     fn macro_ds(&mut self) -> bool {
-        //     def macro_ds(self):
-        //         self.skip_char(2)
-        //         self.skip_leading_whitespace()
-        //         if self.str_at(0):
-        //             # Split at whitespace
-        //             comps = self.s.split(None, 2)
-        //             if len(comps) is 2:
-        //                 name, value = comps
-        //                 value = value.rstrip()
-        //                 self.reg_table[name] = value
-        //         self.condputs('\n')
-        //         return True
+        // Yuck
+        self.s = self.skip_char(&self.s, 2).into();
+        self.s = self.skip_leading_whitespace(&self.s).into();
 
-        unimplemented!()
+        if !Self::str_at(&self.s, 0).is_empty() {
+            let comps: Vec<String> = self.s.splitn(2, " ").map(|s| s.into()).collect();
+
+            if comps.len() == 2 {
+                let name: String = comps.get(0).unwrap().into();
+                let value = comps.get(1).unwrap().trim_end().into();
+                self.reg_table.insert(name, value);
+            }
+        }
+
+        self.condputs("\n");
+        true
     }
 
     fn macro_so_nx(&mut self) -> bool {
@@ -667,41 +670,38 @@ impl Deroffer {
     }
 
     fn macro_tr(&mut self) -> bool {
-        //     def macro_tr(self):
-        //         self.skip_char(2)
-        //         self.skip_leading_whitespace()
-        //         while self.s and self.str_at(0) != '\n':
-        //             c = self.str_at(0)
-        //             ns = self.str_at(1)
-        //             self.skip_char(2)
-        //             if not ns or ns == '\n': ns = ' '
-        //             self.tr_from += c
-        //             self.tr_to += ns
-        //
-        //         # Update our table, then swap in the slower tr-savvy condputs
-        //         try: #Python2
-        //             self.tr = string.maketrans(self.tr_from, self.tr_to)
-        //         except AttributeError: #Python3
-        //             self.tr = "".maketrans(self.tr_from, self.tr_to)
-        //         self.condputs = self.condputs_tr
-        //         return True
-        unimplemented!()
+        self.s = self.skip_char(&self.s, 2).to_owned();
+        self.s = self.skip_leading_whitespace(&self.s).to_owned();
+
+        while !self.s.is_empty() && &self.s[0..=0] != "\n" {
+            self.tr_from.push_str(&self.s[0..=0]);
+
+            let ns = &self.s[1..=1];
+            self.tr_to
+                .push_str(if ns.is_empty() || ns == "\n" { " " } else { ns });
+
+            self.s = self.skip_char(&self.s, 2).to_owned();
+        }
+
+        // Update our table, then swap in the slower tr-savvy condputs
+        self.tr = match TranslationTable::new(&self.tr_from, &self.tr_to) {
+            Ok(table) => Some(table),
+            Err(e) => panic!(
+                "Encountered an error creating a new translation table from {}, {}: {}",
+                self.tr_from, self.tr_to, e
+            ),
+        };
+        true
     }
 
     fn macro_sp(&mut self) -> bool {
-        //     def macro_sp(self):
-        //         self.condputs('\n')
-        //         return True
-
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     fn macro_other(&mut self) -> bool {
-        //     def macro_other(self):
-        //         self.condputs('\n')
-        //         return True
-
-        unimplemented!()
+        self.condputs("\n");
+        true
     }
 
     /// `condputs` (cond)itionally (puts) `s` into `self.output`
