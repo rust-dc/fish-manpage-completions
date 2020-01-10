@@ -838,29 +838,18 @@ impl Deroffer {
         unimplemented!()
     }
 
-    fn macro_tr(&self) -> bool {
-        unimplemented!()
-    }
-
-    /*
-    handled by Kevin
-    fn macro_so_nx(&mut self) -> bool {
-        /*  # We always ignore include directives
-            # deroff.c for some reason allowed this to fall through to the 'tr' case
-            # I think that was just a bug so I won't replicate it */
-        true
-    }
-
-    handled by Anders
+    
     fn macro_tr(&mut self) -> bool {
-        let s = self.s.clone();
-        let s = s.as_str();
-        self.s = self.skip_char(s, Some(2)).to_owned();
-        self.s = self.skip_leading_whitespace(s).to_owned();
-        while !self.s.is_empty() && Self::str_at(s, 0) != "\n" {
-            let c = Self::str_at(s, 0);
-            let mut ns = Self::str_at(s, 1);
-            self.s = self.skip_char(self.s.as_str(), Some(2)).to_owned();
+        let s = &self.s.clone();
+        // self.skip_char(2);
+        self.s = self.skip_char(&self.s, 2).to_owned();
+        // self.skip_leading_whitespace();
+        self.s = self.skip_leading_whitespace(&self.s).to_owned();
+        while !s.is_empty() && &s[0..=0] != "\n" {
+            let c = &s[0..=0];
+            let mut ns = &s[1..=1];
+            // self.skip_char(2);
+            self.s = self.skip_char(&self.s, 2).to_owned();
             if ns.is_empty() || ns == "\n" {
                 ns = " ";
             }
@@ -870,7 +859,19 @@ impl Deroffer {
         }
 
         // Update our table, then swap in the slower tr-savvy condputs
-        self.tr = Some(maketrans(self.tr_from.as_str(), self.tr_to.as_str()));
+        self.tr = match TranslationTable::new(&self.tr_from, &self.tr_to) {
+            Ok(table) => Some(table),
+            Err(e) => panic!("Encountered an error creating a new translation table from {}, {}: {}", self.tr_from, self.tr_to, e),
+        };
+        true
+    }
+
+    /*
+    handled by Kevin
+    fn macro_so_nx(&mut self) -> bool {
+        /*  # We always ignore include directives
+            # deroff.c for some reason allowed this to fall through to the 'tr' case
+            # I think that was just a bug so I won't replicate it */
         true
     } */
 
