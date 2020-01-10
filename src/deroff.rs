@@ -485,6 +485,50 @@ impl Deroffer {
         }
     }
 
+    fn macro_sh(&mut self, s: &str) -> bool {
+        let headers = [" SYNOPSIS", " \"SYNOPSIS", " ‹BERSICHT", " \"‹BERSICHT"];
+        // @TODO: In the future s[2..] should care about UTF-8
+        if headers.iter().any(|header| s[2..].starts_with(header)) {
+            self.inheader = true;
+        } else {
+            self.inheader = false;
+            self.nobody = true;
+        }
+        false
+    }
+
+    fn macro_ss_ip(&mut self) -> bool {
+        self.nobody = true;
+        false
+    }
+
+    fn macro_i_ir(&mut self) -> bool {
+        false
+    }
+
+    fn macro_nm(&mut self) -> bool {
+        //def macro_nm(self):
+        //  if self.s == 'Nm\n':
+        //    self.condputs(self.name)
+        //  else:
+        //    self.name = self.s[3:].strip() + ' '
+        //  return True
+        unimplemented!()
+    }
+
+    fn macro_close_bracket(&mut self) -> bool {
+        self.refer = false;
+        false
+    }
+
+    fn macro_ps(&mut self, s: &str) -> bool {
+        if Self::is_white(s, 2) {
+            self.pic = true;
+        }
+        self.condputs("\n");
+        true
+    }
+
     fn macro_pe(&mut self) -> bool {
         if Self::is_white(&self.s, 2) {
             self.pic = false
@@ -621,6 +665,10 @@ impl Deroffer {
         true
     }
 
+    fn macro_so_nx(&mut self) -> bool {
+        true
+    }
+
     fn macro_tr(&mut self) -> bool {
         self.s = self.skip_char(&self.s, 2).to_owned();
         self.s = self.skip_leading_whitespace(&self.s).to_owned();
@@ -653,54 +701,6 @@ impl Deroffer {
 
     fn macro_other(&mut self) -> bool {
         self.condputs("\n");
-        true
-    }
-
-    fn macro_sh(&mut self, s: &str) -> bool {
-        let headers = [" SYNOPSIS", " \"SYNOPSIS", " ‹BERSICHT", " \"‹BERSICHT"];
-        // @TODO: In the future s[2..] should care about UTF-8
-        if headers.iter().any(|header| s[2..].starts_with(header)) {
-            self.inheader = true;
-        } else {
-            self.inheader = false;
-            self.nobody = true;
-        }
-        false
-    }
-
-    fn macro_ss_ip(&mut self) -> bool {
-        self.nobody = true;
-        false
-    }
-
-    fn macro_i_ir(&mut self) -> bool {
-        false
-    }
-
-    fn macro_nm(&mut self) -> bool {
-        //def macro_nm(self):
-        //  if self.s == 'Nm\n':
-        //    self.condputs(self.name)
-        //  else:
-        //    self.name = self.s[3:].strip() + ' '
-        //  return True
-        unimplemented!()
-    }
-
-    fn macro_close_bracket(&mut self) -> bool {
-        self.refer = false;
-        false
-    }
-
-    fn macro_ps(&mut self, s: &str) -> bool {
-        if Self::is_white(s, 2) {
-            self.pic = true;
-        }
-        self.condputs("\n");
-        true
-    }
-
-    fn macro_so_nx(&mut self) -> bool {
         true
     }
 
