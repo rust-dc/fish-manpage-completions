@@ -637,7 +637,6 @@ impl Deroffer {
             if comps.len() == 2 {
                 let name: String = comps.get(0).unwrap().into();
                 let value = comps.get(1).unwrap().trim_end().into();
-
                 self.reg_table.insert(name, value);
             }
         }
