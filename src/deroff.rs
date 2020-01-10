@@ -489,85 +489,25 @@ impl Deroffer {
         unimplemented!()
     }
 
-    /*
-    Handled by Kevin
-    fn macro_sh(&mut self) -> bool {
-        for header_str in [" SYNOPSIS", " \"SYNOPSIS", " ‹BERSICHT", " \"‹BERSICHT"].iter() {
-            if self.s[2..].starts_with(header_str) {
-                self.inheader = true;
-                return true;
-            }
-        }
-
-        self.inheader = false;
-        self.nobody = true;
-        true
-    } */
-
     fn macro_ss_ip(&self) -> bool {
         unimplemented!()
     }
-
-    /*
-    Handled by Kevin
-    fn macro_ss_ip(&mut self) -> bool {
-        self.nobody = true;
-        false
-    } */
 
     fn macro_i_ir(&self) -> bool {
         unimplemented!()
     }
 
-    /*
-    Handled by Kevin
-    fn macro_i_ir(&mut self) -> bool {
-        // why does this exist
-        false
-    } */
-
     fn macro_nm(&self) -> bool {
         unimplemented!()
     }
-
-    /*
-    Handled by Kevin
-    fn macro_nm(&mut self) -> bool {
-        if self.s == "Nm\n" {
-            self.condputs(self.name.clone().as_str());
-        } else {
-            let mut s = self.s[3..].trim().to_owned();
-            s.push(' ');
-            self.name = s;
-        }
-
-        true
-    } */
 
     fn macro_close_bracket(&self) -> bool {
         unimplemented!()
     }
 
-    /*
-    Handled by Kevin
-    fn macro_close_bracket(&mut self) -> bool {
-        self.refer = false;
-        false
-    } */
-
     fn macro_ps(&self) -> bool {
         unimplemented!()
     }
-
-    /*
-    Handled by Kevin
-    fn macro_ps(&mut self) -> bool {
-        if Self::is_white(self.s.as_str(), 2) {
-            self.pic = true
-        }
-        self.condputs("\n");
-        true
-    } */
 
     fn macro_pe(&mut self) -> bool {
         /*
@@ -804,28 +744,7 @@ impl Deroffer {
 
             if comps.len() == 2 {
                 let name: String = comps.get(0).unwrap().to_owned();
-                /*
-                This is a reminder to google stuff before you go implementing stuff badly
-
-                // This is horrible I know but it's meant to do string.rstrip()
-                // If you can think of a better way I am more than willing to switch it
-                let value: String = comps
-                            .get(1)
-                            .unwrap() // This is safe (len 2)
-                            .chars()
-                            .rev() // reverse the string to get the right side
-                            .skip_while(|c| c.is_whitespace()) // Skip any whitespace
-                            .collect::<String>() // collect it
-                            .chars()
-                            .rev() // make the string face the right way
-                            .collect(); // put it back in a String
-                // A note on the badness of this code,
-                // The reason for `.collect().rev().chars().collect()` exists is
-                // `skip_while` returns a `SkipWhile` which doesnt impl `DoubleEndedIterator`
-                // which is required for `rev` :( */
-
                 let value = comps.get(1).unwrap().as_str().trim_end().to_owned();
-
                 self.reg_table.insert(name, value);
             }
         }
@@ -838,7 +757,6 @@ impl Deroffer {
         unimplemented!()
     }
 
-    
     fn macro_tr(&mut self) -> bool {
         let s = &self.s.clone();
         // self.skip_char(2);
@@ -861,19 +779,13 @@ impl Deroffer {
         // Update our table, then swap in the slower tr-savvy condputs
         self.tr = match TranslationTable::new(&self.tr_from, &self.tr_to) {
             Ok(table) => Some(table),
-            Err(e) => panic!("Encountered an error creating a new translation table from {}, {}: {}", self.tr_from, self.tr_to, e),
+            Err(e) => panic!(
+                "Encountered an error creating a new translation table from {}, {}: {}",
+                self.tr_from, self.tr_to, e
+            ),
         };
         true
     }
-
-    /*
-    handled by Kevin
-    fn macro_so_nx(&mut self) -> bool {
-        /*  # We always ignore include directives
-            # deroff.c for some reason allowed this to fall through to the 'tr' case
-            # I think that was just a bug so I won't replicate it */
-        true
-    } */
 
     fn macro_sp(&mut self) -> bool {
         /*
