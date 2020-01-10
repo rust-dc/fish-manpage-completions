@@ -480,7 +480,7 @@ impl Deroffer {
             "so" => self.macro_so_nx(),
             "nx" => self.macro_so_nx(),
             "tr" => self.macro_tr(),
-            "sp" => self.macro_s(),
+            "sp" => self.macro_sp(),
             _ => self.macro_other(),
         }
     }
@@ -681,7 +681,7 @@ impl Deroffer {
         unimplemented!()
     }
 
-    fn macro_s(&mut self) -> bool {
+    fn macro_sp(&mut self) -> bool {
         //     def macro_sp(self):
         //         self.condputs('\n')
         //         return True
