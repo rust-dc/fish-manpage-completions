@@ -4,10 +4,10 @@ use libflate::gzip::Decoder;
 use regex::Regex;
 
 use crate::util::TranslationTable;
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::cell::Cell;
 
 type TODO_TYPE = u8;
 type TODO_NUMBER_TYPE = i8;
@@ -366,7 +366,6 @@ impl Deroffer {
             _ => return None,
         })
     }
-
 
     fn skip_char(&mut self, amount: usize) {
         self.s.drain(..amount);
@@ -744,7 +743,7 @@ fn test_not_whitespace() {
     deroffer.s = "".to_owned();
     assert_eq!(deroffer.not_whitespace(0), false);
     assert_eq!(deroffer.not_whitespace(9), false);
-    
+
     deroffer.s = "ab d".to_owned();
     // idx 2 = " ", should be false
     assert_eq!(deroffer.not_whitespace(2), false);
@@ -788,25 +787,22 @@ fn test_condputs() {
     d.output.set(o);
 
     d.condputs("Hello World!\n");
-    
+
     let o = d.output.take();
     assert_eq!(o, "Hello World!\n".to_owned());
     d.output.set(o);
-    
+
     d.pic = true;
     d.condputs("This won't go to output");
-    
+
     let o = d.output.take();
     assert_eq!(o, "Hello World!\n".to_owned());
     d.output.set(o);
-    
+
     d.pic = false;
     d.condputs("This will go to output :)");
     let o = d.output.take();
-    assert_eq!(
-        o,
-        "Hello World!\nThis will go to output :)".to_owned()
-    );
+    assert_eq!(o, "Hello World!\nThis will go to output :)".to_owned());
     d.output.set(o);
 
     // Test the translation check
@@ -842,7 +838,6 @@ fn test_digit() {
 
     deroffer.s = " ".to_owned();
     assert_eq!(deroffer.digit(0), false);
-
 }
 
 //     def str_eq(offset, other, len):
