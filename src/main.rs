@@ -1,9 +1,14 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/create_manpage_completions.py
 use std::collections::{HashMap, HashSet};
-use std::io::{Read, Write};
+use std::env;
+use std::ffi::OsString;
+use std::fs::{self, File};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use itertools::Itertools;
+use regex::Regex;
 use structopt::StructOpt;
 
 #[cfg(test)]
@@ -153,9 +158,9 @@ impl App {
 //         data = data[1:len(data)-1]
 //     return data
 
-fn unquote_double_quotes(data: String) -> String {
+fn unquote_double_quotes(data: &str) -> &str {
     if data.len() > 2 && (data.as_bytes()[0], *data.as_bytes().last().unwrap()) == (b'"', b'"') {
-        data[1..(data.len() - 1)].into()
+        &data[1..(data.len() - 1)]
     } else {
         data
     }
@@ -168,15 +173,15 @@ fn unquote_double_quotes(data: String) -> String {
 //         data = data[1:len(data)-1]
 //     return data
 
-fn unquote_single_quotes(data: String) -> String {
+fn unquote_single_quotes(data: &str) -> &str {
     if data.len() > 2 && (data.as_bytes()[0], *data.as_bytes().last().unwrap()) == (b'\'', b'\'') {
-        data[1..(data.len() - 1)].into()
+        &data[1..(data.len() - 1)]
     } else {
         data
     }
 }
 
-fn fish_escape_single_quote(string: String) -> String {
+fn fish_escape_single_quote(string: &str) -> String {
     format!("'{}'", string.replace(r"\", r"\\").replace(r"'", r"\'"))
 }
 
@@ -250,7 +255,7 @@ fn fish_options(options: &str, existing_options: &mut HashSet<String>) -> Vec<St
             fish_opt,
             // Direct indexing of `option` won't panic due to how `num_dashes`
             // is calculated. (I promise!)
-            fish_escape_single_quote(String::from(&option[num_dashes..]))
+            fish_escape_single_quote(&option[num_dashes..])
         );
 
         if existing_options.insert(option.clone()) {
@@ -365,7 +370,7 @@ fn truncated_description(description: &str) -> String {
         }
     }
 
-    fish_escape_single_quote(out)
+    fish_escape_single_quote(&out)
 }
 
 #[test]
@@ -383,12 +388,16 @@ fn test_truncated_description() {
     );
 
     assert_eq!(
-        truncated_description(r"The description for the command is so long. This second sentence will be dropped, in fact, because it is too long to be displayed comfortably."),
+        truncated_description(
+            r"The description for the command is so long. This second sentence will be dropped, in fact, because it is too long to be displayed comfortably."
+        ),
         r"'The description for the command is so long.'"
     );
 
     assert_eq!(
-        truncated_description(r"This single, initial sentence exceeds the `MAX_DESCRIPTION_WIDTH` and so it will not be displayed in its entirety, which is a crying shame."),
+        truncated_description(
+            r"This single, initial sentence exceeds the `MAX_DESCRIPTION_WIDTH` and so it will not be displayed in its entirety, which is a crying shame."
+        ),
         r"'This single, initial sentence exceeds the `MAX_DESCRIPTION_WIDTH` and so it w…'"
     );
 
@@ -406,7 +415,7 @@ fn built_command(
     description: &str,
     built_command_output: &mut Vec<String>,
     existing_options: &mut HashSet<String>,
-    cmd_name: String,
+    cmd_name: &str,
 ) {
     let fish_options = fish_options(options, existing_options);
 
@@ -577,80 +586,99 @@ impl ManParser for Type1 {
 //             options_section = options_section[options_matched.end()-3:]
 //             options_matched = re.search(options_parts_regex, options_section)
 
-//     def fallback(self, options_section):
-//         add_diagnostic('Trying fallback')
-//         options_parts_regex = re.compile("\.TP( \d+)?(.*?)\.TP", re.DOTALL)
-//         options_matched = re.search(options_parts_regex, options_section)
-//         if options_matched == None:
-//             add_diagnostic('Still not found')
-//             return False
-//         while options_matched != None:
-//             data = options_matched.group(2)
-//             data = remove_groff_formatting(data)
-//             data = data.strip()
-//             data = data.split("\n",1)
-//             if (len(data)>1 and len(data[1].strip())>0): # and len(data[1])<400):
-//                 optionName = data[0].strip()
-//                 if ( optionName.find("-") == -1):
-//                     add_diagnostic("%r doesn't contain '-'" % optionName)
-//                 else:
-//                     optionName = unquote_double_quotes(optionName)
-//                     optionName = unquote_single_quotes(optionName)
-//                     optionDescription = data[1].strip().replace("\n"," ")
-//                     built_command(optionName, optionDescription)
-//             else:
-//                 add_diagnostic('Unable to split option from description')
-//                 return False
-//
-//             options_section = options_section[options_matched.end()-3:]
-//             options_matched = re.search(options_parts_regex, options_section)
-//         return True
-
 impl Type1 {
-    fn fallback(&self, options_section: &str) -> bool {
-        unimplemented!()
+    fn fallback(
+        &self,
+        mut options_section: &str,
+        built_command_output: &mut Vec<String>,
+        existing_options: &mut HashSet<String>,
+        cmd_name: &str,
+    ) -> bool {
+        // add_diagnostic("Trying fallback");
+        let options_parts_re = regex!(r"\.TP( \d+)?((?s:.)*?)\.TP");
+        let mut options_matched = options_parts_re.captures(options_section);
+        if options_matched.is_none() {
+            // add_diagnostic("Still not found");
+            return false;
+        }
+        while let Some(mat) = options_matched {
+            let data = mat.get(2).unwrap().as_str();
+            let data = remove_groff_formatting(data);
+            let data: Vec<&str> = data.trim().splitn(2, '\n').collect();
+            if data.len() < 2 || data[1].trim().is_empty() {
+                // add_diagnostic("Unable to split option from description");
+                return false;
+            }
+            let option_name = data[0].trim();
+            if option_name.find('-').is_some() {
+                let option_name = unquote_double_quotes(option_name);
+                let option_name = unquote_single_quotes(option_name);
+                let option_desc = data[1].trim().replace('\n', " ");
+                built_command(
+                    option_name,
+                    option_desc.as_str(),
+                    built_command_output,
+                    existing_options,
+                    cmd_name,
+                );
+            } else {
+                // add_diagnostic(format!("{:?} does not contain '-'", option_name));
+            }
+            // XXX possible to add fallback2 here
+
+            options_section = &options_section[mat.get(0).unwrap().end() - 3..];
+            options_matched = options_parts_re.captures(options_section);
+        }
+        true
     }
-}
 
-//     def fallback2(self, options_section):
-//         add_diagnostic('Trying last chance fallback')
-//         ix_remover_regex = re.compile("\.IX.*")
-//         trailing_num_regex = re.compile('\\d+$')
-//         options_parts_regex = re.compile("\.IP (.*?)\.IP", re.DOTALL)
-//
-//         options_section = re.sub(ix_remover_regex, "", options_section)
-//         options_matched = re.search(options_parts_regex, options_section)
-//         if options_matched == None:
-//             add_diagnostic('Still (still!) not found')
-//             return False
-//         while options_matched != None:
-//             data = options_matched.group(1)
-//
-//             data = remove_groff_formatting(data)
-//             data = data.strip()
-//             data = data.split("\n",1)
-//             if (len(data)>1 and len(data[1].strip())>0): # and len(data[1])<400):
-//                 optionName = re.sub(trailing_num_regex, "", data[0].strip())
-//
-//                 if ('-' not in optionName):
-//                     add_diagnostic("%r doesn't contain '-'" % optionName)
-//                 else:
-//                     optionName = optionName.strip()
-//                     optionName = unquote_double_quotes(optionName)
-//                     optionName = unquote_single_quotes(optionName)
-//                     optionDescription = data[1].strip().replace("\n"," ")
-//                     built_command(optionName, optionDescription)
-//             else:
-//                 add_diagnostic('Unable to split option from description')
-//                 return False
-//
-//             options_section = options_section[options_matched.end()-3:]
-//             options_matched = re.search(options_parts_regex, options_section)
-//         return True
+    fn fallback2(
+        &self,
+        options_section: &str,
+        built_command_output: &mut Vec<String>,
+        existing_options: &mut HashSet<String>,
+        cmd_name: &str,
+    ) -> bool {
+        // add_diagnostic("Trying last chance fallback");
+        let ix_remover_re = regex!(r"\.IX.*");
+        let trailing_num_re = regex!(r"\d+$");
+        let options_parts_re = regex!(r"\.IP ((?s:.)*?)\.IP");
 
-impl Type1 {
-    fn fallback2(&self, options_section: &str) -> bool {
-        unimplemented!()
+        let mut options_section = &*ix_remover_re.replace_all(options_section, "");
+        let mut options_matched = options_parts_re.captures(&options_section);
+        if options_matched.is_none() {
+            // add_diagnostic("Still (still!) not found");
+            return false;
+        }
+        while let Some(mat) = options_matched {
+            let data = mat.get(1).unwrap().as_str();
+            let data = remove_groff_formatting(data);
+            let data: Vec<&str> = data.trim().splitn(2, '\n').collect();
+            if data.len() < 2 || data[1].trim().is_empty() {
+                // add_diagnostic("Unable to split option from description");
+                return false;
+            }
+            let option_name = trailing_num_re.replace_all(data[0].trim(), "");
+            if option_name.find('-').is_some() {
+                let option_name = option_name.trim();
+                let option_name = unquote_double_quotes(option_name);
+                let option_name = unquote_single_quotes(option_name);
+                let option_desc = data[1].trim().replace('\n', " ");
+                built_command(
+                    option_name,
+                    option_desc.as_str(),
+                    built_command_output,
+                    existing_options,
+                    cmd_name,
+                );
+            } else {
+                // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
+            }
+
+            options_section = &options_section[mat.get(0).unwrap().end() - 3..];
+            options_matched = options_parts_re.captures(&options_section);
+        }
+        true
     }
 }
 
@@ -1120,9 +1148,6 @@ fn test_file_is_overwritable() {
 // Raises IOError if it cannot be opened
 fn file_is_overwritable(path: &Path) -> Result<bool, String> {
     use std::error::Error;
-    use std::fs::File;
-    use std::io::BufRead;
-    use std::io::BufReader;
     let display = path.display();
     let f = File::open(path).map_err(|error| format!("{:?}", error))?;
     let file = BufReader::new(&f);
@@ -1489,49 +1514,47 @@ impl App {
     }
 }
 
-// def get_paths_from_man_locations():
-//     # Return all the paths to man(1) and man(8) files in the manpath
-//     import subprocess, os
-//     proc = None
-//     # $MANPATH takes precedence, just like with `man` on the CLI.
-//     if os.getenv("MANPATH"):
-//         parent_paths = os.getenv("MANPATH").strip().split(':')
-//     else:
-//         # Some systems have manpath, others have `man --path` (like Haiku).
-//         for prog in [['manpath'], ['man', '--path']]:
-//             try:
-//                 proc = subprocess.Popen(prog, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-//             except OSError: # Command does not exist, keep trying
-//                 continue
-//             break # Command exists, use it.
-//         manpath, err_data = proc.communicate()
-//         parent_paths = manpath.decode().strip().split(':')
-//     if (not parent_paths) or (proc and proc.returncode > 0):
-//         # HACK: Use some fallbacks in case we can't get anything else.
-//         # `mandoc` does not provide `manpath` or `man --path` and $MANPATH might not be set.
-//         # The alternative is reading its config file (/etc/man.conf)
-//         if os.path.isfile('/etc/man.conf'):
-//             data = open('/etc/man.conf', 'r')
-//             for line in data:
-//                 if ('manpath' in line or 'MANPATH' in line):
-//                     p = line.split(' ')[1]
-//                     p = p.split()[0]
-//                     parent_paths.append(p)
-//         if (not parent_paths):
-//             sys.stderr.write("Unable to get the manpath, falling back to /usr/share/man:/usr/local/share/man. Please set $MANPATH if that is not correct.\n")
-//         parent_paths = ["/usr/share/man", "/usr/local/share/man"]
-//     result = []
-//     for parent_path in parent_paths:
-//         for section in ['man1', 'man6', 'man8']:
-//             directory_path = os.path.join(parent_path, section)
-//             try:
-//                 names = os.listdir(directory_path)
-//             except OSError as e:
-//                 names = []
-//             names.sort()
-//             for name in names:
-//                 result.append(os.path.join(directory_path, name))
-//     return result
+/// Return all the paths to man(1) and man(8) files in the manpath.
+fn get_paths_from_man_locations() -> Vec<PathBuf> {
+    // $MANPATH take precedence, just like with `man` on the CLI.
+    let mut parent_paths: Vec<_> = if let Some(paths) = env::var_os("MANPATH") {
+        env::split_paths(&paths).collect()
+    } else if let Ok(output) = Command::new("manpath").output() {
+        let output = String::from_utf8(output.stdout).unwrap();
+        env::split_paths(&output).collect()
+    } else if let Ok(output) = Command::new("man").arg("--path").output() {
+        let output = String::from_utf8(output.stdout).unwrap();
+        env::split_paths(&output).collect()
+    // HACK: Use some fallbacks in case we can't get anything else.
+    // `mandoc` does not provide `manpath` or `man --path` and $MANPATH might not be set.
+    // The alternative is reading its config file (/etc/man.conf)
+    } else if let Ok(file) = File::open("/etc/man.conf") {
+        let lines_iter = BufReader::new(file).lines().map(|line| line.unwrap());
+        lines_iter
+            .filter(|line| line.starts_with("manpath") || line.starts_with("MANPATH"))
+            .filter_map(|line| line.split_ascii_whitespace().nth(2).map(PathBuf::from))
+            .collect()
+    } else {
+        Default::default()
+    };
+    if parent_paths.is_empty() {
+        eprintln!("Unable to get the manpath, falling back to /usr/share/man:/usr/local/share/man. Please set $MANPATH if that is not correct.");
+        parent_paths.push(PathBuf::from("/usr/share/man"));
+        parent_paths.push(PathBuf::from("/usr/local/share/man"));
+    }
+    let mut paths = Vec::new();
+    for parent_path in parent_paths {
+        for section in &["man1", "man6", "man8"] {
+            let section_path = parent_path.join(section);
+            if let Ok(dir) = fs::read_dir(&section_path) {
+                for entry in dir {
+                    paths.push(section_path.join(entry.unwrap().path()));
+                }
+            }
+        }
+    }
+    paths
+}
 
 mod deroff;
 
