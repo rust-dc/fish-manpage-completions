@@ -391,7 +391,7 @@ impl Deroffer {
         }
     }
 
-    // AKA `prch`
+    /// AKA `prch`
     fn not_whitespace(&self, idx: usize) -> bool {
         !" \t\n".contains(self.str_at(idx))
     }
