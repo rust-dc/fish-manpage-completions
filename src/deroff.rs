@@ -507,12 +507,6 @@ impl Deroffer {
     }
 
     fn macro_nm(&mut self) -> bool {
-        //def macro_nm(self):
-        //  if self.s == 'Nm\n':
-        //    self.condputs(self.name)
-        //  else:
-        //    self.name = self.s[3:].strip() + ' '
-        //  return True
         unimplemented!()
     }
 
@@ -530,135 +524,58 @@ impl Deroffer {
     }
 
     fn macro_pe(&mut self) -> bool {
-        //def macro_pe(self):
-        //  if self.is_white(2): self.pic = False
-        //  self.condputs('\n')
-        //  return True
-
         unimplemented!()
     }
 
     fn macro_ts(&mut self) -> bool {
-        //     def macro_ts(self):
-        //         if self.is_white(2): self.tbl, self.tblstate = True, self.OPTIONS
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_t_and(&mut self) -> bool {
-        //     def macro_t_and(self):
-        //         if self.is_white(2): self.tbl, self.tblstate = True, self.FORMAT
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_te(&mut self) -> bool {
-        //     def macro_te(self):
-        //         if self.is_white(2): self.tbl = False
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_eq(&mut self) -> bool {
-        //     def macro_eq(self):
-        //         if self.is_white(2): self.eqn = True
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_en(&mut self) -> bool {
-        //     def macro_en(self):
-        //         if self.is_white(2): self.eqn = False
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_r1(&mut self) -> bool {
-        //     def macro_r1(self):
-        //         if self.is_white(2): self.refer2 = True
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_r2(&mut self) -> bool {
-        //     def macro_r2(self):
-        //         if self.is_white(2): self.refer2 = False
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_de(&mut self) -> bool {
-        //     def macro_de(self):
-        //         macro=True
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_bl_vl(&mut self) -> bool {
-        //     def macro_bl_vl(self):
-        //         if self.is_white(2): self.inlist = True
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_bv(&mut self) -> bool {
-        //     def macro_bv(self):
-        //         if self.str_at(2) == 'L' and self.white(self.str_at(3)): self.inlist = True
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_le(&mut self) -> bool {
-        //     def macro_le(self):
-        //         if self.is_white(2): self.inlist = False
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_lp_pp(&mut self) -> bool {
-        //     def macro_lp_pp(self):
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_ds(&mut self) -> bool {
-        //     def macro_ds(self):
-        //         self.skip_char(2)
-        //         self.skip_leading_whitespace()
-        //         if self.str_at(0):
-        //             # Split at whitespace
-        //             comps = self.s.split(None, 2)
-        //             if len(comps) is 2:
-        //                 name, value = comps
-        //                 value = value.rstrip()
-        //                 self.reg_table[name] = value
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
@@ -667,33 +584,14 @@ impl Deroffer {
     }
 
     fn macro_tr(&mut self) -> bool {
-        //     def macro_tr(self):
-        //         self.skip_char(2)
-        //         self.skip_leading_whitespace()
-        //         while self.s and self.str_at(0) != '\n':
-        //             c = self.str_at(0)
-        //             ns = self.str_at(1)
-        //             self.skip_char(2)
-        //             if not ns or ns == '\n': ns = ' '
-        //             self.tr_from += c
-        //             self.tr_to += ns
-        //
         unimplemented!()
     }
 
     fn macro_s(&mut self) -> bool {
-        //     def macro_sp(self):
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
     fn macro_other(&mut self) -> bool {
-        //     def macro_other(self):
-        //         self.condputs('\n')
-        //         return True
-
         unimplemented!()
     }
 
@@ -1099,6 +997,101 @@ fn text(s: &str) -> bool {
 //                 else:
 //                     return True
 
+//     def macro_nm(self):
+//         if self.s == 'Nm\n':
+//             self.condputs(self.name)
+//         else:
+//             self.name = self.s[3:].strip() + ' '
+//         return True
+
+//     def macro_pe(self):
+//         if self.is_white(2): self.pic = False
+//         self.condputs('\n')
+//         return True
+
+//     def macro_ts(self):
+//         if self.is_white(2): self.tbl, self.tblstate = True, self.OPTIONS
+//         self.condputs('\n')
+//         return True
+
+//     def macro_t_and(self):
+//         if self.is_white(2): self.tbl, self.tblstate = True, self.FORMAT
+//         self.condputs('\n')
+//         return True
+
+//     def macro_te(self):
+//         if self.is_white(2): self.tbl = False
+//         self.condputs('\n')
+//         return True
+
+//     def macro_eq(self):
+//         if self.is_white(2): self.eqn = True
+//         self.condputs('\n')
+//         return True
+
+//     def macro_en(self):
+//         if self.is_white(2): self.eqn = False
+//         self.condputs('\n')
+//         return True
+
+//     def macro_r1(self):
+//         if self.is_white(2): self.refer2 = True
+//         self.condputs('\n')
+//         return True
+
+//     def macro_r2(self):
+//         if self.is_white(2): self.refer2 = False
+//         self.condputs('\n')
+//         return True
+
+//     def macro_de(self):
+//         macro=True
+//         self.condputs('\n')
+//         return True
+
+//     def macro_bl_vl(self):
+//         if self.is_white(2): self.inlist = True
+//         self.condputs('\n')
+//         return True
+
+//     def macro_bv(self):
+//         if self.str_at(2) == 'L' and self.white(self.str_at(3)): self.inlist = True
+//         self.condputs('\n')
+//         return True
+
+//     def macro_le(self):
+//         if self.is_white(2): self.inlist = False
+//         self.condputs('\n')
+//         return True
+
+//     def macro_lp_pp(self):
+//         self.condputs('\n')
+//         return True
+
+//     def macro_ds(self):
+//         self.skip_char(2)
+//         self.skip_leading_whitespace()
+//         if self.str_at(0):
+//             # Split at whitespace
+//             comps = self.s.split(None, 2)
+//             if len(comps) is 2:
+//                 name, value = comps
+//                 value = value.rstrip()
+//                 self.reg_table[name] = value
+//         self.condputs('\n')
+//         return True
+
+//     def macro_tr(self):
+//         self.skip_char(2)
+//         self.skip_leading_whitespace()
+//         while self.s and self.str_at(0) != '\n':
+//             c = self.str_at(0)
+//             ns = self.str_at(1)
+//             self.skip_char(2)
+//             if not ns or ns == '\n': ns = ' '
+//             self.tr_from += c
+//             self.tr_to += ns
+//
 //         # Update our table, then swap in the slower tr-savvy condputs
 //         try: #Python2
 //             self.tr = string.maketrans(self.tr_from, self.tr_to)
@@ -1107,9 +1100,14 @@ fn text(s: &str) -> bool {
 //         self.condputs = self.condputs_tr
 //         return True
 
+//     def macro_other(self):
+//         self.condputs('\n')
+//         return True
+
 fn request_or_macro(s: &str) -> bool {
     unimplemented!()
 }
+
 //     def request_or_macro(self):
 //         # s[0] is period or open single quote
 //         self.skip_char()
