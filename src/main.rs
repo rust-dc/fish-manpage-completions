@@ -415,7 +415,7 @@ fn built_command(
     description: &str,
     built_command_output: &mut Vec<String>,
     existing_options: &mut HashSet<String>,
-    cmd_name: &str,
+    cmdname: &str,
 ) {
     let fish_options = fish_options(options, existing_options);
 
@@ -424,7 +424,7 @@ fn built_command(
     }
 
     built_command_output.push(complete_command(
-        fish_escape_single_quote(cmd_name),
+        fish_escape_single_quote(cmdname),
         fish_options,
         &truncated_description(description),
     ));
@@ -522,7 +522,7 @@ trait ManParser {
     }
 
     // TODO Is this the right type signature?
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
         None
     }
 }
@@ -535,79 +535,79 @@ impl ManParser for Type1 {
         manpage.contains(r#".SH "OPTIONS""#)
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
-        unimplemented!();
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
+        let options_section_re = regex!(r#"\.SH "OPTIONS"((?s:.)*?)(\.SH|\Z)"#);
+        let options_section_matched = options_section_re.find(manpage);
+        let mut options_section = options_section_matched.unwrap().as_str();
+
+        let options_parts_re = regex!(r"\.PP((?s:.)*?)\.RE");
+        let mut options_matched = options_parts_re.captures(options_section);
+        // add_diagnostic(format!("Command is {}", cmdname));
+
+        if options_matched.is_none() {
+            // add_diagnostic("Unable to find options");
+            return self
+                .fallback(options_section, cmdname)
+                .or_else(|| self.fallback2(options_section, cmdname));
+        }
+
+        let mut built_command_output = Vec::new();
+        let mut existing_options = HashSet::new();
+        while let Some(mat) = options_matched {
+            let mut data = mat.get(1).unwrap().as_str();
+            let last_dotpp_index = data.rfind(".PP");
+            if let Some(idx) = last_dotpp_index {
+                data = &data[idx + 3..];
+            }
+
+            let data = remove_groff_formatting(data);
+            let data: Vec<_> = data.split(".RS 4").collect();
+            if data.len() > 1 {
+                let option_name = data[0].trim();
+                if option_name.find('-').is_some() {
+                    let option_name = unquote_double_quotes(option_name);
+                    let option_name = unquote_single_quotes(option_name);
+                    let option_desc = data[1].trim().replace('\n', " ");
+                    built_command(
+                        option_name,
+                        option_desc.as_str(),
+                        &mut built_command_output,
+                        &mut existing_options,
+                        cmdname,
+                    );
+                } else {
+                    // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
+                }
+            } else {
+                // add_diagnostic("Unable to split option from description");
+                return None;
+            }
+
+            options_section = &options_section[mat.get(0).unwrap().end() - 3..];
+            options_matched = options_parts_re.captures(options_section);
+        }
+        Some(built_command_output.join("\n"))
     }
 }
 
-// class Type1ManParser(ManParser):
-//     def parse_man_page(self, manpage):
-//         options_section_regex = re.compile( "\.SH \"OPTIONS\"(.*?)(\.SH|\Z)", re.DOTALL)
-//         options_section_matched = re.search( options_section_regex, manpage)
-//
-//         options_section = options_section_matched.group(0)
-//         #   print options_section
-//         options_parts_regex = re.compile("\.PP(.*?)\.RE", re.DOTALL)
-//         options_matched = re.search(options_parts_regex, options_section)
-//         #   print options_matched
-//         add_diagnostic("Command is %r" % CMDNAME)
-//
-//         if options_matched == None:
-//             add_diagnostic('Unable to find options')
-//             if( self.fallback(options_section) ):
-//                 return True
-//             elif (self.fallback2(options_section) ):
-//                 return True
-//             return False
-//
-//         while (options_matched != None):
-//             data = options_matched.group(1)
-//             last_dotpp_index = data.rfind(".PP")
-//             if (last_dotpp_index != -1):
-//                 data = data[last_dotpp_index+3:]
-//
-//             data = remove_groff_formatting(data)
-//             data = data.split(".RS 4")
-//             if (len (data) > 1): #and len(data[1]) <= 300):
-//                 optionName = data[0].strip()
-//
-//                 if ( optionName.find("-") == -1):
-//                     add_diagnostic("%r doesn't contain '-' " % optionName)
-//                 else:
-//                     optionName = unquote_double_quotes(optionName)
-//                     optionName = unquote_single_quotes(optionName)
-//                     optionDescription = data[1].strip().replace("\n"," ")
-//                     built_command(optionName, optionDescription)
-//
-//             else:
-//                 add_diagnostic('Unable to split option from description')
-//                 return False
-//
-//             options_section = options_section[options_matched.end()-3:]
-//             options_matched = re.search(options_parts_regex, options_section)
-
 impl Type1 {
-    fn fallback(
-        &self,
-        mut options_section: &str,
-        built_command_output: &mut Vec<String>,
-        existing_options: &mut HashSet<String>,
-        cmd_name: &str,
-    ) -> bool {
+    fn fallback(&self, mut options_section: &str, cmdname: &str) -> Option<String> {
         // add_diagnostic("Trying fallback");
         let options_parts_re = regex!(r"\.TP( \d+)?((?s:.)*?)\.TP");
         let mut options_matched = options_parts_re.captures(options_section);
         if options_matched.is_none() {
             // add_diagnostic("Still not found");
-            return false;
+            return None;
         }
+        let mut built_command_output = Vec::new();
+        let mut existing_options = HashSet::new();
         while let Some(mat) = options_matched {
             let data = mat.get(2).unwrap().as_str();
             let data = remove_groff_formatting(data);
             let data: Vec<&str> = data.trim().splitn(2, '\n').collect();
             if data.len() < 2 || data[1].trim().is_empty() {
                 // add_diagnostic("Unable to split option from description");
-                return false;
+                return None;
             }
             let option_name = data[0].trim();
             if option_name.find('-').is_some() {
@@ -617,9 +617,9 @@ impl Type1 {
                 built_command(
                     option_name,
                     option_desc.as_str(),
-                    built_command_output,
-                    existing_options,
-                    cmd_name,
+                    &mut built_command_output,
+                    &mut existing_options,
+                    cmdname,
                 );
             } else {
                 // add_diagnostic(format!("{:?} does not contain '-'", option_name));
@@ -629,16 +629,10 @@ impl Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-        true
+        Some(built_command_output.join("\n"))
     }
 
-    fn fallback2(
-        &self,
-        options_section: &str,
-        built_command_output: &mut Vec<String>,
-        existing_options: &mut HashSet<String>,
-        cmd_name: &str,
-    ) -> bool {
+    fn fallback2(&self, options_section: &str, cmdname: &str) -> Option<String> {
         // add_diagnostic("Trying last chance fallback");
         let ix_remover_re = regex!(r"\.IX.*");
         let trailing_num_re = regex!(r"\d+$");
@@ -648,15 +642,17 @@ impl Type1 {
         let mut options_matched = options_parts_re.captures(&options_section);
         if options_matched.is_none() {
             // add_diagnostic("Still (still!) not found");
-            return false;
+            return None;
         }
+        let mut built_command_output = Vec::new();
+        let mut existing_options = HashSet::new();
         while let Some(mat) = options_matched {
             let data = mat.get(1).unwrap().as_str();
             let data = remove_groff_formatting(data);
             let data: Vec<&str> = data.trim().splitn(2, '\n').collect();
             if data.len() < 2 || data[1].trim().is_empty() {
                 // add_diagnostic("Unable to split option from description");
-                return false;
+                return None;
             }
             let option_name = trailing_num_re.replace_all(data[0].trim(), "");
             if option_name.find('-').is_some() {
@@ -667,9 +663,9 @@ impl Type1 {
                 built_command(
                     option_name,
                     option_desc.as_str(),
-                    built_command_output,
-                    existing_options,
-                    cmd_name,
+                    &mut built_command_output,
+                    &mut existing_options,
+                    cmdname,
                 );
             } else {
                 // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
@@ -678,7 +674,7 @@ impl Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(&options_section);
         }
-        true
+        Some(built_command_output.join("\n"))
     }
 }
 
@@ -690,7 +686,7 @@ impl ManParser for Type2 {
         manpage.contains(".SH OPTIONS")
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -741,7 +737,7 @@ impl ManParser for Type3 {
         manpage.contains(".SH DESCRIPTION")
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -792,7 +788,7 @@ impl ManParser for Type4 {
         manpage.contains(".SH FUNCTION LETTERS")
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -845,7 +841,7 @@ impl ManParser for TypeDarwin {
         regex!(r##"\.S[hH] DESCRIPTION"##).is_match(manpage)
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -1031,7 +1027,7 @@ impl ManParser for TypeDeroff {
         true
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -1505,8 +1501,10 @@ impl App {
         if parsers.is_empty() {
             self.add_diagnostic(&format!("{}: Not supported", input_name), None);
         }
+        // TODO cmdname
+        let cmdname = "rustc";
         for parser in parsers.iter_mut() {
-            if let Some(completions) = parser.parse_man_page(&buf) {
+            if let Some(completions) = parser.parse_man_page(&buf, &cmdname) {
                 output.write_all(completions.as_bytes()).unwrap();
                 return;
             }
