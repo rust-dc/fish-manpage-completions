@@ -489,96 +489,28 @@ impl Deroffer {
         unimplemented!()
     }
 
-    /*
-    Handled by Kevin
-    fn macro_sh(&mut self) -> bool {
-        for header_str in [" SYNOPSIS", " \"SYNOPSIS", " ‹BERSICHT", " \"‹BERSICHT"].iter() {
-            if self.s[2..].starts_with(header_str) {
-                self.inheader = true;
-                return true;
-            }
-        }
-
-        self.inheader = false;
-        self.nobody = true;
-        true
-    } */
-
     fn macro_ss_ip(&self) -> bool {
         unimplemented!()
     }
-
-    /*
-    Handled by Kevin
-    fn macro_ss_ip(&mut self) -> bool {
-        self.nobody = true;
-        false
-    } */
 
     fn macro_i_ir(&self) -> bool {
         unimplemented!()
     }
 
-    /*
-    Handled by Kevin
-    fn macro_i_ir(&mut self) -> bool {
-        // why does this exist
-        false
-    } */
-
     fn macro_nm(&self) -> bool {
         unimplemented!()
     }
-
-    /*
-    Handled by Kevin
-    fn macro_nm(&mut self) -> bool {
-        if self.s == "Nm\n" {
-            self.condputs(self.name.clone().as_str());
-        } else {
-            let mut s = self.s[3..].trim().to_owned();
-            s.push(' ');
-            self.name = s;
-        }
-
-        true
-    } */
 
     fn macro_close_bracket(&self) -> bool {
         unimplemented!()
     }
 
-    /*
-    Handled by Kevin
-    fn macro_close_bracket(&mut self) -> bool {
-        self.refer = false;
-        false
-    } */
-
     fn macro_ps(&self) -> bool {
         unimplemented!()
     }
 
-    /*
-    Handled by Kevin
-    fn macro_ps(&mut self) -> bool {
-        if Self::is_white(self.s.as_str(), 2) {
-            self.pic = true
-        }
-        self.condputs("\n");
-        true
-    } */
-
     fn macro_pe(&mut self) -> bool {
-        /*
-        def macro_pe(self):
-            if self.is_white(2):
-                self.pic = False
-            self.condputs("\n")
-            return True
-        */
-
-        if Self::is_white(self.s.as_str(), 2) {
+        if Self::is_white(&self.s, 2) {
             self.pic = false
         }
         self.condputs("\n");
@@ -586,15 +518,7 @@ impl Deroffer {
     }
 
     fn macro_ts(&mut self) -> bool {
-        /*
-        def macro_ts(self):
-            if self.is_white(2):
-                self.tbl, self.tblstate = True, self.OPTIONS
-            self.condputs("\n")
-            return True
-        */
-
-        if Self::is_white(self.s.as_str(), 2) {
+        if Self::is_white(&self.s, 2) {
             self.tbl = true;
             self.tblstate = TblState::Options;
         }
@@ -604,15 +528,7 @@ impl Deroffer {
     }
 
     fn macro_t_and(&mut self) -> bool {
-        /*
-        def macro_t_and(self):
-            if self.is_white(2):
-                self.tbl, self.tblstate = True, self.FORMAT
-            self.condputs("\n")
-            return True
-        */
-
-        if Self::is_white(self.s.as_str(), 2) {
+        if Self::is_white(&self.s, 2) {
             self.tbl = true;
             self.tblstate = TblState::Format;
         }
@@ -622,15 +538,7 @@ impl Deroffer {
     }
 
     fn macro_te(&mut self) -> bool {
-        /*
-        def macro_te(self):
-            if self.is_white(2):
-                self.tbl = False
-            self.condputs("\n")
-            return True
-        */
-
-        if Self::is_white(self.s.as_str(), 2) {
+        if Self::is_white(&self.s, 2) {
             self.tbl = false
         }
 
@@ -639,15 +547,7 @@ impl Deroffer {
     }
 
     fn macro_eq(&mut self) -> bool {
-        /*
-        def macro_eq(self):
-            if self.is_white(2):
-                self.eqn = True
-            self.condputs("\n")
-            return True
-        */
-
-        if Self::is_white(self.s.as_str(), 2) {
+        if Self::is_white(&self.s, 2) {
             self.eqn = true
         }
 
@@ -656,15 +556,7 @@ impl Deroffer {
     }
 
     fn macro_en(&mut self) -> bool {
-        /*
-        def macro_en(self):
-            if self.is_white(2):
-                self.eqn = False
-            self.condputs("\n")
-            return True
-        */
-
-        if Self::is_white(self.s.as_str(), 2) {
+        if Self::is_white(&self.s, 2) {
             self.eqn = false
         }
 
@@ -673,17 +565,9 @@ impl Deroffer {
     }
 
     fn macro_r1(&mut self) -> bool {
-        /*
-        def macro_r1(self):
-            if self.is_white(2):
-                self.refer2 = True
-            self.condputs("\n")
-            return True
-        */
-
         // NOTE: self.refer2 is never used in the python source, so this and macro_r2 are
         // pretty much worthless
-        // if Self::is_white(self.s.as_str(), 2) {
+        // if Self::is_white(&self.s, 2) {
         //     self.refer2 = true;
         // }
         self.condputs("\n");
@@ -691,15 +575,7 @@ impl Deroffer {
     }
 
     fn macro_r2(&mut self) -> bool {
-        /*
-            def macro_r2(self):
-            if self.is_white(2):
-                self.refer2 = False
-            self.condputs("\n")
-            return True
-        */
-
-        // if Self::is_white(self.s.as_str(), 2) {
+        // if Self::is_white(&self.s, 2) {
         //     NOTE: See macro_r1
         //     self.refer2 = false;
         // }
@@ -708,27 +584,13 @@ impl Deroffer {
     }
 
     fn macro_de(&mut self) -> bool {
-        /*
-        def macro_de(self):
-            macro = True
-            self.condputs("\n")
-            return True
-        */
         self.r#macro = true;
         self.condputs("\n");
         true
     }
 
     fn macro_bl_vl(&mut self) -> bool {
-        /*
-        def macro_bl_vl(self):
-            if self.is_white(2):
-                self.inlist = True
-            self.condputs("\n")
-            return True
-        */
-
-        if Self::is_white(self.s.as_str(), 2) {
+        if Self::is_white(&self.s, 2) {
             self.inlist = true
         }
         self.condputs("\n");
@@ -736,33 +598,23 @@ impl Deroffer {
     }
 
     fn macro_bv(&mut self) -> bool {
-        /*
-        def macro_bv(self):
-            if self.str_at(2) == "L" and self.white(self.str_at(3)):
-                self.inlist = True
-            self.condputs("\n")
-            return True
-        */
-
-        /*
-        `self.white` doesn't exist in the source, and the argument type is wrong
-        for `self.is_white`, so I don't know what function its supposed to be
-        if self.str_at(2) == "L" and self.white(self.str_at(3)):
-            self.inlist = true
-        } */
+        // TODO: Determine whether `self.white` is a bastardization of
+        // `self.is_white`. (Was self.white converted to self.is_white
+        // but this call site was missed?)
+        //
+        // If it _were_ a valid function, the original Python source
+        // would translate roughly to:
+        //
+        //     for `self.is_white`, so I don't know what function its supposed to be
+        //     if self.str_at(2) == "L" and self.white(self.str_at(3)):
+        //         self.inlist = true
+        //     }
         self.condputs("\n");
         true
     }
 
     fn macro_le(&mut self) -> bool {
-        /*
-        def macro_le(self):
-            if self.is_white(2):
-                self.inlist = False
-            self.condputs("\n")
-            return True
-        */
-        if Self::is_white(self.s.as_str(), 2) {
+        if Self::is_white(&self.s, 2) {
             self.inlist = false;
         }
         self.condputs("\n");
@@ -770,61 +622,21 @@ impl Deroffer {
     }
 
     fn macro_lp_pp(&mut self) -> bool {
-        /*
-        def macro_lp_pp(self):
-            self.condputs("\n")
-            return True
-        */
         self.condputs("\n");
         true
     }
 
     fn macro_ds(&mut self) -> bool {
-        /*
-        def macro_ds(self):
-            self.skip_char(2)
-            self.skip_leading_whitespace()
-            if self.str_at(0):
-                # Split at whitespace
-                comps = self.s.split(None, 2)
-                if len(comps) == 2:
-                    name, value = comps
-                    value = value.rstrip()
-                    self.reg_table[name] = value
-            self.condputs("\n")
-            return True
-        */
-
         // Yuck
-        self.s = self.skip_char(self.s.as_str(), 2).to_owned();
-        self.s = self.skip_leading_whitespace(self.s.as_str()).to_owned();
+        self.s = self.skip_char(&self.s, 2).into();
+        self.s = self.skip_leading_whitespace(&self.s).into();
 
-        if !Self::str_at(self.s.as_str(), 0).is_empty() {
-            let comps: Vec<String> = self.s.splitn(2, " ").map(|s| s.to_owned()).collect();
+        if !Self::str_at(&self.s, 0).is_empty() {
+            let comps: Vec<String> = self.s.splitn(2, " ").map(|s| s.into()).collect();
 
             if comps.len() == 2 {
-                let name: String = comps.get(0).unwrap().to_owned();
-                /*
-                This is a reminder to google stuff before you go implementing stuff badly
-
-                // This is horrible I know but it's meant to do string.rstrip()
-                // If you can think of a better way I am more than willing to switch it
-                let value: String = comps
-                            .get(1)
-                            .unwrap() // This is safe (len 2)
-                            .chars()
-                            .rev() // reverse the string to get the right side
-                            .skip_while(|c| c.is_whitespace()) // Skip any whitespace
-                            .collect::<String>() // collect it
-                            .chars()
-                            .rev() // make the string face the right way
-                            .collect(); // put it back in a String
-                // A note on the badness of this code,
-                // The reason for `.collect().rev().chars().collect()` exists is
-                // `skip_while` returns a `SkipWhile` which doesnt impl `DoubleEndedIterator`
-                // which is required for `rev` :( */
-
-                let value = comps.get(1).unwrap().as_str().trim_end().to_owned();
+                let name: String = comps.get(0).unwrap().into();
+                let value = comps.get(1).unwrap().trim_end().into();
 
                 self.reg_table.insert(name, value);
             }
@@ -838,61 +650,39 @@ impl Deroffer {
         unimplemented!()
     }
 
-    
     fn macro_tr(&mut self) -> bool {
-        let s = &self.s.clone();
+        // let s = &self.s.clone();
         // self.skip_char(2);
         self.s = self.skip_char(&self.s, 2).to_owned();
         // self.skip_leading_whitespace();
         self.s = self.skip_leading_whitespace(&self.s).to_owned();
-        while !s.is_empty() && &s[0..=0] != "\n" {
-            let c = &s[0..=0];
-            let mut ns = &s[1..=1];
-            // self.skip_char(2);
-            self.s = self.skip_char(&self.s, 2).to_owned();
-            if ns.is_empty() || ns == "\n" {
-                ns = " ";
-            }
+        while !self.s.is_empty() && &self.s[0..=0] != "\n" {
+            self.tr_from.push_str(&self.s[0..=0]);
 
-            self.tr_from.push_str(c);
-            self.tr_to.push_str(ns);
+            let ns = &self.s[1..=1];
+            self.tr_to
+                .push_str(if ns.is_empty() || ns == "\n" { " " } else { ns });
+
+            self.s = self.skip_char(&self.s, 2).to_owned();
         }
 
         // Update our table, then swap in the slower tr-savvy condputs
         self.tr = match TranslationTable::new(&self.tr_from, &self.tr_to) {
             Ok(table) => Some(table),
-            Err(e) => panic!("Encountered an error creating a new translation table from {}, {}: {}", self.tr_from, self.tr_to, e),
+            Err(e) => panic!(
+                "Encountered an error creating a new translation table from {}, {}: {}",
+                self.tr_from, self.tr_to, e
+            ),
         };
         true
     }
 
-    /*
-    handled by Kevin
-    fn macro_so_nx(&mut self) -> bool {
-        /*  # We always ignore include directives
-            # deroff.c for some reason allowed this to fall through to the 'tr' case
-            # I think that was just a bug so I won't replicate it */
-        true
-    } */
-
     fn macro_sp(&mut self) -> bool {
-        /*
-        def macro_sp(self):
-            self.condputs("\n")
-            return True
-        */
-
         self.condputs("\n");
         true
     }
 
     fn macro_other(&mut self) -> bool {
-        /*
-        def macro_other(self):
-            self.condputs("\n")
-            return True
-        */
-
         self.condputs("\n");
         true
     }
