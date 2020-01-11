@@ -16,6 +16,23 @@ that includes a link to your comment.
 For in-depth discussion of a particularly hairy function, open a dedicated issue
 or pipe up on [the RustDC Zulip chat](https://rust-dc.zulipchat.com/).
 
+Getting Started
+---------------
+
+Cargo and rustc are a prerequisite, to install check https://rustup.rs/.
+
+To build and run tests.
+
+```fish
+> cargo test
+```
+
+To run the command. (Not working as of now)
+
+```fish
+> cargo run
+```
+
 Examples
 --------
 
