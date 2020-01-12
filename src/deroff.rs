@@ -55,7 +55,7 @@ impl Deroffer {
     fn new() -> Deroffer {
         Deroffer {
             g_re_word: crate::regex!(r##"[a-zA-Z_]+"##),
-            g_re_number: crate::regex!(r##"[+-]?\d+"##),
+            g_re_number: crate::regex!(r##"^[+-]?\d+"##),
             // sequence of not backslash or whitespace
             g_re_not_backslash_or_whitespace: crate::regex!(r##"[^ \t\n\r\f\v\\]+"##),
             g_re_newline_collapse: crate::regex!(r##"\n{3,}"##),
@@ -761,7 +761,14 @@ impl Deroffer {
     //             return self.esc()
 
     fn number<'a>(&mut self, s: &'a str) -> Option<&'a str> {
-        unimplemented!()
+        //unimplemented!()
+        let possible = self.g_re_number.find(s);
+        if let Some(m) = possible {
+            // return None
+            self.condputs(m.as_str());
+            return Some(self.skip_char(s, m.end()));
+        }
+        None
     }
     //     def number(self):
     //         match = Deroffer.g_re_number.match(self.s)
@@ -938,6 +945,17 @@ fn test_digit() {
     assert_eq!(Deroffer::digit("1", 1), false);
     assert_eq!(Deroffer::digit("a", 0), false);
     assert_eq!(Deroffer::digit(" ", 0), false);
+}
+
+#[test]
+fn test_number() {
+    let mut deroffer = Deroffer::new();
+    assert_eq!(deroffer.number("4343xx7"), Some("xx7"));
+    assert_eq!(deroffer.output, "4343");
+    assert_eq!(deroffer.number("__23"), None);
+    assert_eq!(deroffer.number("-18.5"), Some(".5"));
+    assert_eq!(deroffer.output, "4343-18");
+    assert_eq!(deroffer.number("+078t"), Some("t"));
 }
 
 //     def str_eq(offset, other, len):
