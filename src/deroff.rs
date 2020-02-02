@@ -761,7 +761,6 @@ impl Deroffer {
     //             return self.esc()
 
     fn number<'a>(&mut self, s: &'a str) -> Option<&'a str> {
-        //unimplemented!()
         let possible = self.g_re_number.find(s);
         if let Some(m) = possible {
             // return None
