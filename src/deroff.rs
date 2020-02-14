@@ -840,6 +840,22 @@ impl Deroffer {
             None => panic!("do_line` called with empty string as argument"),
         }
     }
+
+    fn str_eq(&self, offset: usize, other: &str, len: usize) -> bool {
+        let self_substr = match self.s.get(offset..offset + len) {
+            Some(s) => s,
+            None => {
+                return false;
+            }
+        };
+        let other_substr = match other.get(0..len) {
+            Some(s) => s,
+            None => {
+                return false;
+            }
+        };
+        self_substr == other_substr
+    }
 }
 
 #[test]
@@ -939,9 +955,6 @@ fn test_digit() {
     assert_eq!(Deroffer::digit("a", 0), false);
     assert_eq!(Deroffer::digit(" ", 0), false);
 }
-
-//     def str_eq(offset, other, len):
-//         return self.s[offset:offset+len] == other[:len]
 
 //     def font(self):
 //         match = Deroffer.g_re_font.match(self.s)
