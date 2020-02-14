@@ -24,13 +24,13 @@ Cargo and rustc are a prerequisite, to install check https://rustup.rs/.
 To build and run tests.
 
 ```fish
-> cargo test
+cargo test
 ```
 
 To run the command. (Not working as of now)
 
 ```fish
-> cargo run
+cargo run
 ```
 
 Examples
