@@ -840,6 +840,34 @@ fn test_digit() {
     assert_eq!(deroffer.digit(0), false);
 }
 
+#[test]
+fn test_skip_char() {
+    let mut d = Deroffer::new();
+    d.s = String::from("      Hello         World");
+    d.skip_char(6);
+    assert_eq!(&d.s, "Hello         World");
+    d.skip_char(5);
+    assert_eq!(&d.s, "         World");
+    d.skip_char(9);
+    assert_eq!(&d.s, "World");
+    d.skip_char(5);
+    assert_eq!(&d.s, "");
+}
+
+#[test]
+fn test_skip_leading_whitespace() {
+    let mut d = Deroffer::new();
+    d.s = String::from("          Hello        World");
+    d.skip_leading_whitespace();
+    assert_eq!(&d.s, "Hello        World");
+    d.skip_char(5);
+    assert_eq!(&d.s, "        World");
+    d.skip_leading_whitespace();
+    assert_eq!(&d.s, "World");
+    d.skip_leading_whitespace();
+    assert_eq!(&d.s, "World");
+}
+
 //     def str_eq(offset, other, len):
 //         return self.s[offset:offset+len] == other[:len]
 
