@@ -564,7 +564,7 @@ impl ManParser for Type1 {
             let data: Vec<_> = data.split(".RS 4").collect();
             if data.len() > 1 {
                 let option_name = data[0].trim();
-                if option_name.find('-').is_some() {
+                if option_name.contains('-') {
                     let option_name = unquote_double_quotes(option_name);
                     let option_name = unquote_single_quotes(option_name);
                     let option_desc = data[1].trim().replace('\n', " ");
@@ -610,7 +610,7 @@ impl Type1 {
                 return None;
             }
             let option_name = data[0].trim();
-            if option_name.find('-').is_some() {
+            if option_name.contains('-') {
                 let option_name = unquote_double_quotes(option_name);
                 let option_name = unquote_single_quotes(option_name);
                 let option_desc = data[1].trim().replace('\n', " ");
@@ -655,7 +655,7 @@ impl Type1 {
                 return None;
             }
             let option_name = trailing_num_re.replace_all(data[0].trim(), "");
-            if option_name.find('-').is_some() {
+            if option_name.contains('-') {
                 let option_name = option_name.trim();
                 let option_name = unquote_double_quotes(option_name);
                 let option_name = unquote_single_quotes(option_name);
@@ -708,7 +708,7 @@ impl ManParser for Type2 {
             let data = data.find('\n').map(|pos| data.split_at(pos));
             if data.is_some() && data.unwrap().1.trim().is_empty() {
                 let option_name = data.unwrap().0.trim();
-                if option_name.find('-').is_some() {
+                if option_name.contains('-') {
                     let option_name = unquote_double_quotes(option_name);
                     let option_name = unquote_single_quotes(option_name);
                     let option_desc = data.unwrap().1[1..].trim().replace('\n', " ");
