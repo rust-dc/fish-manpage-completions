@@ -686,48 +686,52 @@ impl ManParser for Type2 {
         manpage.contains(".SH OPTIONS")
     }
 
-    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
-        unimplemented!();
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
+        let options_section_re = regex!(r#"\.SH OPTIONS((?s:.)*?)(\.SH|\Z)"#);
+        let options_section_matched = options_section_re.captures(manpage);
+        let mut options_section = options_section_matched.unwrap().get(1).unwrap().as_str();
+
+        let options_parts_re = regex!(r#"\.[IT]P( \d+(\.\d)?i?)?((?s:.)*?)\.([IT]P|UNINDENT)"#);
+        let mut options_matched = options_parts_re.captures(options_section);
+        // add_diagnostic(format!("Command is {}", cmdname));
+
+        if options_matched.is_none() {
+            // add_diagnostic("Unable to find options");
+            return None;
+        }
+
+        let mut built_command_output = Vec::new();
+        let mut existing_options = HashSet::new();
+        while let Some(mat) = options_matched {
+            let data = mat.get(3).unwrap().as_str();
+            let data = remove_groff_formatting(data);
+            let data = data.find('\n').map(|pos| data.split_at(pos));
+            if data.is_some() && data.unwrap().1.trim().is_empty() {
+                let option_name = data.unwrap().0.trim();
+                if option_name.find('-').is_some() {
+                    let option_name = unquote_double_quotes(option_name);
+                    let option_name = unquote_single_quotes(option_name);
+                    let option_desc = data.unwrap().1[1..].trim().replace('\n', " ");
+                    built_command(
+                        option_name,
+                        option_desc.as_str(),
+                        &mut built_command_output,
+                        &mut existing_options,
+                        cmdname,
+                    );
+                } else {
+                    // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
+                }
+            } else {
+                // add_diagnostic("Unable to split option from description");
+            }
+
+            options_section = &options_section[mat.get(0).unwrap().end() - 3..];
+            options_matched = options_parts_re.captures(options_section);
+        }
+        Some(built_command_output.join("\n"))
     }
 }
-
-// class Type2ManParser(ManParser):
-//     def parse_man_page(self, manpage):
-//         options_section_regex = re.compile( "\.SH OPTIONS(.*?)(\.SH|\Z)", re.DOTALL)
-//         options_section_matched = re.search( options_section_regex, manpage)
-//
-//         options_section = options_section_matched.group(1)
-//
-//         options_parts_regex = re.compile("\.[I|T]P( \d+(\.\d)?i?)?(.*?)\.([I|T]P|UNINDENT)", re.DOTALL)
-//         options_matched = re.search(options_parts_regex, options_section)
-//         add_diagnostic('Command is %r' % CMDNAME)
-//
-//         if options_matched == None:
-//             add_diagnostic("%r: Unable to find options" % self)
-//             return False
-//
-//         while (options_matched != None):
-//             data = options_matched.group(3)
-//
-//             data = remove_groff_formatting(data)
-//
-//             data = data.strip()
-//
-//             data = data.split("\n",1)
-//             if (len(data)>1 and len(data[1].strip())>0): # and len(data[1])<400):
-//                 optionName = data[0].strip()
-//                 if '-' not in optionName:
-//                     add_diagnostic("%r doesn't contain '-'" % optionName)
-//                 else:
-//                     optionName = unquote_double_quotes(optionName)
-//                     optionName = unquote_single_quotes(optionName)
-//                     optionDescription = data[1].strip().replace("\n"," ")
-//                     built_command(optionName, optionDescription)
-//             else:
-//                 add_diagnostic('Unable to split option from description')
-//
-//             options_section = options_section[options_matched.end()-3:]
-//             options_matched = re.search(options_parts_regex, options_section)
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Type3;
