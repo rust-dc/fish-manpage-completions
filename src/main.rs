@@ -604,7 +604,7 @@ impl Type1 {
         while let Some(mat) = options_matched {
             let data = mat.get(2).unwrap().as_str();
             let data = remove_groff_formatting(data);
-            let data: Vec<&str> = data.trim().splitn(2, '\n').collect();
+            let data: Vec<&str> = data.splitn(2, '\n').collect();
             if data.len() < 2 || data[1].trim().is_empty() {
                 // add_diagnostic("Unable to split option from description");
                 return None;
@@ -649,7 +649,7 @@ impl Type1 {
         while let Some(mat) = options_matched {
             let data = mat.get(1).unwrap().as_str();
             let data = remove_groff_formatting(data);
-            let data: Vec<&str> = data.trim().splitn(2, '\n').collect();
+            let data: Vec<&str> = data.splitn(2, '\n').collect();
             if data.len() < 2 || data[1].trim().is_empty() {
                 // add_diagnostic("Unable to split option from description");
                 return None;
