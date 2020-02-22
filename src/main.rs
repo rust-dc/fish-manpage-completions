@@ -4,8 +4,10 @@ use std::env;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Read, Write};
+use std::iter::Peekable;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::slice::Iter;
 
 use itertools::Itertools;
 use regex::Regex;
@@ -1447,73 +1449,23 @@ macro_rules! mantypes {
 
 mantypes![Type1, Type2, Type3, Type4, TypeDarwin, TypeDeroff];
 
-fn parsers_to_try(input: &str) -> Vec<ManType> {
-    ManType::ALL
-        .iter()
-        .filter(|parser| parser.is_my_type(input))
-        .cloned()
-        .collect()
-}
-
-#[test]
-fn test_parsers_to_try() {
-    assert_eq!(
-        parsers_to_try(r###".SH "OPTIONS""###),
-        [Type1.into(), TypeDeroff.into()],
-    );
-
-    assert_eq!(
-        parsers_to_try(r###".SH OPTIONS"###),
-        [Type2.into(), TypeDeroff.into()],
-    );
-
-    assert_eq!(
-        parsers_to_try(".SH OPTIONS\nabc.SH DESCRIPTION"),
-        [
-            Type2.into(),
-            Type3.into(),
-            TypeDarwin.into(),
-            TypeDeroff.into(),
-        ],
-    );
-
-    assert_eq!(
-        parsers_to_try(".SH OPTIONS\nabc.Sh DESCRIPTION"),
-        [Type2.into(), TypeDarwin.into(), TypeDeroff.into()],
-    );
-
-    assert_eq!(
-        parsers_to_try(".SH FUNCTION LETTERS"),
-        [Type4.into(), TypeDeroff.into()],
-    );
-}
-
 impl App {
     // TODO Result type
     // This function might be useable as a helper function for parse_manpage_at_path
-    fn single_man_page<R: Read, W: Write>(
-        &mut self,
-        input: &mut R,
-        output: &mut W,
-        input_name: &str,
-    ) {
+    fn single_man_page<R: Read, W: Write>(&mut self, input: &mut R, output: &mut W, cmdname: &str) {
         let mut buf = vec![];
         input.read_to_end(&mut buf).unwrap();
         dbg!(buf.len());
         // TODO Either use lossy conversion or do something sensible with the Err
         let buf = String::from_utf8(buf).unwrap();
-        // TODO mimic multiple parser logic
-        let parsers = parsers_to_try(&buf);
-        if parsers.is_empty() {
-            self.add_diagnostic(&format!("{}: Not supported", input_name), None);
+        // TODO mimic multiple parser logic with lazy evaluation
+        let parsers = ManType::ALL.iter().filter(|parser| parser.is_my_type(&buf));
+        let mut parsers = parsers.peekable();
+        if parsers.peek().is_none() {
+            self.add_diagnostic(&format!("{}: Not supported", cmdname), None);
         }
-        // TODO cmdname
-        let cmdname = "rustc";
-        for parser in parsers {
-            if let Some(completions) = parser.parse_man_page(&buf, &cmdname) {
-                output.write_all(completions.as_bytes()).unwrap();
-                return;
-            }
+        if let Some(completions) = parsers.find_map(|parser| parser.parse_man_page(&buf, cmdname)) {
+            output.write_all(completions.as_bytes()).unwrap();
         }
     }
 }
