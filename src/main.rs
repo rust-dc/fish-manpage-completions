@@ -517,12 +517,10 @@ fn test_remove_groff_formatting() {
 }
 
 trait ManParser {
-    fn is_my_type(&self, manpage: &str) -> bool {
-        false
-    }
+    fn is_my_type(&self, manpage: &str) -> bool;
 
     // TODO Is this the right type signature?
-    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
+    fn parse_man_page(&self, _manpage: &str, _cmdname: &str) -> Option<String> {
         None
     }
 }
@@ -535,7 +533,7 @@ impl ManParser for Type1 {
         manpage.contains(r#".SH "OPTIONS""#)
     }
 
-    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
+    fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
         let options_section_re = regex!(r#"\.SH "OPTIONS"((?s:.)*?)(\.SH|\Z)"#);
         let options_section_matched = options_section_re.find(manpage);
         let mut options_section = options_section_matched.unwrap().as_str();
@@ -686,7 +684,7 @@ impl ManParser for Type2 {
         manpage.contains(".SH OPTIONS")
     }
 
-    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
+    fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
         let options_section_re = regex!(r#"\.SH OPTIONS((?s:.)*?)(\.SH|\Z)"#);
         let options_section_matched = options_section_re.captures(manpage);
         let mut options_section = options_section_matched.unwrap().get(1).unwrap().as_str();
@@ -741,7 +739,7 @@ impl ManParser for Type3 {
         manpage.contains(".SH DESCRIPTION")
     }
 
-    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
+    fn parse_man_page(&self, manpage: &str, _cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -792,7 +790,7 @@ impl ManParser for Type4 {
         manpage.contains(".SH FUNCTION LETTERS")
     }
 
-    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
+    fn parse_man_page(&self, manpage: &str, _cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -845,7 +843,7 @@ impl ManParser for TypeDarwin {
         regex!(r##"\.S[hH] DESCRIPTION"##).is_match(manpage)
     }
 
-    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
+    fn parse_man_page(&self, manpage: &str, _cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -1031,7 +1029,7 @@ impl ManParser for TypeDeroff {
         true
     }
 
-    fn parse_man_page(&mut self, manpage: &str, _cmdname: &str) -> Option<String> {
+    fn parse_man_page(&self, manpage: &str, _cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -1501,13 +1499,13 @@ impl App {
         // TODO Either use lossy conversion or do something sensible with the Err
         let buf = String::from_utf8(buf).unwrap();
         // TODO mimic multiple parser logic
-        let mut parsers = parsers_to_try(&buf);
+        let parsers = parsers_to_try(&buf);
         if parsers.is_empty() {
             self.add_diagnostic(&format!("{}: Not supported", input_name), None);
         }
         // TODO cmdname
         let cmdname = "rustc";
-        for parser in parsers.iter_mut() {
+        for parser in parsers {
             if let Some(completions) = parser.parse_man_page(&buf, &cmdname) {
                 output.write_all(completions.as_bytes()).unwrap();
                 return;
