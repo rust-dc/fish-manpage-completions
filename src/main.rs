@@ -559,13 +559,12 @@ impl ManParser for Type1 {
             }
 
             let data = remove_groff_formatting(data);
-            let data: Vec<_> = data.split(".RS 4").collect();
-            if data.len() > 1 {
-                let option_name = data[0].trim();
+            if let Some(data) = data.splitn(2, ".RS 4").next_tuple::<(_, _)>() {
+                let option_name = data.0.trim();
                 if option_name.contains('-') {
                     let option_name = unquote_double_quotes(option_name);
                     let option_name = unquote_single_quotes(option_name);
-                    let option_desc = data[1].trim().replace('\n', " ");
+                    let option_desc = data.1.trim().replace('\n', " ");
                     built_command(
                         option_name,
                         option_desc.as_str(),
@@ -602,16 +601,16 @@ impl Type1 {
         while let Some(mat) = options_matched {
             let data = mat.get(2).unwrap().as_str();
             let data = remove_groff_formatting(data);
-            let data: Vec<&str> = data.splitn(2, '\n').collect();
-            if data.len() < 2 || data[1].trim().is_empty() {
+            let data = data.splitn(2, '\n').next_tuple::<(_, _)>();
+            if data.filter(|data| !data.1.trim().is_empty()).is_none() {
                 // add_diagnostic("Unable to split option from description");
                 return None;
             }
-            let option_name = data[0].trim();
+            let option_name = data.unwrap().0.trim();
             if option_name.contains('-') {
                 let option_name = unquote_double_quotes(option_name);
                 let option_name = unquote_single_quotes(option_name);
-                let option_desc = data[1].trim().replace('\n', " ");
+                let option_desc = data.unwrap().1.trim().replace('\n', " ");
                 built_command(
                     option_name,
                     option_desc.as_str(),
@@ -703,13 +702,13 @@ impl ManParser for Type2 {
         while let Some(mat) = options_matched {
             let data = mat.get(3).unwrap().as_str();
             let data = remove_groff_formatting(data);
-            let data = data.find('\n').map(|pos| data.split_at(pos));
-            if data.is_some() && data.unwrap().1.trim().is_empty() {
-                let option_name = data.unwrap().0.trim();
+            let data = data.splitn(2, '\n').next_tuple::<(_, _)>();
+            if let Some(data) = data.filter(|data| !data.1.trim().is_empty()) {
+                let option_name = data.0.trim();
                 if option_name.contains('-') {
                     let option_name = unquote_double_quotes(option_name);
                     let option_name = unquote_single_quotes(option_name);
-                    let option_desc = data.unwrap().1[1..].trim().replace('\n', " ");
+                    let option_desc = data.1.trim().replace('\n', " ");
                     built_command(
                         option_name,
                         option_desc.as_str(),
