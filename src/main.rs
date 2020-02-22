@@ -412,40 +412,50 @@ fn test_truncated_description() {
     );
 }
 
-fn built_command(
-    options: &str,
-    description: &str,
-    built_command_output: &mut Vec<String>,
-    existing_options: &mut HashSet<String>,
-    cmdname: &str,
-) {
-    let fish_options = fish_options(options, existing_options);
-
-    if fish_options.is_empty() {
-        return;
-    }
-
-    built_command_output.push(complete_command(
-        fish_escape_single_quote(cmdname),
-        fish_options,
-        &truncated_description(description),
-    ));
+struct Completions<'a> {
+    cmdname: &'a str,
+    // TODO should we store the whole built_command here?
+    built_command_output: Vec<String>,
+    existing_options: HashSet<String>,
 }
 
-fn complete_command(cmdname: String, args: Vec<String>, description: &str) -> String {
-    format!(
-        "complete \
-         -c {cmdname} \
-         {args}{description_flag}{description}",
-        cmdname = cmdname,
-        args = args.join(" "),
-        description_flag = if description.is_empty() {
-            ""
-        } else {
-            " --description "
-        },
-        description = description,
-    )
+impl<'a> Completions<'a> {
+    fn new(cmdname: &'a str) -> Completions {
+        Completions {
+            cmdname,
+            built_command_output: Vec::new(),
+            existing_options: HashSet::new(),
+        }
+    }
+
+    fn add(&mut self, option_name: &str, option_desc: &str) {
+        let fish_options = fish_options(option_name, &mut self.existing_options);
+
+        if fish_options.is_empty() {
+            return;
+        }
+
+        self.built_command_output.push(complete_command(
+            &fish_escape_single_quote(self.cmdname),
+            fish_options,
+            &truncated_description(option_desc),
+        ));
+    }
+
+    // TODO naming and type
+    fn build(self) -> String {
+        self.built_command_output.join("\n")
+    }
+}
+
+/// Generate fish `complete` command.
+fn complete_command(cmdname: &str, args: Vec<String>, description: &str) -> String {
+    let mut out = format!("complete -c {} {}", cmdname, args.join(" "));
+    if !description.is_empty() {
+        out.push_str(" --description ");
+        out.push_str(description);
+    }
+    out
 }
 
 #[test]
@@ -551,8 +561,7 @@ impl ManParser for Type1 {
                 .or_else(|| self.fallback2(options_section, cmdname));
         }
 
-        let mut built_command_output = Vec::new();
-        let mut existing_options = HashSet::new();
+        let mut completions = Completions::new(cmdname);
         while let Some(mat) = options_matched {
             let mut data = mat.get(1).unwrap().as_str();
             let last_dotpp_index = data.rfind(".PP");
@@ -567,13 +576,7 @@ impl ManParser for Type1 {
                     let option_name = unquote_double_quotes(option_name);
                     let option_name = unquote_single_quotes(option_name);
                     let option_desc = data.1.trim().replace('\n', " ");
-                    built_command(
-                        option_name,
-                        option_desc.as_str(),
-                        &mut built_command_output,
-                        &mut existing_options,
-                        cmdname,
-                    );
+                    completions.add(option_name, &option_desc);
                 } else {
                     // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
                 }
@@ -585,7 +588,7 @@ impl ManParser for Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-        Some(built_command_output.join("\n"))
+        Some(completions.build())
     }
 }
 
@@ -598,8 +601,7 @@ impl Type1 {
             // add_diagnostic("Still not found");
             return None;
         }
-        let mut built_command_output = Vec::new();
-        let mut existing_options = HashSet::new();
+        let mut completions = Completions::new(cmdname);
         while let Some(mat) = options_matched {
             let data = mat.get(2).unwrap().as_str();
             let data = remove_groff_formatting(data);
@@ -613,13 +615,7 @@ impl Type1 {
                 let option_name = unquote_double_quotes(option_name);
                 let option_name = unquote_single_quotes(option_name);
                 let option_desc = data.unwrap().1.trim().replace('\n', " ");
-                built_command(
-                    option_name,
-                    option_desc.as_str(),
-                    &mut built_command_output,
-                    &mut existing_options,
-                    cmdname,
-                );
+                completions.add(option_name, &option_desc);
             } else {
                 // add_diagnostic(format!("{:?} does not contain '-'", option_name));
             }
@@ -628,7 +624,8 @@ impl Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-        Some(built_command_output.join("\n"))
+
+        Some(completions.build())
     }
 
     fn fallback2(&self, options_section: &str, cmdname: &str) -> Option<String> {
@@ -643,8 +640,7 @@ impl Type1 {
             // add_diagnostic("Still (still!) not found");
             return None;
         }
-        let mut built_command_output = Vec::new();
-        let mut existing_options = HashSet::new();
+        let mut completions = Completions::new(cmdname);
         while let Some(mat) = options_matched {
             let data = mat.get(1).unwrap().as_str();
             let data = remove_groff_formatting(data);
@@ -659,13 +655,7 @@ impl Type1 {
                 let option_name = unquote_double_quotes(option_name);
                 let option_name = unquote_single_quotes(option_name);
                 let option_desc = data[1].trim().replace('\n', " ");
-                built_command(
-                    option_name,
-                    option_desc.as_str(),
-                    &mut built_command_output,
-                    &mut existing_options,
-                    cmdname,
-                );
+                completions.add(option_name, &option_desc);
             } else {
                 // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
             }
@@ -673,7 +663,7 @@ impl Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(&options_section);
         }
-        Some(built_command_output.join("\n"))
+        Some(completions.build())
     }
 }
 
@@ -699,8 +689,7 @@ impl ManParser for Type2 {
             return None;
         }
 
-        let mut built_command_output = Vec::new();
-        let mut existing_options = HashSet::new();
+        let mut completions = Completions::new(cmdname);
         while let Some(mat) = options_matched {
             let data = mat.get(3).unwrap().as_str();
             let data = remove_groff_formatting(data);
@@ -711,13 +700,7 @@ impl ManParser for Type2 {
                     let option_name = unquote_double_quotes(option_name);
                     let option_name = unquote_single_quotes(option_name);
                     let option_desc = data.1.trim().replace('\n', " ");
-                    built_command(
-                        option_name,
-                        option_desc.as_str(),
-                        &mut built_command_output,
-                        &mut existing_options,
-                        cmdname,
-                    );
+                    completions.add(option_name, &option_desc);
                 } else {
                     // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
                 }
@@ -728,7 +711,7 @@ impl ManParser for Type2 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-        Some(built_command_output.join("\n"))
+        Some(completions.build())
     }
 }
 
@@ -805,8 +788,7 @@ impl ManParser for Type4 {
             return None;
         }
 
-        let mut built_command_output = Vec::new();
-        let mut existing_options = HashSet::new();
+        let mut completions = Completions::new(cmdname);
         while let Some(mat) = options_matched {
             let data = mat.get(1).unwrap().as_str();
             let data = remove_groff_formatting(data);
@@ -818,13 +800,7 @@ impl ManParser for Type4 {
                     let option_name = unquote_double_quotes(option_name);
                     let option_name = unquote_single_quotes(option_name);
                     let option_desc = data.1.trim().replace('\n', " ");
-                    built_command(
-                        option_name,
-                        option_desc.as_str(),
-                        &mut built_command_output,
-                        &mut existing_options,
-                        cmdname,
-                    );
+                    completions.add(option_name, &option_desc);
                 } else {
                     // add_diagnostic(format!("{} doesn't contain '-'", option_name));
                 }
@@ -837,7 +813,7 @@ impl ManParser for Type4 {
             options_matched = options_parts_re.captures(options_section);
         }
 
-        Some(built_command_output.join("\n"))
+        Some(completions.build())
     }
 }
 
