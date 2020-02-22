@@ -496,28 +496,11 @@ fn test_complete_command() {
     );
 }
 
-fn remove_groff_formatting(data: &str) -> String {
-    // TODO Can we remove all of these strings in one go?
-    let mut data = data.to_owned();
-    for marker in &[
-        r"\fI", r"\fP", r"\f1", r"\fB", r"\fR", r"\e", r".BI", r".BR", r"0.5i", r".rb", r"\^",
-        r"{ ", r" }", ".B",
-        ".I",
-        //     The next ones are odd. Putting them into a python file makes my
-        //     python linter warn about anomalous backslash and python2 vs python3
-        //     seems to make no difference
-        //     data = data.replace("\ ","")
-        //     data = data.replace("\-","-")
-        //"\ ",
-        //"\&",
-        //"\f",
-    ] {
-        data = data.replace(marker, "");
-    }
-    // See note above about anomalous backslash
-    //data = data.replace("\-", "-");
-    let data = regex!(r##".PD( \d+)"##).replace_all(&data, "");
-    data.to_string()
+fn remove_groff_formatting(data: &str) -> Cow<'_, str> {
+    // using regex is twice as fast as manual replace
+    let re =
+        regex!(r"\\fI|\\fP|\\f1|\\fB|\\fR|\\e|\.BI|\.BR|0\.5i|\.rb|\\^|\{ | \}|\.B|\.I|.PD( \d+)");
+    re.replace_all(&data, "")
 }
 
 #[test]
