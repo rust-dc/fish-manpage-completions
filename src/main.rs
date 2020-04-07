@@ -496,7 +496,7 @@ fn test_complete_command() {
     );
 }
 
-fn remove_groff_formatting(data: &str) -> Cow<'_, str> {
+fn remove_groff_formatting(data: &str) -> Cow<str> {
     // using regex is twice as fast as manual replace
     let re =
         regex!(r"\\fI|\\fP|\\f1|\\fB|\\fR|\\e|\.BI|\.BR|0\.5i|\.rb|\\^|\{ | \}|\.B|\.I|.PD( \d+)");
