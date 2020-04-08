@@ -61,7 +61,8 @@ impl Deroffer {
                     (\(\S{2})  | # Open paren, then two printable chars
                     (\[\S*?\]) | # Open bracket, zero or more printable characters, then close bracket
                     \S)          # Any printable character
-                   "##),
+                   "##
+            ),
 
             reg_table: HashMap::new(),
             tr_from: String::new(),
@@ -1125,71 +1126,6 @@ fn test_var() {
 //         while self.str_at(0) and self.str_at(0) != '\n': self.skip_char()
 //         return True
 
-//     def numreq(self):
-//         # We require that the string starts with backslash
-//         if self.str_at(1) in 'hvwud' and self.str_at(2) == '\'':
-//             self.macro += 1
-//             self.skip_char(3)
-//             while self.str_at(0) != '\'' and self.esc_char():
-//                 pass # Weird
-//             if self.str_at(0) == '\'':
-//                 self.skip_char()
-//             self.macro -= 1
-//             return True
-//         return False
-
-//     def var(self):
-//         reg = ''
-//         s0s1 = self.s[0:2]
-//         if s0s1 == '\\n':
-//             if self.s[3:5] == 'dy':
-//                 self.skip_char(5)
-//                 return True
-//             elif self.str_at(2) == '(' and self.not_whitespace(3) and self.not_whitespace(4):
-//                 self.skip_char(5)
-//                 return True
-//             elif self.str_at(2) == '[' and self.not_whitespace(3):
-//                 self.skip_char(3)
-//                 while self.str_at(0) and self.str_at(0) != ']':
-//                     self.skip_char()
-//                 return True
-//             elif self.not_whitespace(2):
-//                 self.skip_char(3)
-//                 return True
-//         elif s0s1 == '\\*':
-//             if self.str_at(2) == '(' and self.not_whitespace(3) and self.not_whitespace(4):
-//                 reg = self.s[3:5]
-//                 self.skip_char(5)
-//             elif self.str_at(2) == '[' and self.not_whitespace(3):
-//                 self.skip_char(3)
-//                 while self.str_at(0) and self.str_at(0) != ']':
-//                     reg = reg + self.str_at(0)
-//                     self.skip_char()
-//                 if self.s[0:1] == ']':
-//                     self.skip_char()
-//                 else:
-//                     return False
-//             elif self.not_whitespace(2):
-//                 reg = self.str_at(2)
-//                 self.skip_char(3)
-//             else:
-//                 return False
-//
-//             if reg in self.reg_table:
-//                 old_s = self.s
-//                 self.s = self.reg_table[reg]
-//                 self.text_arg()
-//                 return True
-//         return False
-
-//     def size(self):
-//         # We require that the string starts with \s
-//         if self.digit(2) or (self.str_at(2) in '-+' and self.digit(3)):
-//             self.skip_char(3)
-//             while self.digit(0): self.skip_char()
-//             return True
-//         return False
-
 //     def spec(self):
 //         self.specletter = False
 //         if self.s[0:2] == '\\(' and self.not_whitespace(2) and self.not_whitespace(3):
@@ -1208,53 +1144,6 @@ fn test_var() {
 //         else:
 //             return False
 
-//     def esc(self):
-//         # We require that the string start with backslash
-//         c = self.s[1:2]
-//         if not c: return False
-//         if c in 'eE':
-//             self.condputs('\\')
-//         elif c in 't':
-//             self.condputs('\t')
-//         elif c in '0~':
-//             self.condputs(' ')
-//         elif c in '|^&:':
-//             pass
-//         else:
-//             self.condputs(c)
-//         self.skip_char(2)
-//         return True
-
-//     def word(self):
-//         got_something = False
-//         while True:
-//             match = Deroffer.g_re_word.match(self.s)
-//             if not match: break
-//             got_something = True
-//             self.condputs(match.group(0))
-//             self.skip_char(match.end(0))
-//
-//             # Consume all specials
-//             while self.spec():
-//                 if not self.specletter: break
-//
-//         return got_something
-
-//     def text(self):
-//         while True:
-//             idx = self.s.find('\\')
-//             if idx == -1:
-//                 self.condputs(self.s)
-//                 self.s = ''
-//                 break
-//             else:
-//                 self.condputs(self.s[:idx])
-//                 self.skip_char(idx)
-//                 if not self.esc_char_backslash():
-//                     self.condputs(self.str_at(0))
-//                     self.skip_char()
-//         return True
-
 //     def digit(self, idx):
 //         ch = self.str_at(idx)
 //         return ch.isdigit()
@@ -1267,24 +1156,6 @@ fn test_var() {
 //             self.condputs(match.group(0))
 //             self.skip_char(match.end())
 //             return True
-
-//     def esc_char_backslash(self):
-//         # Like esc_char, but we know the string starts with a backslash
-//         c = self.s[1:2]
-//         if c == '"':
-//             return self.comment()
-//         elif c == 'f':
-//             return self.font()
-//         elif c == 's':
-//             return self.size()
-//         elif c in 'hvwud':
-//             return self.numreq()
-//         elif c in 'n*':
-//             return self.var()
-//         elif c == '(':
-//             return self.spec()
-//         else:
-//             return self.esc()
 
 //     def esc_char(self):
 //         if self.s[0:1] == '\\':
