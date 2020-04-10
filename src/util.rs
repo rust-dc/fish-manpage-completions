@@ -9,6 +9,7 @@ macro_rules! regex {
 }
 
 use crate::char_len;
+use std::cell::Cell;
 use std::{collections::HashMap, iter::FromIterator};
 
 pub struct TranslationTable {
@@ -30,6 +31,31 @@ impl TranslationTable {
             .map(|c| *self.table.get(&c).unwrap_or(&c))
             .collect()
     }
+}
+
+pub trait CellMap<T> {
+    fn map_<F, R>(&self, f: F) -> R
+    where
+        F: Fn(&T) -> R;
+}
+
+impl<T: Default> CellMap<T> for Cell<T> {
+    fn map_<F, R>(&self, f: F) -> R
+    where
+        F: Fn(&T) -> R,
+    {
+        let internal = self.take();
+        let result = f(&internal);
+        self.set(internal);
+        result
+    }
+}
+
+#[test]
+fn test_cell_map() {
+    let cell = Cell::from("Hello World!".to_owned());
+    assert!(cell.map_(|s| s.contains("Hello")));
+    assert_eq!(cell.take(), "Hello World!");
 }
 
 #[test]
