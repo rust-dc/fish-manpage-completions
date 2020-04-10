@@ -368,7 +368,7 @@ impl Deroffer {
     }
 
     fn skip_char(&mut self, amount: usize) {
-        self.s.drain(..amount);
+        self.s.drain(0..amount);
     }
 
     fn skip_leading_whitespace(&mut self) {
