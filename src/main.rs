@@ -1110,9 +1110,9 @@ fn test_file_is_overwritable() {
     use tests::FileKind;
 
     // Setup file paths
-    
+
     // Good File Paths
-    
+
     let mut good_string = env::temp_dir();
     good_string.push("test_file_is_overwritable__good.txt");
     let good_path = Path::new(&good_string);
