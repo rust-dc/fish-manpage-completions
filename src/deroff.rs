@@ -523,7 +523,7 @@ impl Deroffer {
     }
 
     fn macro_ps(&mut self, s: &str) -> bool {
-        if Self::is_white(s, 2) {
+        if self.is_white(2) {
             self.pic = true;
         }
         self.condputs("\n");
@@ -531,7 +531,7 @@ impl Deroffer {
     }
 
     fn macro_pe(&mut self) -> bool {
-        if Self::is_white(&self.s, 2) {
+        if self.is_white(2) {
             self.pic = false
         }
         self.condputs("\n");
@@ -539,7 +539,7 @@ impl Deroffer {
     }
 
     fn macro_ts(&mut self) -> bool {
-        if Self::is_white(&self.s, 2) {
+        if self.is_white(2) {
             self.tbl = true;
             self.tblstate = TblState::Options;
         }
@@ -549,7 +549,7 @@ impl Deroffer {
     }
 
     fn macro_t_and(&mut self) -> bool {
-        if Self::is_white(&self.s, 2) {
+        if self.is_white(2) {
             self.tbl = true;
             self.tblstate = TblState::Format;
         }
@@ -559,7 +559,7 @@ impl Deroffer {
     }
 
     fn macro_te(&mut self) -> bool {
-        if Self::is_white(&self.s, 2) {
+        if self.is_white(2) {
             self.tbl = false
         }
 
@@ -568,7 +568,7 @@ impl Deroffer {
     }
 
     fn macro_eq(&mut self) -> bool {
-        if Self::is_white(&self.s, 2) {
+        if self.is_white(2) {
             self.eqn = true
         }
 
@@ -577,7 +577,7 @@ impl Deroffer {
     }
 
     fn macro_en(&mut self) -> bool {
-        if Self::is_white(&self.s, 2) {
+        if self.is_white(2) {
             self.eqn = false
         }
 
@@ -588,7 +588,7 @@ impl Deroffer {
     fn macro_r1(&mut self) -> bool {
         // NOTE: self.refer2 is never used in the python source, so this and macro_r2 are
         // pretty much worthless
-        // if Self::is_white(&self.s, 2) {
+        // if self.is_white(2) {
         //     self.refer2 = true;
         // }
         self.condputs("\n");
@@ -596,7 +596,7 @@ impl Deroffer {
     }
 
     fn macro_r2(&mut self) -> bool {
-        // if Self::is_white(&self.s, 2) {
+        // if self.is_white(2) {
         //     NOTE: See macro_r1
         //     self.refer2 = false;
         // }
@@ -611,7 +611,7 @@ impl Deroffer {
     }
 
     fn macro_bl_vl(&mut self) -> bool {
-        if Self::is_white(&self.s, 2) {
+        if self.is_white(2) {
             self.inlist = true
         }
         self.condputs("\n");
@@ -635,7 +635,7 @@ impl Deroffer {
     }
 
     fn macro_le(&mut self) -> bool {
-        if Self::is_white(&self.s, 2) {
+        if self.is_white(2) {
             self.inlist = false;
         }
         self.condputs("\n");
@@ -649,10 +649,10 @@ impl Deroffer {
 
     fn macro_ds(&mut self) -> bool {
         // Yuck
-        self.s = self.skip_char(&self.s, 2).into();
-        self.s = self.skip_leading_whitespace(&self.s).into();
+        self.skip_char(2);
+        self.skip_leading_whitespace();
 
-        if !Self::str_at(&self.s, 0).is_empty() {
+        if !self.str_at(0).is_empty() {
             let comps: Vec<String> = self.s.splitn(2, " ").map(|s| s.into()).collect();
 
             if comps.len() == 2 {
@@ -671,8 +671,8 @@ impl Deroffer {
     }
 
     fn macro_tr(&mut self) -> bool {
-        self.s = self.skip_char(&self.s, 2).to_owned();
-        self.s = self.skip_leading_whitespace(&self.s).to_owned();
+        self.skip_char(2);
+        self.skip_leading_whitespace();
 
         while !self.s.is_empty() && &self.s[0..=0] != "\n" {
             self.tr_from.push_str(&self.s[0..=0]);
@@ -681,7 +681,7 @@ impl Deroffer {
             self.tr_to
                 .push_str(if ns.is_empty() || ns == "\n" { " " } else { ns });
 
-            self.s = self.skip_char(&self.s, 2).to_owned();
+            self.skip_char(2);
         }
 
         // Update our table, then swap in the slower tr-savvy condputs
