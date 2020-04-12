@@ -14,3 +14,4 @@ libflate = "*"
 
 [dev-dependencies]
 pretty_assertions = "*"
+common_macros = "*"

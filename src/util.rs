@@ -34,23 +34,26 @@ impl TranslationTable {
 
 #[test]
 fn test_translationtable_new() {
+    use common_macros::hash_map;
     assert!(TranslationTable::new("aaa", "Incorrect Length").is_err());
     assert!(TranslationTable::new("aaa", "bbb").is_ok());
     let tr = TranslationTable::new("ab!", "cd.").unwrap();
 
-    let mut expected = HashMap::new();
-    expected.insert('a', 'c');
-    expected.insert('b', 'd');
-    expected.insert('!', '.');
+    let expected = hash_map! {
+        'a' => 'c',
+        'b' => 'd',
+        '!' => '.',
+    };
 
     assert_eq!(tr.table, expected);
 
     // Unicode tests
     let tr = TranslationTable::new("🗻🚀🚁", "mrh").unwrap();
-    let mut expected = HashMap::new();
-    expected.insert('🗻', 'm');
-    expected.insert('🚀', 'r');
-    expected.insert('🚁', 'h');
+    let expected = hash_map! {
+        '🗻' => 'm',
+        '🚀' => 'r',
+        '🚁' => 'h',
+    };
 
     assert_eq!(tr.table, expected);
 }
