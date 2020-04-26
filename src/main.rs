@@ -522,7 +522,7 @@ trait ManParser {
     }
 
     // TODO Is this the right type signature?
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
         None
     }
 }
@@ -535,7 +535,7 @@ impl ManParser for Type1 {
         manpage.contains(r#".SH "OPTIONS""#)
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -690,7 +690,7 @@ impl ManParser for Type2 {
         manpage.contains(".SH OPTIONS")
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -741,7 +741,7 @@ impl ManParser for Type3 {
         manpage.contains(".SH DESCRIPTION")
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -792,7 +792,7 @@ impl ManParser for Type4 {
         manpage.contains(".SH FUNCTION LETTERS")
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -845,8 +845,84 @@ impl ManParser for TypeDarwin {
         regex!(r##"\.S[hH] DESCRIPTION"##).is_match(manpage)
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
-        unimplemented!();
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
+        let mut got_something = false;
+        let mut lines = manpage
+            .split_terminator("\n")
+            .skip_while(|cond| !cond.to_lowercase().starts_with(".sh description"));
+
+        let mut built_command_output = vec![];
+        let mut existing_options = HashSet::new();
+
+        while let Some(line) = lines.next() {
+            if !Self::is_option(line) {
+                continue;
+            }
+
+            let dash_count = Self::count_argument_dashes(line);
+
+            let line = Self::groff_replace_escapes(line);
+            let line = Self::trim_groff(&line);
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+
+            let name = match line.split_whitespace().next() {
+                Some(name) => name,
+                None => continue,
+            };
+
+            let mut desc_lines = vec![];
+
+            while let Some(line) = lines.next() {
+                if !Self::is_option(line) {
+                    break;
+                }
+
+                if line.starts_with(".\"") {
+                    continue;
+                } else if line.starts_with(".") {
+                    let line = Self::groff_replace_escapes(line);
+                    let line = Self::trim_groff(&line);
+                    if !line.is_empty() {
+                        desc_lines.push(line);
+                    }
+                }
+            }
+
+            let desc = desc_lines.join(" ");
+
+            if name == "-" {
+                continue;
+            } else if name.len() > 1 {
+                built_command(
+                    &format!(
+                        "{}{}",
+                        (0..dash_count).map(|_| "-").collect::<String>(),
+                        name
+                    ),
+                    &desc,
+                    &mut built_command_output,
+                    &mut existing_options,
+                    cmdname,
+                )
+            } else if name.len() == 1 {
+                built_command(
+                    &format!("-{}", name),
+                    &desc,
+                    &mut built_command_output,
+                    &mut existing_options,
+                    cmdname,
+                )
+            }
+        }
+
+        if built_command_output.is_empty() {
+            None
+        } else {
+            Some(built_command_output.join("\n"))
+        }
     }
 }
 
@@ -1031,7 +1107,7 @@ impl ManParser for TypeDeroff {
         true
     }
 
-    fn parse_man_page(&mut self, manpage: &str) -> Option<String> {
+    fn parse_man_page(&mut self, manpage: &str, cmdname: &str) -> Option<String> {
         unimplemented!();
     }
 }
@@ -1511,8 +1587,10 @@ impl App {
         if parsers.is_empty() {
             self.add_diagnostic(&format!("{}: Not supported", input_name), None);
         }
+        // TODO: cmdname
+        let cmdname = "rustc";
         for parser in parsers.iter_mut() {
-            if let Some(completions) = parser.parse_man_page(&buf) {
+            if let Some(completions) = parser.parse_man_page(&buf, cmdname) {
                 output.write_all(completions.as_bytes()).unwrap();
                 return;
             }
