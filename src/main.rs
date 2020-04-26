@@ -830,16 +830,71 @@ impl ManParser for TypeDarwin {
         regex!(r##"\.S[hH] DESCRIPTION"##).is_match(manpage)
     }
 
-    fn parse_man_page(&self, manpage: &str, _cmdname: &str) -> Option<String> {
-        unimplemented!();
+    fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
+        let mut got_something = false;
+        let mut lines = manpage.split_terminator("\n").skip_while(|cond| {
+            !cond.starts_with(".Sh DESCRIPTION") || !cond.starts_with(".SH DESCRIPTION")
+        });
+
+        let mut completions = Completions::new(cmdname);
+        while let Some(line) = lines.next() {
+            if !Self::is_option(line) {
+                continue;
+            }
+
+            // Try to guess how many dashes this argument has
+            let dash_count = Self::count_argument_dashes(line);
+
+            let line = Self::groff_replace_escapes(line);
+            let line = Self::trim_groff(&line);
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+
+            // Extract the name
+            let name = line.split_whitespace().next().unwrap();
+
+            // Extract the description
+            let mut desc_lines = Vec::new();
+            while let Some(line) = lines.next() {
+                if !Self::is_option(line) {
+                    break;
+                }
+                // Ignore comments
+                if line.starts_with(".\"") {
+                    continue;
+                } else if line.starts_with(".") {
+                    let line = Self::groff_replace_escapes(line);
+                    let line = Self::trim_groff(&line);
+                    if !line.is_empty() {
+                        desc_lines.push(line);
+                    }
+                }
+            }
+            let desc = desc_lines.join(" ");
+
+            if name == "-" {
+                // Skip double -- arguments
+                continue;
+            }
+            let name = if name.len() == 1 {
+                format!("{}{}", "-".repeat(dash_count as usize), name)
+            } else {
+                format!("-{}", name)
+            };
+            completions.add(&name, &desc);
+        }
+
+        Some(completions.build())
     }
 }
 
 #[test]
 fn test_TypeDarwin_trim_groff() {
-    assert_eq!(TypeDarwin::trim_groff(". Test"), " Test");
+    assert_eq!(TypeDarwin::trim_groff(". Test"), "Test");
     assert_eq!(TypeDarwin::trim_groff("..."), "..");
-    assert_eq!(TypeDarwin::trim_groff(" Test"), " Test");
+    assert_eq!(TypeDarwin::trim_groff(" Test"), "Test");
     assert_eq!(TypeDarwin::trim_groff("Test ."), "Test.");
     assert_eq!(TypeDarwin::trim_groff("Test ,"), "Test,");
     assert_eq!(TypeDarwin::trim_groff("Ab "), "");
@@ -860,7 +915,7 @@ impl TypeDarwin {
         // Skip leading groff crud
         let line = regex!(r"^\.?([A-Z][a-z]\s)*").replace(&line, "");
         // If the line ends with a space and then a period or comma, then erase the space
-        regex!(r" ([.,])$").replace(&line, "$1").to_string()
+        regex!(r" ([.,])$").replace(&line, "$1").trim().to_string()
     }
 }
 
@@ -948,62 +1003,6 @@ impl TypeDarwin {
         line.starts_with(".It Fl")
     }
 }
-
-//     def parse_man_page(self, manpage):
-//         got_something = False
-//         lines =  manpage.splitlines()
-//         # Discard lines until we get to ".sh Description"
-//         while lines and not (lines[0].startswith('.Sh DESCRIPTION') or lines[0].startswith('.SH DESCRIPTION')):
-//             lines.pop(0)
-//
-//         while lines:
-//             # Pop until we get to the next option
-//             while lines and not self.is_option(lines[0]):
-//                 lines.pop(0)
-//
-//             if not lines:
-//                 continue
-//
-//             # Get the line and clean it up
-//             line = lines.pop(0)
-//
-//             # Try to guess how many dashes this argument has
-//             dash_count = self.count_argument_dashes(line)
-//
-//             line = self.groff_replace_escapes(line)
-//             line = self.trim_groff(line)
-//             line = line.strip()
-//             if not line: continue
-//
-//             # Extract the name
-//             name = line.split(None, 2)[0]
-//
-//             # Extract the description
-//             desc_lines = []
-//             while lines and not self.is_option(lines[0]):
-//                 line = lossy_unicode(lines.pop(0).strip())
-//                 # Ignore comments
-//                 if line.startswith(r'.\"'):
-//                     continue
-//                 if line.startswith('.'):
-//                     line = self.groff_replace_escapes(line)
-//                     line = self.trim_groff(line).strip()
-//                 if line:
-//                     desc_lines.append(line)
-//             desc = ' '.join(desc_lines)
-//
-//             if name == '-':
-//                 # Skip double -- arguments
-//                 continue
-//             elif len(name) > 1:
-//                 # Output the command
-//                 built_command(('-' * dash_count) + name, desc)
-//                 got_something = True
-//             elif len(name) == 1:
-//                 built_command('-' + name, desc)
-//                 got_something = True
-//
-//         return got_something
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct TypeDeroff;
