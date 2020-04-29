@@ -11,6 +11,9 @@ regex = "*"
 lazy_static = "*"
 bstr = "*"
 libflate = "*"
+encoding = "*"
+bzip2 = "*"
+xz2 = "*"
 
 [dev-dependencies]
 pretty_assertions = "*"

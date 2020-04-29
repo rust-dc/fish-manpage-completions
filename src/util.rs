@@ -9,6 +9,7 @@ macro_rules! regex {
 }
 
 use crate::char_len;
+use std::borrow::Cow;
 use std::{collections::HashMap, iter::FromIterator};
 
 pub struct TranslationTable {
@@ -82,4 +83,34 @@ fn test_translationtable_translate() {
         tr.translate("This 🚁 is a helicopter!"),
         "This h is a helicopter!".to_owned(),
     )
+}
+
+pub enum CompletionsError {
+    IOError(std::io::Error),
+    DecoderError(std::io::Error),
+    BZ2Error(bzip2::Error),
+    UnknownExtension(String),
+    EncodingError(Cow<'static, str>),
+    NoStem(String),
+    IgnoredCommand(String),
+    LinkToBuiltin,
+    NoExtension(String),
+}
+impl Into<std::io::Error> for CompletionsError {
+    fn into(self) -> std::io::Error {
+        let err_s = match self {
+            Self::IOError(e) => return e,
+            Self::DecoderError(e) => return e,
+            Self::XZ2Error(e) => return e,
+            Self::BZ2Error(e) => format!("{}", e),
+            Self::UnknownExtension(e) => e,
+            Self::EncodingError(e) => e.into(),
+            Self::NoStem(e) => format!("Expected stem in file name {:?}", e),
+            Self::IgnoredCommand(e) => format!("Skipped ignored command {:?}", e),
+            Self::NoExtension(e) => format!("Unable to determine file type, no extension {}", e),
+            Self::LinkToBuiltin => format!("Skipped link to builtin.1"),
+        };
+
+        std::io::Error::new(std::io::ErrorKind::Other, err_s)
+    }
 }
