@@ -101,7 +101,6 @@ impl Into<std::io::Error> for CompletionsError {
         let err_s = match self {
             Self::IOError(e) => return e,
             Self::DecoderError(e) => return e,
-            Self::XZ2Error(e) => return e,
             Self::BZ2Error(e) => format!("{}", e),
             Self::UnknownExtension(e) => e,
             Self::EncodingError(e) => e.into(),

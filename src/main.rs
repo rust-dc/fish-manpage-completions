@@ -1410,7 +1410,11 @@ fn parse_manpage_at_path<P: AsRef<Path>>(
             }
             ext => {
                 if (0..=9).any(|v| ext == &format!("{}", v)) {
-                    vec![]
+                    let mut buffer = vec![];
+                    if let Err(e) = file_handle.read_to_end(&mut buffer) {
+                        return Err(CompletionsError::IOError(e));
+                    }
+                    buffer
                 } else {
                     return Err(CompletionsError::UnknownExtension(ext.to_owned()));
                 }
@@ -1499,7 +1503,7 @@ fn parse_manpage_at_path<P: AsRef<Path>>(
             let mut fullpath = output_directory.as_ref().to_path_buf();
             fullpath.push(format!("{}.fish", cmd_base));
 
-            // IF THERE'S A BUG WITH OVERWRITING FILES:
+            // NOTE: IF THERE'S A BUG WITH OVERWRITING FILES:
             // If the output file already exists, this will overwrite it.
             let mut output_file = match File::create(fullpath) {
                 Ok(handle) => handle,
@@ -1551,7 +1555,7 @@ fn parse_and_output_man_pages(
     let total_count = paths.len();
 
     let mut successful_count = 0;
-    let padding_len = total_count.to_string().len();
+    let padding_len = (total_count as f32).log10().ceil() as usize;
     let mut last_progress_string_length = 0;
     if show_progress {
         println!(
@@ -1559,18 +1563,6 @@ fn parse_and_output_man_pages(
             output_directory.to_string_lossy()
         );
     }
-
-    let man_page_suffixes = paths.iter().fold(vec![], |mut acc, v| {
-        if let Some(ext) = v.as_path().extension() {
-            let mut ext = ext.to_string_lossy();
-            if !acc.contains(ext.to_mut()) {
-                acc.push(ext.to_mut().to_owned());
-            }
-        }
-        acc
-    });
-
-    // TODO: LZMA shiz
 
     for (index, manpage_path) in paths.iter().enumerate() {
         // Get the Path from the PathBuf
@@ -1597,7 +1589,7 @@ fn parse_and_output_man_pages(
         };
 
         // Create the output file name
-        let output_file_name = format!("{}.fish", path.to_string_lossy());
+        let output_file_name = format!("{}.fish", cmd_name.to_string_lossy());
         let output_file_name = Path::new(&output_file_name);
 
         // Handle progress
@@ -1632,7 +1624,6 @@ fn parse_and_output_man_pages(
 
             // </Handle progress>
         }
-
         // TODO: `skip` is _used_ but is never assigned, see create_manpage_completions.py:917 & 923
 
         // Write to stdout
@@ -1647,7 +1638,7 @@ fn parse_and_output_man_pages(
         // Parse manpage
         match parse_manpage_at_path(manpage_path, &output_directory) {
             // if sucessful, increment successful_count
-            Ok(_) => successful_count += 1,
+            Ok(successful) => successful_count += successful as usize,
             Err(e) => {
                 // TODO: Update this to be good
                 let e: std::io::Error = e.into();
@@ -1658,6 +1649,7 @@ fn parse_and_output_man_pages(
         // TODO: flush diag to stderr
     }
 
+    // TODO: This
     // print a \n
     // add a diagnostic for how many we did :)
 
