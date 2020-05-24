@@ -780,11 +780,11 @@ impl ManParser for Type4 {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let options_section_re = regex!(r#"\.SH FUNCTION LETTERS((?s:.)*?)(\.SH|\Z)"#);
+        let options_section_re = regex!(r"\.SH FUNCTION LETTERS((?s:.)*?)(\.SH|\\Z)");
         let options_section_matched = options_section_re.captures(manpage);
         let mut options_section = options_section_matched.unwrap().get(1).unwrap().as_str();
 
-        let options_parts_re = regex!(r#"\.TP((?s:.)*?)\.TP"#);
+        let options_parts_re = regex!(r"\.TP((?s:.)*?)\.TP");
         let mut options_matched = options_parts_re.captures(options_section);
         // add_diagnostic(format!("Command is {}", cmdname));
 
