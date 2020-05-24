@@ -56,7 +56,7 @@ impl Deroffer {
     fn new() -> Deroffer {
         Deroffer {
             g_re_word: crate::regex!(r##"[a-zA-Z_]+"##),
-            g_re_number: crate::regex!(r##"[+-]?\d+"##),
+            g_re_number: crate::regex!(r##"^[+-]?\d+"##),
             // sequence of not backslash or whitespace
             g_re_not_backslash_or_whitespace: crate::regex!(r##"[^ \t\n\r\f\v\\]+"##),
             g_re_newline_collapse: crate::regex!(r##"\n{3,}"##),
@@ -754,16 +754,14 @@ impl Deroffer {
     //             return self.esc()
 
     fn number(&mut self) -> bool {
-        unimplemented!()
+        if let Some(mat) = self.g_re_number.find(&self.s) {
+            self.condputs(mat.as_str());
+            self.skip_char(mat.end());
+            true
+        } else {
+            false
+        }
     }
-    //     def number(self):
-    //         match = Deroffer.g_re_number.match(self.s)
-    //         if not match:
-    //             return False
-    //         else:
-    //             self.condputs(match.group(0))
-    //             self.skip_char(match.end())
-    //             return True
 
     fn word(&mut self) -> bool {
         unimplemented!()
@@ -1003,6 +1001,29 @@ fn test_skip_leading_whitespace() {
     assert_eq!(&d.s, "World");
     d.skip_leading_whitespace();
     assert_eq!(&d.s, "World");
+}
+
+#[test]
+fn test_number() {
+    let mut d = Deroffer::new();
+
+    d.s = String::from("4343xx7");
+    assert_eq!(d.number(), true);
+    let o = d.output.take();
+    assert_eq!(o, "4343".to_string());
+    d.output.set(o);
+
+    d.s = String::from("__23");
+    assert_eq!(d.number(), false);
+
+    d.s = String::from("-18.5");
+    assert_eq!(d.number(), true);
+    let o = d.output.take();
+    assert_eq!(o, "4343-18".to_string());
+    d.output.set(o);
+
+    d.s = String::from("+078t");
+    assert_eq!(d.number(), true);
 }
 
 //     def str_eq(offset, other, len):
