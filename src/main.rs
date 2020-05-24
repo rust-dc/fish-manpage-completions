@@ -728,48 +728,48 @@ impl ManParser for Type3 {
         manpage.contains(".SH DESCRIPTION")
     }
 
-    fn parse_man_page(&self, manpage: &str, _cmdname: &str) -> Option<String> {
-        unimplemented!();
+    fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
+        let options_section_re = regex!(r"\.SH DESCRIPTION((?s:.)*?)(\.SH|\\Z)");
+        let options_section_matched = options_section_re.find(manpage);
+        let mut options_section = options_section_matched.unwrap().as_str();
+
+        let options_parts_re = regex!(r"\.TP((?s:.)*?)\.TP");
+        let mut options_matched = options_parts_re.captures(options_section);
+        // add_diagnostic(format!("Command is {}", cmdname));
+
+        if options_matched.is_none() {
+            // add_diagnostic("Unable to find options section");
+            return None;
+        }
+
+        let mut completions = Completions::new(cmdname);
+        while let Some(mat) = options_matched {
+            let mut data = mat.get(1).unwrap().as_str();
+
+            let data = remove_groff_formatting(data);
+            let data = data.trim();
+            let data: Vec<&str> = data.splitn(2, '\n').collect();
+
+            if data.len() < 2 {
+                // add_diagnostic("Unable to split option from description");
+                return None;
+            }
+            let option_name = data[0].trim();
+            if option_name.contains('-') {
+                let option_name = unquote_double_quotes(option_name);
+                let option_name = unquote_single_quotes(option_name);
+                let option_desc = data[1].trim().replace("\n", " ");
+                completions.add(&option_name, &option_desc);
+            } else {
+                // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
+            }
+
+            options_section = &options_section[mat.get(0).unwrap().end() - 3..];
+            options_matched = options_parts_re.captures(&options_section);
+        }
+        Some(completions.build())
     }
 }
-
-// class Type3ManParser(ManParser):
-//     def parse_man_page(self, manpage):
-//         options_section_regex = re.compile( "\.SH DESCRIPTION(.*?)(\.SH|\Z)", re.DOTALL)
-//         options_section_matched = re.search( options_section_regex, manpage)
-//
-//         options_section = options_section_matched.group(1)
-//         options_parts_regex = re.compile("\.TP(.*?)\.TP", re.DOTALL)
-//         options_matched = re.search(options_parts_regex, options_section)
-//         add_diagnostic("Command is %r" % CMDNAME)
-//
-//         if options_matched == None:
-//             add_diagnostic('Unable to find options section')
-//             return False
-//
-//         while (options_matched != None):
-//             data = options_matched.group(1)
-//
-//             data = remove_groff_formatting(data)
-//             data = data.strip()
-//             data = data.split("\n",1)
-//
-//             if (len(data)>1): # and len(data[1])<400):
-//                 optionName = data[0].strip()
-//                 if ( optionName.find("-") == -1):
-//                     add_diagnostic("%r doesn't contain '-'" % optionName)
-//                 else:
-//                     optionName = unquote_double_quotes(optionName)
-//                     optionName = unquote_single_quotes(optionName)
-//                     optionDescription = data[1].strip().replace("\n"," ")
-//                     built_command(optionName, optionDescription)
-//
-//             else:
-//                 add_diagnostic('Unable to split option from description')
-//                 return False
-//
-//             options_section = options_section[options_matched.end()-3:]
-//             options_matched = re.search(options_parts_regex, options_section)
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct Type4;
