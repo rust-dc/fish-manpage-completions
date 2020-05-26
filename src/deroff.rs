@@ -4,6 +4,7 @@ use libflate::gzip::Decoder;
 use regex::Regex;
 
 use crate::util::TranslationTable;
+use std::borrow::Cow;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::fs::File;
@@ -89,10 +90,13 @@ impl Deroffer {
         }
     }
 
-    // TODO: With change in `self.output` type, no longer needs to
-    // return Result
-    pub fn get_output(&self) -> Result<String, String> {
-        Ok(self.output.take())
+    /// Take the output, leaving the the default value.
+    pub fn get_output(&self) -> String {
+        let output = self.output.take();
+        match self.g_re_newline_collapse.replace_all(&output, "\n") {
+            Cow::Borrowed(_) => output,
+            Cow::Owned(result) => result,
+        }
     }
 
     // for the moment, return small strings, until we figure out what
@@ -864,8 +868,10 @@ fn deroff_files(files: &[String]) -> std::io::Result<()> {
 #[test]
 fn test_get_output() {
     let deroffer = Deroffer::new();
-    assert_eq!(&deroffer.get_output_(b"foo\n\nbar").unwrap(), "foo\n\nbar");
-    assert_eq!(&deroffer.get_output_(b"foo\n\n\nbar").unwrap(), "foo\nbar");
+    deroffer.output.set("foo\n\nbar".to_string());
+    assert_eq!(&deroffer.get_output(), "foo\n\nbar");
+    deroffer.output.set("foo\n\n\nbar".to_string());
+    assert_eq!(&deroffer.get_output(), "foo\nbar");
 }
 
 #[test]

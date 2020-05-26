@@ -4,7 +4,6 @@ use std::env;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Read, Write};
-use std::iter::Peekable;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::slice::Iter;
@@ -536,8 +535,7 @@ fn test_remove_groff_formatting() {
 trait ManParser {
     fn is_my_type(&self, manpage: &str) -> bool;
 
-    // TODO Is this the right type signature?
-    fn parse_man_page(&self, cmd_name: &str, manpage: &str) -> Option<String> {
+    fn parse_man_page(&self, _manpage: &str, _cmdname: &str) -> Option<String> {
         None
     }
 }
@@ -1014,115 +1012,70 @@ impl ManParser for TypeDeroff {
         // TODO Revisit post-MVP
         // I think this is just to account for TypeDeroff being the last ManParser implementation
         // that is checked; it's the fallback.
-        true
+        true // We're optimists
     }
 
-    fn parse_man_page(&self, cmd_name: &str, manpage: &str) -> Option<String> {
-        use bstr::ByteSlice;
-        let output: bstr::BString = {
-            let mut deroffer = deroff::Deroffer::new();
-            deroffer.deroff(manpage.to_owned());
-            deroffer
-                .get_output()
-                .map_err(|err| eprintln!("Error deroffing manpage: {}", err))
-                .ok()?
-                .into()
-        };
-
-        let lines = output.split(|&byte| byte == b'\n');
+    fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
+        let mut deroffer = deroff::Deroffer::new();
+        deroffer.deroff(manpage.to_owned());
+        let output = deroffer.get_output();
+        let lines = output.lines();
 
         let mut lines = lines
+            // Discard lines until we get to DESCRIPTION or OPTIONS
             .skip_while(|line| {
-                !(line.starts_with(b"DESCRIPTION")
-                    || line.starts_with(b"OPTIONS")
-                    || line.starts_with(b"COMMAND OPTIONS"))
+                !(line.starts_with("DESCRIPTION")
+                    || line.starts_with("OPTIONS")
+                    || line.starts_with("COMMAND OPTIONS"))
             })
-            .take_while(|line| !line.starts_with(b"BUGS"))
-            .peekable();
+            // Look for BUGS and stop there
+            .take_while(|line| !line.starts_with("BUGS"));
 
-        let mut Completions::new(cmd_name);
-        let mut built_command_output: Vec<String> = vec![];
-        let mut existing_options: HashSet<String> = HashSet::new();
+        let mut completions = Completions::new(cmdname);
+        while lines.by_ref().peekable().peek().is_some() {
+            let lines = lines.by_ref();
 
-        while lines.peek().is_some() {
-            while lines
-                .peek()
-                .map(|line| !TypeDeroff::is_option(*line))
-                .unwrap_or_default()
-            {
-                lines.next();
-            }
-
-            let options = match lines.next() {
+            // Pop until we get to the next option
+            let options = match lines.skip_while(|line| !TypeDeroff::is_option(line)).next() {
                 Some(line) => line,
                 None => break,
             };
 
-            let mut description_vec: Vec<&[u8]> = vec![];
+            // Pop until we get to either an empty line or a line starting with -
+            let description: Vec<_> = lines
+                .take_while(|line| TypeDeroff::could_be_description(line))
+                .collect();
+            let description = description.join(" ");
 
-            while lines
-                .peek()
-                .map(|line| TypeDeroff::could_be_description(*line))
-                .unwrap_or_default()
-            {
-                description_vec.push(lines.next().unwrap());
-            }
-
-            let description: Vec<u8> = description_vec.join(&b' ');
-
-            // TODO Fix type signature of built_command to accept non-string inputs
-            let options = String::from_utf8_lossy(options);
-            let description = String::from_utf8_lossy(&description);
-
-            built_command(
-                &options,
-                &description,
-                &mut built_command_output,
-                &mut existing_options,
-                cmd_name.to_owned(),
-            );
+            completions.add(&options, &description);
         }
-
-        if built_command_output.is_empty() {
-            None
-        } else {
-            // TODO is adding newlines the right thing here?
-            let num_lines = built_command_output.len();
-            Some(
-                built_command_output
-                    .into_iter()
-                    .zip(std::iter::repeat("\n".to_owned()).take(num_lines))
-                    .flat_map(|(line, newline)| vec![line, newline])
-                    .collect(),
-            )
-        }
+        Some(completions.build())
     }
 }
 
 #[test]
 fn test_TypeDeroff_is_option() {
-    assert!(!TypeDeroff::is_option(b"Not an Option"));
-    assert!(TypeDeroff::is_option(b"-Is an Option"));
-    assert!(!TypeDeroff::is_option(b""));
+    assert!(!TypeDeroff::is_option("Not an Option"));
+    assert!(TypeDeroff::is_option("-Is an Option"));
+    assert!(!TypeDeroff::is_option(""));
 }
 
 impl TypeDeroff {
-    fn is_option(line: &[u8]) -> bool {
-        line.starts_with(b"-")
+    fn is_option(line: &str) -> bool {
+        line.starts_with("-")
     }
 }
 
 #[test]
 fn test_could_be_description() {
-    assert!(TypeDeroff::could_be_description(b"Test Pass Line"));
-    assert!(!TypeDeroff::could_be_description(b"-Test Fail Line"));
-    assert!(!TypeDeroff::could_be_description(b""));
+    assert!(TypeDeroff::could_be_description("Test Pass Line"));
+    assert!(!TypeDeroff::could_be_description("-Test Fail Line"));
+    assert!(!TypeDeroff::could_be_description(""));
 }
 
 impl TypeDeroff {
-    fn could_be_description(line: &[u8]) -> bool {
-        use bstr::ByteSlice;
-        line.len() > 0 && !line.starts_with(b"-")
+    fn could_be_description(line: &str) -> bool {
+        line.len() > 0 && !line.starts_with("-")
     }
 }
 
@@ -1173,11 +1126,7 @@ fn test_file_is_overwritable() {
 // Return whether the file at the given path is overwritable
 // Raises IOError if it cannot be opened
 fn file_is_overwritable(path: &Path) -> Result<bool, String> {
-    use std::error::Error;
     use bstr::ByteSlice;
-    use std::fs::File;
-    use std::io::BufRead;
-    use std::io::BufReader;
     let display = path.display();
     let f = File::open(path).map_err(|error| format!("{:?}", error))?;
     let file = BufReader::new(&f);
