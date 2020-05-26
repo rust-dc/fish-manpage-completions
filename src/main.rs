@@ -745,7 +745,7 @@ impl ManParser for Type3 {
 
         let mut completions = Completions::new(cmdname);
         while let Some(mat) = options_matched {
-            let mut data = mat.get(1).unwrap().as_str();
+            let data = mat.get(1).unwrap().as_str();
 
             let data = remove_groff_formatting(data);
             let data = data.trim();
@@ -831,7 +831,6 @@ impl ManParser for TypeDarwin {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let mut got_something = false;
         let mut lines = manpage.split_terminator("\n").skip_while(|cond| {
             !cond.starts_with(".Sh DESCRIPTION") || !cond.starts_with(".SH DESCRIPTION")
         });
