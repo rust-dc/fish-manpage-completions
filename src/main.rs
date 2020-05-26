@@ -751,17 +751,18 @@ impl ManParser for Type3 {
 
             let data = remove_groff_formatting(data);
             let data = data.trim();
-            let data: Vec<&str> = data.splitn(2, '\n').collect();
-
-            if data.len() < 2 {
-                // add_diagnostic("Unable to split option from description");
-                return None;
-            }
-            let option_name = data[0].trim();
+            let (option_name, option_desc) = match data.splitn(2, '\n').next_tuple() {
+                Some(tuple) => tuple,
+                None => {
+                    // add_diagnostic("Unable to split option from description");
+                    return None;
+                }
+            };
+            let option_name = option_name.trim();
             if option_name.contains('-') {
                 let option_name = unquote_double_quotes(option_name);
                 let option_name = unquote_single_quotes(option_name);
-                let option_desc = data[1].trim().replace("\n", " ");
+                let option_desc = option_desc.trim().replace("\n", " ");
                 completions.add(&option_name, &option_desc);
             } else {
                 // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
