@@ -699,12 +699,12 @@ impl ManParser for Type2 {
             let data = mat.get(3).unwrap().as_str();
             let data = remove_groff_formatting(data);
             let data = data.splitn(2, '\n').next_tuple::<(_, _)>();
-            if let Some(data) = data.filter(|data| !data.1.trim().is_empty()) {
-                let option_name = data.0.trim();
+            if let Some((option_name, option_desc)) = data.filter(|(_, desc)| !desc.trim().is_empty()) {
+                let option_name = option_name.trim();
                 if option_name.contains('-') {
                     let option_name = unquote_double_quotes(option_name);
                     let option_name = unquote_single_quotes(option_name);
-                    let option_desc = data.1.trim().replace('\n', " ");
+                    let option_desc = option_desc.trim().replace('\n', " ");
                     completions.add(option_name, &option_desc);
                 } else {
                     // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
