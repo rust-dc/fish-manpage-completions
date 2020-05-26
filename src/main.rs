@@ -575,7 +575,8 @@ impl ManParser for Type1 {
             }
 
             let data = remove_groff_formatting(data);
-            if let Some((option_name, option_desc)) = data.splitn(2, ".RS 4").next_tuple::<(_, _)>() {
+            if let Some((option_name, option_desc)) = data.splitn(2, ".RS 4").next_tuple::<(_, _)>()
+            {
                 let option_name = option_name.trim();
                 if option_name.contains('-') {
                     let option_name = unquote_double_quotes(option_name);
@@ -699,7 +700,9 @@ impl ManParser for Type2 {
             let data = mat.get(3).unwrap().as_str();
             let data = remove_groff_formatting(data);
             let data = data.splitn(2, '\n').next_tuple::<(_, _)>();
-            if let Some((option_name, option_desc)) = data.filter(|(_, desc)| !desc.trim().is_empty()) {
+            if let Some((option_name, option_desc)) =
+                data.filter(|(_, desc)| !desc.trim().is_empty())
+            {
                 let option_name = option_name.trim();
                 if option_name.contains('-') {
                     let option_name = unquote_double_quotes(option_name);
