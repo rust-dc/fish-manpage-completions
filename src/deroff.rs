@@ -9,9 +9,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 
-type TODO_TYPE = u8;
-type TODO_NUMBER_TYPE = i8;
-
 const SKIP_LISTS: bool = false;
 const SKIP_HEADERS: bool = false;
 
