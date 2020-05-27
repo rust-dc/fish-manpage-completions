@@ -4,7 +4,6 @@ use std::env;
 use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Read, Write};
-use std::iter::Peekable;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::slice::Iter;
@@ -536,7 +535,6 @@ fn test_remove_groff_formatting() {
 trait ManParser {
     fn is_my_type(&self, manpage: &str) -> bool;
 
-    // TODO Is this the right type signature?
     fn parse_man_page(&self, _manpage: &str, _cmdname: &str) -> Option<String> {
         None
     }
@@ -747,7 +745,7 @@ impl ManParser for Type3 {
 
         let mut completions = Completions::new(cmdname);
         while let Some(mat) = options_matched {
-            let mut data = mat.get(1).unwrap().as_str();
+            let data = mat.get(1).unwrap().as_str();
 
             let data = remove_groff_formatting(data);
             let data = data.trim();
@@ -833,7 +831,6 @@ impl ManParser for TypeDarwin {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let mut got_something = false;
         let mut lines = manpage.split_terminator("\n").skip_while(|cond| {
             !cond.starts_with(".Sh DESCRIPTION") || !cond.starts_with(".SH DESCRIPTION")
         });
@@ -1014,11 +1011,44 @@ impl ManParser for TypeDeroff {
         // TODO Revisit post-MVP
         // I think this is just to account for TypeDeroff being the last ManParser implementation
         // that is checked; it's the fallback.
-        true
+        true // We're optimists
     }
 
-    fn parse_man_page(&self, manpage: &str, _cmdname: &str) -> Option<String> {
-        unimplemented!();
+    fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
+        let mut deroffer = deroff::Deroffer::new();
+        deroffer.deroff(manpage.to_owned());
+        let output = deroffer.get_output();
+        let lines = output.lines();
+
+        let mut lines = lines
+            // Discard lines until we get to DESCRIPTION or OPTIONS
+            .skip_while(|line| {
+                !(line.starts_with("DESCRIPTION")
+                    || line.starts_with("OPTIONS")
+                    || line.starts_with("COMMAND OPTIONS"))
+            })
+            // Look for BUGS and stop there
+            .take_while(|line| !line.starts_with("BUGS"));
+
+        let mut completions = Completions::new(cmdname);
+        while lines.by_ref().peekable().peek().is_some() {
+            let lines = lines.by_ref();
+
+            // Pop until we get to the next option
+            let options = match lines.skip_while(|line| !TypeDeroff::is_option(line)).next() {
+                Some(line) => line,
+                None => break,
+            };
+
+            // Pop until we get to either an empty line or a line starting with -
+            let description: Vec<_> = lines
+                .take_while(|line| TypeDeroff::could_be_description(line))
+                .collect();
+            let description = description.join(" ");
+
+            completions.add(&options, &description);
+        }
+        Some(completions.build())
     }
 }
 
@@ -1047,48 +1077,6 @@ impl TypeDeroff {
         line.len() > 0 && !line.starts_with("-")
     }
 }
-
-// class TypeDeroffManParser(ManParser):
-//     def parse_man_page(self, manpage):
-//         d = Deroffer()
-//         d.deroff(manpage)
-//         output = d.get_output()
-//         lines = output.split('\n')
-//
-//         got_something = False
-//
-//         # Discard lines until we get to DESCRIPTION or OPTIONS
-//         while lines and not (lines[0].startswith('DESCRIPTION') or lines[0].startswith('OPTIONS') or lines[0].startswith('COMMAND OPTIONS')):
-//             lines.pop(0)
-//
-//         # Look for BUGS and stop there
-//         for idx in range(len(lines)):
-//             line = lines[idx]
-//             if line.startswith('BUGS'):
-//                 # Drop remaining elements
-//                 lines[idx:] = []
-//                 break
-//
-//         while lines:
-//             # Pop until we get to the next option
-//             while lines and not self.is_option(lines[0]):
-//                 line = lines.pop(0)
-//
-//             if not lines:
-//                 continue
-//
-//             options = lines.pop(0)
-//
-//             # Pop until we get to either an empty line or a line starting with -
-//             description = ''
-//             while lines and self.could_be_description(lines[0]):
-//                 if description: description += ' '
-//                 description += lines.pop(0)
-//
-//             built_command(options, description)
-//             got_something = True
-//
-//         return got_something
 
 #[test]
 fn test_file_is_overwritable() {
@@ -1137,7 +1125,7 @@ fn test_file_is_overwritable() {
 // Return whether the file at the given path is overwritable
 // Raises IOError if it cannot be opened
 fn file_is_overwritable(path: &Path) -> Result<bool, String> {
-    use std::error::Error;
+    use bstr::ByteSlice;
     let display = path.display();
     let f = File::open(path).map_err(|error| format!("{:?}", error))?;
     let file = BufReader::new(&f);
@@ -1151,8 +1139,8 @@ fn file_is_overwritable(path: &Path) -> Result<bool, String> {
                 .to_owned()
         })
         .filter(|line| !line.is_empty())
-        .take_while(|line| line.starts_with("#"))
-        .any(|line| line.contains("Autogenerated")))
+        .take_while(|line| line.starts_with(b"#"))
+        .any(|line: Vec<u8>| line.contains_str("Autogenerated")))
 }
 
 // # Remove any and all autogenerated completions in the given directory
