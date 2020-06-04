@@ -859,7 +859,7 @@ impl ManParser for TypeDarwin {
                 .by_ref()
                 .take_while(|line| Self::is_option(line))
                 .filter(|line| line.starts_with(".") && !line.starts_with(".\"")) // Ignore comments
-                .map(|line| Self::groff_replace_escapes(line))
+                .map(Self::groff_replace_escapes)
                 .map(|line| Self::trim_groff(&line))
                 .filter(|line| !line.is_empty())
                 .collect::<Vec<_>>()
