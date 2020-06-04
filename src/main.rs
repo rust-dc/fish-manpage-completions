@@ -855,23 +855,15 @@ impl ManParser for TypeDarwin {
             let name = line.split_whitespace().next().unwrap();
 
             // Extract the description
-            let mut desc_lines = Vec::new();
-            while let Some(line) = lines.next() {
-                if !Self::is_option(line) {
-                    break;
-                }
-                // Ignore comments
-                if line.starts_with(".\"") {
-                    continue;
-                } else if line.starts_with(".") {
-                    let line = Self::groff_replace_escapes(line);
-                    let line = Self::trim_groff(&line);
-                    if !line.is_empty() {
-                        desc_lines.push(line);
-                    }
-                }
-            }
-            let desc = desc_lines.join(" ");
+            let desc = lines
+                .by_ref()
+                .take_while(|line| Self::is_option(line))
+                .filter(|line| line.starts_with(".") && !line.starts_with(".\"")) // Ignore comments
+                .map(Self::groff_replace_escapes)
+                .map(|line| Self::trim_groff(&line))
+                .filter(|line| !line.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ");
 
             if name == "-" {
                 // Skip double -- arguments
