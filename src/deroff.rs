@@ -704,26 +704,26 @@ impl Deroffer {
     fn request_or_macro(&mut self) -> bool {
         self.skip_char(1);
 
-        let s0 = self.s.get(1..=1).unwrap_or("_"); // _ will be ignored by the match
+        let s0 = self.s.chars().nth(1).unwrap_or('_'); // _ will be ignored by the match
 
         match s0 {
-            "\\" => {
+            '\\' => {
                 if self.str_at(1) == "\"" {
                     self.condputs("\n");
                     return true;
                 }
             }
-            "[" => {
+            '[' => {
                 self.refer = true;
                 self.condputs("\n");
                 return true;
             }
-            "]" => {
+            ']' => {
                 self.refer = false;
                 self.skip_char(1);
                 return self.text();
             }
-            "." => {
+            '.' => {
                 self.r#macro = 0;
                 self.condputs("\n");
                 return true;
@@ -732,7 +732,7 @@ impl Deroffer {
         };
 
         self.nobody = false;
-        let s0s1 = self.s.get(..2).unwrap_or("").to_owned();
+        let s0s1 = self.s.chars().take(2).collect::<String>();
 
         if self.g_macro_dispatch(&s0s1) {
             return true;
@@ -816,12 +816,10 @@ impl Deroffer {
     // NOTE: there is a call to text_arg that is commented out because it's not implemented, so the
     // tests will need revised when it gets implemented
     fn var(&mut self) -> bool {
-        let s0s1 = match self.s.get(0..2) {
-            Some(s) => s,
-            None => return false,
-        };
+        let s0s1 = self.s.chars().take(2).collect::<String>();
+
         if s0s1 == "\\n" {
-            if Some("dy") == self.s.get(3..5)
+            if "dy" == self.s.chars().skip(3).take(2).collect::<String>()
                 || (self.str_at(2) == "(" && self.prch(3) && self.prch(4))
             {
                 self.skip_char(5);
@@ -849,7 +847,7 @@ impl Deroffer {
                     reg.push_str(self.str_at(0));
                     self.skip_char(1);
                 }
-                if let Some("]") = self.s.get(0..1) {
+                if let Some(']') = self.s.chars().next() {
                     self.skip_char(1);
                 } else {
                     return false;
@@ -889,13 +887,13 @@ impl Deroffer {
 
     fn esc(&mut self) -> bool {
         // We require that the string start with backslash
-        if let Some(c) = self.s.get(1..2) {
+        if let Some(c) = self.s.chars().nth(1) {
             match c {
-                "e" | "E" => self.condputs("\\"),
-                "t" => self.condputs("\t"),
-                "0" | "~" => self.condputs(" "),
-                "|" | "^" | "&" | ":" => (),
-                _ => self.condputs(c),
+                'e' | 'E' => self.condputs("\\"),
+                't' => self.condputs("\t"),
+                '0' | '~' => self.condputs(" "),
+                '|' | '^' | '&' | ':' => (),
+                _ => self.condputs(c.to_string()),
             };
             self.skip_char(2);
             true
@@ -942,14 +940,14 @@ impl Deroffer {
     }
 
     fn esc_char_backslash(&mut self) -> bool {
-        if let Some(c) = self.s.get(1..2) {
+        if let Some(c) = self.s.chars().nth(1) {
             match c {
-                "\"" => self.comment(),
-                "f" => self.font(),
-                "s" => self.size(),
-                "h" | "v" | "w" | "u" | "d" => self.numreq(),
-                "n" | "*" => self.var(),
-                "(" => self.spec(),
+                '"' => self.comment(),
+                'f' => self.font(),
+                's' => self.size(),
+                'h' | 'v' | 'w' | 'u' | 'd' => self.numreq(),
+                'n' | '*' => self.var(),
+                '(' => self.spec(),
                 _ => self.esc(),
             }
         } else {
@@ -973,7 +971,8 @@ impl Deroffer {
     /// if `self.tr` is set, instead of putting `s` into `self.output` directly,
     /// it `translate`s it using the set translation table and puts the result
     /// into `self.output`
-    fn condputs(&self, s: &str) {
+    fn condputs<S: AsRef<str>>(&self, s: S) {
+        let s = s.as_ref();
         let is_special = {
             self.pic || self.eqn || self.refer || self.r#macro != 0 || self.inlist || self.inheader
         };
@@ -1008,7 +1007,7 @@ impl Deroffer {
     }
 
     fn esc_char(&mut self) -> bool {
-        if self.s.get(0..=0) == Some("\\") {
+        if self.s.chars().next() == Some('\\') {
             self.esc_char_backslash()
         } else {
             self.word() || self.number()
