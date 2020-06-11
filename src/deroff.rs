@@ -865,12 +865,12 @@ impl Deroffer {
                 // This unwrap is safe because of the if
                 self.s = self.reg_table.get(&reg).unwrap().to_owned();
                 self.text_arg();
-                return true;
+                true
             } else {
-                return false;
+                false
             }
         } else {
-            return false;
+            false
         }
     }
 
