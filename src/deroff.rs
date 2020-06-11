@@ -732,9 +732,9 @@ impl Deroffer {
         };
 
         self.nobody = false;
-        let s0s1 = self.s[..2].to_owned();
+        let s0s1 = self.s.get(..2).unwrap_or("").to_owned();
 
-        if self.g_macro_dispatch(s0s1.as_str()) {
+        if self.g_macro_dispatch(&s0s1) {
             return true;
         }
 
@@ -1147,141 +1147,70 @@ fn test_var() {
 
     // "\n" successes
     d.s = "\\n dyHello".to_owned();
-    assert!(d.var() == true);
-    assert!(d.s == "Hello");
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, "Hello");
 
     d.s = "\\n(aaHello".to_owned();
-    assert!(d.var() == true);
-    assert!(d.s == "Hello");
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, "Hello");
 
     d.s = "\\n[skipme] Hello".to_owned();
-    assert!(d.var() == true);
-    assert!(d.s == "] Hello");
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, "] Hello");
 
     d.s = "\\naHello".to_owned();
-    assert!(d.var() == true);
-    assert!(d.s == "Hello");
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, "Hello");
 
     // "\n" errors
     d.s = "\\n".to_owned();
-    assert!(d.var() == false);
-    assert!(d.s == "\\n");
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "\\n");
 
     d.s = "\\n a".to_owned();
-    assert!(d.var() == false);
-    assert!(d.s == "\\n a");
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "\\n a");
 
     d.s = "\\n da".to_owned();
-    assert!(d.var() == false);
-    assert!(d.s == "\\n da");
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "\\n da");
 
     // "\*" successes
 
-    // these blocks are more for me to understand the code,
-    // but, I think they're probably helpful for you guys,
-    // so here they are. On another note, I cannot WAIT to
-    // reformat this entire project
-
-    /*
-    AA is two non whitespace characters
-    "\*(AA" => {
-        if AA in self.reg_table => {
-            self.s = self.reg_table.get(AA);
-            return true;
-        } else => {
-            self.s = self.s.get(5..);
-            return false;
-        }
-    } */
     d.s = "\\*(traaaaaaaaaaaaa".to_owned();
     d.reg_table
         .insert("tr".to_owned(), "Hello World!".to_owned());
-    assert!(d.var() == true);
-    assert!(d.s == " World!");
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, " World!");
     let o = d.output.take();
     assert!(o.contains("Hello"));
     d.output.set(o);
 
     d.s = "\\*(aaHello World!".to_owned();
-    assert!(d.var() == false);
-    assert!(d.s == "Hello World!");
-
-    /*
-    A is a string that does not start with whitespace
-    "\*[A" => {
-        if A ends with "]" => {
-            let B = A[..-1];
-
-            if B in self.reg_table {
-                self.s = self.reg_table.get(B);
-                return true;
-            } else {
-                +1 to skip the "]" as well
-                self.s = self.s[len(B)+1..];
-                return false;
-            }
-        } else => {
-            self.s = "";
-            return false;
-        }
-    }
-    */
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "Hello World!");
 
     // ideal case, B is in reg_table
     d.s = "\\*[test_reg]".to_owned();
     d.reg_table
         .insert("test_reg".to_owned(), "It me!".to_owned());
-    assert!(d.var() == true);
-    assert!(d.s == " me!");
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, " me!");
     let o = d.output.take();
     assert!(o.contains("It"));
     d.output.set(o);
 
     // no "]"
     d.s = "\\*[foo bar :)".to_owned();
-    assert!(d.var() == false);
-    assert!(d.s == "");
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "");
 
     // B not in reg_table
     d.s = "\\*[foo bar]abcd".to_owned();
-    assert!(d.var() == false);
-    assert!(d.s == "abcd");
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "abcd");
 }
 
-//     def __init__(self):
-//         self.reg_table = {}
-//         self.tr_from = ''
-//         self.tr_to = ''
-//         self.tr = ''
-//         self.nls = 2
-//         self.specletter = False
-//         self.refer = False
-//         self.macro = 0
-//         self.nobody = False
-//         self.inlist = False
-//         self.inheader = False
-//         self.pic = False
-//         self.tbl = False
-//         self.tblstate = 0
-//         self.tblTab = ''
-//         self.eqn = False
-//         self.skipheaders = False
-//         self.skiplists = False
-//         self.ignore_sonx = False
-//         self.output = []
-//         self.name = ''
-//
-//         self.OPTIONS = 0
-//         self.FORMAT = 1
-//         self.DATA = 2
-//
-//         # words is uninteresting and should be treated as false
-//
-//     # This gets swapped in in place of condputs the first time tr gets modified
-//     def condputs_tr(self, str):
-//         special = self.pic or self.eqn or self.refer or self.macro or (self.skiplists and self.inlist) or (self.skipheaders and self.inheader)
-//         if not special:
-//             self.output.append(str.translate(self.tr))
 fn test_condputs() {
     let mut d = Deroffer::new();
 
