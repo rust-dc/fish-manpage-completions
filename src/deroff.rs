@@ -704,7 +704,7 @@ impl Deroffer {
     fn request_or_macro(&mut self) -> bool {
         self.skip_char(1);
 
-        let s0 = &self.s[1..2];
+        let s0 = self.s.get(1..=1).unwrap_or("_"); // _ will be ignored by the match
 
         match s0 {
             "\\" => {
