@@ -33,7 +33,7 @@ pub struct Deroffer {
     tr: Option<TranslationTable>,
     specletter: bool,
     refer: bool,
-    r#macro: bool,
+    r#macro: u8,
     nobody: bool,
     inlist: bool,
     inheader: bool,
@@ -72,7 +72,7 @@ impl Deroffer {
             tr: None,
             specletter: false,
             refer: false,
-            r#macro: false,
+            r#macro: 0,
             nobody: false,
             inlist: false,
             inheader: false,
@@ -601,7 +601,7 @@ impl Deroffer {
     }
 
     fn macro_de(&mut self) -> bool {
-        self.r#macro = true;
+        self.r#macro = 1;
         self.condputs("\n");
         true
     }
@@ -724,7 +724,7 @@ impl Deroffer {
                 return self.text();
             }
             "." => {
-                self.r#macro = false;
+                self.r#macro = 0;
                 self.condputs("\n");
                 return true;
             }
@@ -779,7 +779,11 @@ impl Deroffer {
         // self.r#macro = true;
         // Upon further investigation, this is the weirdest function ever
         // This is just a state placeholder thing
-        let mut m = self.r#macro as u8 + 1;
+        if self.str_at(2) != "'" {
+            return false;
+        }
+
+        self.r#macro += 1;
 
         self.skip_char(3);
 
@@ -794,17 +798,13 @@ impl Deroffer {
             self.skip_char(1);
         }
 
-        m -= 1;
-        self.r#macro = m != 0;
+        self.r#macro -= 1;
 
         true
     }
 
     fn prch(&self, idx: usize) -> bool {
-        self.s
-            .get(idx..=idx)
-            .map(|c| !" \t\n".contains(c))
-            .unwrap_or_default()
+        self.s.chars().nth(idx).map(|op| !" \t\n".contains(op)).unwrap_or_default()
     }
 
     // This function is the worst, there are a few comments explaining some of it in the test (test_var)
@@ -815,7 +815,10 @@ impl Deroffer {
     // NOTE: there is a call to text_arg that is commented out because it's not implemented, so the
     // tests will need revised when it gets implemented
     fn var(&mut self) -> bool {
-        let s0s1 = &self.s[0..2];
+        let s0s1 = match self.s.get(0..2) {
+            Some(s) => s,
+            None => return false,
+        };
         if s0s1 == "\\n" {
             if Some("dy") == self.s.get(3..5)
                 || (self.str_at(2) == "(" && self.prch(3) && self.prch(4))
@@ -959,8 +962,9 @@ impl Deroffer {
         // return ch not in ' \t\n'
         // TODO Investigate checking for ASCII whitespace after mvp
         self.s
-            .get(idx..=idx)
-            .map(|string| !" \t\n".contains(string))
+            .chars()
+            .nth(idx)
+            .map(|op| !op.is_whitespace())
             .unwrap_or_default()
     }
     /// `condputs` (cond)itionally (puts) `s` into `self.output`
@@ -969,7 +973,7 @@ impl Deroffer {
     /// into `self.output`
     fn condputs(&self, s: &str) {
         let is_special =
-            { self.pic || self.eqn || self.refer || self.r#macro || self.inlist || self.inheader };
+            { self.pic || self.eqn || self.refer || self.r#macro != 0 || self.inlist || self.inheader };
 
         if !is_special {
             let mut o = self.output.take();
