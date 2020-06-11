@@ -40,12 +40,12 @@ pub trait CellMap<T> {
 }
 
 impl<T: Default> CellMap<T> for Cell<T> {
-    fn map_<F, R>(&self, f: F) -> R
+    fn map_<F, R>(&self, predicate: F) -> R
     where
         F: Fn(&T) -> R,
     {
         let internal = self.take();
-        let result = f(&internal);
+        let result = predicate(&internal);
         self.set(internal);
         result
     }
