@@ -800,14 +800,6 @@ impl Deroffer {
         true
     }
 
-    fn prch(&self, idx: usize) -> bool {
-        self.s
-            .chars()
-            .nth(idx)
-            .map(|op| !" \t\n".contains(op))
-            .unwrap_or_default()
-    }
-
     // This function is the worst, there are a few comments explaining some of it in the test (test_var)
     // its so hard to briefly put into words what this function does, basically depending on the state
     // of self.s, it will either, change self.s to "", a part of self.s, or a value in self.reg_table
@@ -820,17 +812,17 @@ impl Deroffer {
 
         if s0s1 == "\\n" {
             if "dy" == self.s.chars().skip(3).take(2).collect::<String>()
-                || (self.str_at(2) == "(" && self.prch(3) && self.prch(4))
+                || (self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4))
             {
                 self.skip_char(5);
                 return true;
-            } else if self.str_at(2) == "[" && self.prch(3) {
+            } else if self.str_at(2) == "[" && self.not_whitespace(3) {
                 self.skip_char(3);
                 while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
                     self.skip_char(1);
                 }
                 return true;
-            } else if self.prch(2) {
+            } else if self.not_whitespace(2) {
                 self.skip_char(3);
                 return true;
             } else {
@@ -838,10 +830,10 @@ impl Deroffer {
             }
         } else if s0s1 == "\\*" {
             let mut reg = String::new();
-            if self.str_at(2) == "(" && self.prch(3) && self.prch(4) {
+            if self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4) {
                 reg = self.s[3..5].to_owned();
                 self.skip_char(5);
-            } else if self.str_at(2) == "[" && self.prch(3) {
+            } else if self.str_at(2) == "[" && self.not_whitespace(3) {
                 self.skip_char(3);
                 while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
                     reg.push_str(self.str_at(0));
@@ -852,7 +844,7 @@ impl Deroffer {
                 } else {
                     return false;
                 }
-            } else if self.prch(2) {
+            } else if self.not_whitespace(2) {
                 reg = self.str_at(2).to_owned();
                 self.skip_char(3);
             } else {
@@ -955,7 +947,7 @@ impl Deroffer {
         }
     }
 
-    /// AKA `prch`
+    /// AKA `not_whitespace`
     fn not_whitespace(&self, idx: usize) -> bool {
         // # Note that this return False for the empty string (idx >= len(self.s))
         // ch = self.s[idx:idx+1]
