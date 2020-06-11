@@ -787,12 +787,9 @@ impl Deroffer {
 
         self.skip_char(3);
 
-        // There's this, which has a comment explaining my thoughts right now
-        /*
-        while self.str_at(0) != "'" and self.esc_char():
-            pass  # Weird
-        */
-        // And I dont know what the purpose of it would even be, if you can tell, lmk
+        // This is weird, but it was in the source so it's here now.
+        // I think this skips characters until we hit a '
+        while self.str_at(0) != "'" && self.esc_char() {}
 
         if self.str_at(0) == "'" {
             self.skip_char(1);
@@ -804,7 +801,11 @@ impl Deroffer {
     }
 
     fn prch(&self, idx: usize) -> bool {
-        self.s.chars().nth(idx).map(|op| !" \t\n".contains(op)).unwrap_or_default()
+        self.s
+            .chars()
+            .nth(idx)
+            .map(|op| !" \t\n".contains(op))
+            .unwrap_or_default()
     }
 
     // This function is the worst, there are a few comments explaining some of it in the test (test_var)
@@ -853,6 +854,9 @@ impl Deroffer {
                 } else {
                     return false;
                 }
+            } else if self.prch(2) {
+                reg = self.str_at(2).to_owned();
+                self.skip_char(3);
             } else {
                 return false;
             }
@@ -860,8 +864,7 @@ impl Deroffer {
             if self.reg_table.contains_key(&reg) {
                 // This unwrap is safe because of the if
                 self.s = self.reg_table.get(&reg).unwrap().to_owned();
-                // This is unimplemented, so tests fail:
-                // self.text_arg();
+                self.text_arg();
                 return true;
             } else {
                 return false;
@@ -872,7 +875,7 @@ impl Deroffer {
     }
 
     fn size(&mut self) -> bool {
-        /* # We require that the string starts with \s */
+        // We require that the string starts with \s
         if self.digit(2) || ("-+".contains(self.str_at(2)) && self.digit(3)) {
             self.skip_char(3);
             while self.digit(0) {
@@ -885,7 +888,7 @@ impl Deroffer {
     }
 
     fn esc(&mut self) -> bool {
-        /* # We require that the string start with backslash */
+        // We require that the string start with backslash
         if let Some(c) = self.s.get(1..2) {
             match c {
                 "e" | "E" => self.condputs("\\"),
@@ -929,10 +932,9 @@ impl Deroffer {
             } else {
                 self.condputs(&self.s);
                 self.s = String::new();
-                break;
+                return true;
             }
         }
-        true
     }
 
     fn spec(&self) -> bool {
@@ -972,8 +974,9 @@ impl Deroffer {
     /// it `translate`s it using the set translation table and puts the result
     /// into `self.output`
     fn condputs(&self, s: &str) {
-        let is_special =
-            { self.pic || self.eqn || self.refer || self.r#macro != 0 || self.inlist || self.inheader };
+        let is_special = {
+            self.pic || self.eqn || self.refer || self.r#macro != 0 || self.inlist || self.inheader
+        };
 
         if !is_special {
             let mut o = self.output.take();
@@ -1194,9 +1197,10 @@ fn test_var() {
     d.reg_table
         .insert("tr".to_owned(), "Hello World!".to_owned());
     assert!(d.var() == true);
-    assert!(d.s == "Hello World!");
-    // assert!(d.s == " World!");
-    // assert!(d.output.contains("Hello"))
+    assert!(d.s == " World!");
+    let o = d.output.take();
+    assert!(o.contains("Hello"));
+    d.output.set(o);
 
     d.s = "\\*(aaHello World!".to_owned();
     assert!(d.var() == false);
@@ -1228,9 +1232,10 @@ fn test_var() {
     d.reg_table
         .insert("test_reg".to_owned(), "It me!".to_owned());
     assert!(d.var() == true);
-    assert!(d.s == "It me!");
-    // assert!(d.s == " me!");
-    // assert!(d.output.contains("It"));
+    assert!(d.s == " me!");
+    let o = d.output.take();
+    assert!(o.contains("It"));
+    d.output.set(o);
 
     // no "]"
     d.s = "\\*[foo bar :)".to_owned();
