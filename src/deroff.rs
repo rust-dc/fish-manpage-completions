@@ -1416,6 +1416,10 @@ fn text(s: &str) -> bool {
     unimplemented!()
 }
 
+fn request_or_macro(s: &str) -> bool {
+    unimplemented!()
+}
+
 fn do_tbl(s: &str) -> bool {
     unimplemented!()
 }
