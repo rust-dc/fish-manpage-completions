@@ -33,7 +33,7 @@ pub struct Deroffer {
     tr: Option<TranslationTable>,
     specletter: bool,
     refer: bool,
-    r#macro: bool,
+    r#macro: u8,
     nobody: bool,
     inlist: bool,
     inheader: bool,
@@ -72,7 +72,7 @@ impl Deroffer {
             tr: None,
             specletter: false,
             refer: false,
-            r#macro: false,
+            r#macro: 0,
             nobody: false,
             inlist: false,
             inheader: false,
@@ -392,11 +392,6 @@ impl Deroffer {
         }
     }
 
-    /// AKA `prch`
-    fn not_whitespace(&self, idx: usize) -> bool {
-        !" \t\n".contains(self.str_at(idx))
-    }
-
     fn digit(&self, idx: usize) -> bool {
         match self.str_at(idx) {
             "" => false,
@@ -606,7 +601,7 @@ impl Deroffer {
     }
 
     fn macro_de(&mut self) -> bool {
-        self.r#macro = true;
+        self.r#macro = 1;
         self.condputs("\n");
         true
     }
@@ -706,13 +701,273 @@ impl Deroffer {
         true
     }
 
+    fn request_or_macro(&mut self) -> bool {
+        self.skip_char(1);
+
+        let s0 = self.s.chars().nth(1).unwrap_or('_'); // _ will be ignored by the match
+
+        match s0 {
+            '\\' => {
+                if self.str_at(1) == "\"" {
+                    self.condputs("\n");
+                    return true;
+                }
+            }
+            '[' => {
+                self.refer = true;
+                self.condputs("\n");
+                return true;
+            }
+            ']' => {
+                self.refer = false;
+                self.skip_char(1);
+                return self.text();
+            }
+            '.' => {
+                self.r#macro = 0;
+                self.condputs("\n");
+                return true;
+            }
+            _ => (),
+        };
+
+        self.nobody = false;
+        let s0s1 = self.s.chars().take(2).collect::<String>();
+
+        if self.g_macro_dispatch(&s0s1) {
+            return true;
+        }
+
+        if SKIP_HEADERS && self.nobody {
+            return true;
+        }
+
+        self.skip_leading_whitespace();
+        while !self.s.is_empty() && !self.is_white(0) {
+            self.skip_char(1);
+        }
+
+        self.skip_leading_whitespace();
+
+        loop {
+            if !self.quoted_arg() && !self.text_arg() {
+                if !self.s.is_empty() {
+                    self.condputs(self.str_at(0));
+                    self.skip_char(1);
+                } else {
+                    return true;
+                }
+            }
+        }
+    }
+
+    fn font(&mut self) -> bool {
+        if let Some(m) = self.g_re_font.find(&self.s) {
+            self.skip_char(m.end());
+            true
+        } else {
+            false
+        }
+    }
+
+    fn numreq(&mut self) -> bool {
+        // In the python, it has a check that is already handled in esc_char_backslash, which is
+        // the only place it gets called, so I'll omit that check here
+
+        // This is written as `self.macro += 1` in the source, but I dont know why
+        // it does the same thing (false -> true, true -> still true) :shrug:
+        // self.r#macro = true;
+        // Upon further investigation, this is the weirdest function ever
+        // This is just a state placeholder thing
+        if self.str_at(2) != "'" {
+            return false;
+        }
+
+        self.r#macro += 1;
+
+        self.skip_char(3);
+
+        // This is weird, but it was in the source so it's here now.
+        // I think this skips characters until we hit a '
+        while self.str_at(0) != "'" && self.esc_char() {}
+
+        if self.str_at(0) == "'" {
+            self.skip_char(1);
+        }
+
+        self.r#macro -= 1;
+
+        true
+    }
+
+    // This function is the worst, there are a few comments explaining some of it in the test (test_var)
+    // its so hard to briefly put into words what this function does, basically depending on the state
+    // of self.s, it will either, change self.s to "", a part of self.s, or a value in self.reg_table
+    // which corresponds to a key that is part of self.s.
+    // This should be like 2 or 3 functions, but it's only one. So there's that. :-)
+    // NOTE: there is a call to text_arg that is commented out because it's not implemented, so the
+    // tests will need revised when it gets implemented
+    fn var(&mut self) -> bool {
+        let s0s1 = self.s.chars().take(2).collect::<String>();
+
+        if s0s1 == "\\n" {
+            if "dy" == self.s.chars().skip(3).take(2).collect::<String>()
+                || (self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4))
+            {
+                self.skip_char(5);
+                return true;
+            } else if self.str_at(2) == "[" && self.not_whitespace(3) {
+                self.skip_char(3);
+                while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
+                    self.skip_char(1);
+                }
+                return true;
+            } else if self.not_whitespace(2) {
+                self.skip_char(3);
+                return true;
+            } else {
+                return false;
+            }
+        } else if s0s1 == "\\*" {
+            let mut reg = String::new();
+            if self.str_at(2) == "(" && self.not_whitespace(3) && self.not_whitespace(4) {
+                reg = self.s[3..5].to_owned();
+                self.skip_char(5);
+            } else if self.str_at(2) == "[" && self.not_whitespace(3) {
+                self.skip_char(3);
+                while !self.str_at(0).is_empty() && self.str_at(0) != "]" {
+                    reg.push_str(self.str_at(0));
+                    self.skip_char(1);
+                }
+                if let Some(']') = self.s.chars().next() {
+                    self.skip_char(1);
+                } else {
+                    return false;
+                }
+            } else if self.not_whitespace(2) {
+                reg = self.str_at(2).to_owned();
+                self.skip_char(3);
+            } else {
+                return false;
+            }
+
+            if self.reg_table.contains_key(&reg) {
+                // This unwrap is safe because of the if
+                self.s = self.reg_table.get(&reg).unwrap().to_owned();
+                self.text_arg();
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    fn size(&mut self) -> bool {
+        // We require that the string starts with \s
+        if self.digit(2) || ("-+".contains(self.str_at(2)) && self.digit(3)) {
+            self.skip_char(3);
+            while self.digit(0) {
+                self.skip_char(1);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    fn esc(&mut self) -> bool {
+        // We require that the string start with backslash
+        if let Some(c) = self.s.chars().nth(1) {
+            match c {
+                'e' | 'E' => self.condputs("\\"),
+                't' => self.condputs("\t"),
+                '0' | '~' => self.condputs(" "),
+                '|' | '^' | '&' | ':' => (),
+                _ => self.condputs(c.to_string()),
+            };
+            self.skip_char(2);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn word(&mut self) -> bool {
+        let mut got_something = false;
+        while let Some(m) = self.g_re_word.find(&self.s) {
+            got_something = true;
+            self.condputs(m.as_str());
+            self.skip_char(m.end());
+
+            while self.spec() {
+                if !self.specletter {
+                    break;
+                }
+            }
+        }
+        got_something
+    }
+
+    fn text(&mut self) -> bool {
+        loop {
+            if let Some(idx) = self.s.find("\\") {
+                self.condputs(&self.s[..idx]);
+                self.skip_char(idx);
+                if !self.esc_char_backslash() {
+                    self.condputs(self.str_at(0));
+                    self.skip_char(1);
+                }
+            } else {
+                self.condputs(&self.s);
+                self.s = String::new();
+                return true;
+            }
+        }
+    }
+
+    fn spec(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn esc_char_backslash(&mut self) -> bool {
+        if let Some(c) = self.s.chars().nth(1) {
+            match c {
+                '"' => self.comment(),
+                'f' => self.font(),
+                's' => self.size(),
+                'h' | 'v' | 'w' | 'u' | 'd' => self.numreq(),
+                'n' | '*' => self.var(),
+                '(' => self.spec(),
+                _ => self.esc(),
+            }
+        } else {
+            false
+        }
+    }
+
+    /// AKA `not_whitespace`
+    fn not_whitespace(&self, idx: usize) -> bool {
+        // # Note that this return False for the empty string (idx >= len(self.s))
+        // ch = self.s[idx:idx+1]
+        // return ch not in ' \t\n'
+        // TODO Investigate checking for ASCII whitespace after mvp
+        self.s
+            .chars()
+            .nth(idx)
+            .map(|op| !op.is_whitespace())
+            .unwrap_or_default()
+    }
     /// `condputs` (cond)itionally (puts) `s` into `self.output`
     /// if `self.tr` is set, instead of putting `s` into `self.output` directly,
     /// it `translate`s it using the set translation table and puts the result
     /// into `self.output`
-    fn condputs(&self, s: &str) {
-        let is_special =
-            { self.pic || self.eqn || self.refer || self.r#macro || self.inlist || self.inheader };
+    fn condputs<S: AsRef<str>>(&self, s: S) {
+        let s = s.as_ref();
+        let is_special = {
+            self.pic || self.eqn || self.refer || self.r#macro != 0 || self.inlist || self.inheader
+        };
 
         if !is_special {
             let mut o = self.output.take();
@@ -733,27 +988,6 @@ impl Deroffer {
         write.flush().unwrap()
     }
 
-    fn esc_char_backslash(&mut self) -> bool {
-        unimplemented!()
-    }
-    //     def esc_char_backslash(self):
-    //         # Like esc_char, but we know the string starts with a backslash
-    //         c = self.s[1:2]
-    //         if c == '"':
-    //             return self.comment()
-    //         elif c == 'f':
-    //             return self.font()
-    //         elif c == 's':
-    //             return self.size()
-    //         elif c in 'hvwud':
-    //             return self.numreq()
-    //         elif c in 'n*':
-    //             return self.var()
-    //         elif c == '(':
-    //             return self.spec()
-    //         else:
-    //             return self.esc()
-
     fn number(&mut self) -> bool {
         if let Some(mat) = self.g_re_number.find(&self.s) {
             self.condputs(mat.as_str());
@@ -764,26 +998,8 @@ impl Deroffer {
         }
     }
 
-    fn word(&mut self) -> bool {
-        unimplemented!()
-    }
-    //     def word(self):
-    //         got_something = False
-    //         while True:
-    //             match = Deroffer.g_re_word.match(self.s)
-    //             if not match: break
-    //             got_something = True
-    //             self.condputs(match.group(0))
-    //             self.skip_char(match.end(0))
-    //
-    //             # Consume all specials
-    //             while self.spec():
-    //                 if not self.specletter: break
-    //
-    //         return got_something
-
     fn esc_char(&mut self) -> bool {
-        if self.s.get(0..=0) == Some("\\") {
+        if self.s.chars().next() == Some('\\') {
             self.esc_char_backslash()
         } else {
             self.word() || self.number()
@@ -917,6 +1133,75 @@ fn test_is_white() {
 }
 
 #[test]
+fn test_var() {
+    let mut d = Deroffer::new();
+
+    // "\n" successes
+    d.s = "\\n dyHello".to_owned();
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, "Hello");
+
+    d.s = "\\n(aaHello".to_owned();
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, "Hello");
+
+    d.s = "\\n[skipme] Hello".to_owned();
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, "] Hello");
+
+    d.s = "\\naHello".to_owned();
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, "Hello");
+
+    // "\n" errors
+    d.s = "\\n".to_owned();
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "\\n");
+
+    d.s = "\\n a".to_owned();
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "\\n a");
+
+    d.s = "\\n da".to_owned();
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "\\n da");
+
+    // "\*" successes
+
+    d.s = "\\*(traaaaaaaaaaaaa".to_owned();
+    d.reg_table
+        .insert("tr".to_owned(), "Hello World!".to_owned());
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, " World!");
+    let o = d.output.take();
+    assert!(o.contains("Hello"));
+    d.output.set(o);
+
+    d.s = "\\*(aaHello World!".to_owned();
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "Hello World!");
+
+    // ideal case, B is in reg_table
+    d.s = "\\*[test_reg]".to_owned();
+    d.reg_table
+        .insert("test_reg".to_owned(), "It me!".to_owned());
+    assert_eq!(d.var(), true);
+    assert_eq!(d.s, " me!");
+    let o = d.output.take();
+    assert!(o.contains("It"));
+    d.output.set(o);
+
+    // no "]"
+    d.s = "\\*[foo bar :)".to_owned();
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "");
+
+    // B not in reg_table
+    d.s = "\\*[foo bar]abcd".to_owned();
+    assert_eq!(d.var(), false);
+    assert_eq!(d.s, "abcd");
+}
+
 fn test_condputs() {
     let mut d = Deroffer::new();
 
@@ -1029,80 +1314,6 @@ fn test_number() {
     assert_eq!(d.number(), true);
 }
 
-//     def str_eq(offset, other, len):
-//         return self.s[offset:offset+len] == other[:len]
-
-//     def font(self):
-//         match = Deroffer.g_re_font.match(self.s)
-//         if not match: return False
-//         self.skip_char(match.end())
-//         return True
-
-//     def numreq(self):
-//         # We require that the string starts with backslash
-//         if self.str_at(1) in 'hvwud' and self.str_at(2) == '\'':
-//             self.macro += 1
-//             self.skip_char(3)
-//             while self.str_at(0) != '\'' and self.esc_char():
-//                 pass # Weird
-//             if self.str_at(0) == '\'':
-//                 self.skip_char()
-//             self.macro -= 1
-//             return True
-//         return False
-
-//     def var(self):
-//         reg = ''
-//         s0s1 = self.s[0:2]
-//         if s0s1 == '\\n':
-//             if self.s[3:5] == 'dy':
-//                 self.skip_char(5)
-//                 return True
-//             elif self.str_at(2) == '(' and self.not_whitespace(3) and self.not_whitespace(4):
-//                 self.skip_char(5)
-//                 return True
-//             elif self.str_at(2) == '[' and self.not_whitespace(3):
-//                 self.skip_char(3)
-//                 while self.str_at(0) and self.str_at(0) != ']':
-//                     self.skip_char()
-//                 return True
-//             elif self.not_whitespace(2):
-//                 self.skip_char(3)
-//                 return True
-//         elif s0s1 == '\\*':
-//             if self.str_at(2) == '(' and self.not_whitespace(3) and self.not_whitespace(4):
-//                 reg = self.s[3:5]
-//                 self.skip_char(5)
-//             elif self.str_at(2) == '[' and self.not_whitespace(3):
-//                 self.skip_char(3)
-//                 while self.str_at(0) and self.str_at(0) != ']':
-//                     reg = reg + self.str_at(0)
-//                     self.skip_char()
-//                 if self.s[0:1] == ']':
-//                     self.skip_char()
-//                 else:
-//                     return False
-//             elif self.not_whitespace(2):
-//                 reg = self.str_at(2)
-//                 self.skip_char(3)
-//             else:
-//                 return False
-//
-//             if reg in self.reg_table:
-//                 old_s = self.s
-//                 self.s = self.reg_table[reg]
-//                 self.text_arg()
-//                 return True
-//         return False
-
-//     def size(self):
-//         # We require that the string starts with \s
-//         if self.digit(2) or (self.str_at(2) in '-+' and self.digit(3)):
-//             self.skip_char(3)
-//             while self.digit(0): self.skip_char()
-//             return True
-//         return False
-
 //     def spec(self):
 //         self.specletter = False
 //         if self.s[0:2] == '\\(' and self.not_whitespace(2) and self.not_whitespace(3):
@@ -1121,284 +1332,13 @@ fn test_number() {
 //         else:
 //             return False
 
-//     def esc(self):
-//         # We require that the string start with backslash
-//         c = self.s[1:2]
-//         if not c: return False
-//         if c in 'eE':
-//             self.condputs('\\')
-//         elif c in 't':
-//             self.condputs('\t')
-//         elif c in '0~':
-//             self.condputs(' ')
-//         elif c in '|^&:':
-//             pass
-//         else:
-//             self.condputs(c)
-//         self.skip_char(2)
-//         return True
-
 fn text(s: &str) -> bool {
     unimplemented!()
 }
-//     def text(self):
-//         while True:
-//             idx = self.s.find('\\')
-//             if idx == -1:
-//                 self.condputs(self.s)
-//                 self.s = ''
-//                 break
-//             else:
-//                 self.condputs(self.s[:idx])
-//                 self.skip_char(idx)
-//                 if not self.esc_char_backslash():
-//                     self.condputs(self.str_at(0))
-//                     self.skip_char()
-//         return True
-
-//     def text_arg(self):
-//         # PCA: The deroff.c textArg() disallowed quotes at the start of an argument
-//         # I'm not sure if this was a bug or not
-//         got_something = False
-//         while True:
-//             match = Deroffer.g_re_not_backslash_or_whitespace.match(self.s)
-//             if match:
-//                 # Output the characters in the match
-//                 self.condputs(match.group(0))
-//                 self.skip_char(match.end(0))
-//                 got_something = True
-//
-//             # Next is either an escape, or whitespace, or the end
-//             # If it's the whitespace or the end, we're done
-//             if not self.s or self.is_white(0):
-//                 return got_something
-//
-//             # Try an escape
-//             if not self.esc_char():
-//                 # Some busted escape? Just output it
-//                 self.condputs(self.str_at(0))
-//                 self.skip_char()
-//                 got_something = True
-
-//     def text_arg2(self):
-//         if not self.esc_char():
-//             if self.s and not self.is_white(0):
-//                 self.condputs(self.str_at(0))
-//                 self.skip_char()
-//             else:
-//                 return False
-//         while True:
-//             if not self.esc_char():
-//                 if self.s and not self.is_white(0):
-//                     self.condputs(self.str_at(0))
-//                     self.skip_char()
-//                 else:
-//                     return True
-
-//         # Update our table, then swap in the slower tr-savvy condputs
-//         try: #Python2
-//             self.tr = string.maketrans(self.tr_from, self.tr_to)
-//         except AttributeError: #Python3
-//             self.tr = "".maketrans(self.tr_from, self.tr_to)
-//         self.condputs = self.condputs_tr
-//         return True
 
 fn request_or_macro(s: &str) -> bool {
     unimplemented!()
 }
-//     def request_or_macro(self):
-//         # s[0] is period or open single quote
-//         self.skip_char()
-//         s0 = self.s[1:2]
-//         if s0 == '\\':
-//             if self.str_at(1) == '"':
-//                 self.condputs('\n')
-//                 return True
-//             else:
-//                 pass
-//         elif s0 == '[':
-//             self.refer = True
-//             self.condputs('\n')
-//             return True
-//         elif s0 == ']':
-//             self.refer = False
-//             self.skip_char()
-//             return self.text()
-//         elif s0 == '.':
-//             self.macro = False
-//             self.condputs('\n')
-//             return True
-//
-//         self.nobody = False
-//         s0s1 = self.s[0:2]
-//
-// RUST NOTE: use Deroffer.g_macro_dispatch(s0s1) which will return like macro_func does below
-//         macro_func = Deroffer.g_macro_dict.get(s0s1, Deroffer.macro_other)
-//         if macro_func(self):
-//             return True
-//
-//         if self.skipheaders and self.nobody: return True
-//
-//         self.skip_leading_whitespace()
-//         while self.s and not self.is_white(0): self.skip_char()
-//         self.skip_leading_whitespace()
-//         while True:
-//             if not self.quoted_arg() and not self.text_arg():
-//                 if self.s:
-//                     self.condputs(self.str_at(0))
-//                     self.skip_char()
-//                 else:
-//                     return True
-
-//     def request_or_macro2(self):
-//         self.skip_char()
-//         s0 = self.s[0:1]
-//         if s0 == '\\':
-//             if self.str_at(1) == '"':
-//                 self.condputs('\n')
-//                 return True
-//             else:
-//                 pass
-//         elif s0 == '[':
-//             self.refer = True
-//             self.condputs('\n')
-//             return True
-//         elif s0 == ']':
-//             self.refer = False
-//             self.skip_char()
-//             return self.text()
-//         elif s0 == '.':
-//             self.macro = False
-//             self.condputs('\n')
-//             return True
-//
-//         self.nobody = False
-//         s0s1 = self.s[0:2]
-//         if s0s1 == 'SH':
-//             for header_str in [' SYNOPSIS', ' "SYNOPSIS', ' ‹BERSICHT', ' "‹BERSICHT']:
-//                 if self.s[2:].startswith(header_str):
-//                     self.inheader = True
-//                     break
-//             else:
-//                 # Did not find a header string
-//                 self.inheader = False
-//                 self.nobody = True
-//         elif s0s1 in ['SS', 'IP', 'H ']:
-//             self.nobody = True
-//         elif s0s1 in ['I ', 'IR', 'IB', 'B ', 'BR', 'BI', 'R ', 'RB', 'RI', 'AB']:
-//             pass
-//         elif s0s1 in ['] ']:
-//             self.refer = False
-//         elif s0s1 in ['PS']:
-//             if self.is_white(2): self.pic = True
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['PE']:
-//             if self.is_white(2): self.pic = False
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['TS']:
-//             if self.is_white(2): self.tbl, self.tblstate = True, self.OPTIONS
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['T&']:
-//             if self.is_white(2): self.tbl, self.tblstate = True, self.FORMAT
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['TE']:
-//             if self.is_white(2): self.tbl = False
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['EQ']:
-//             if self.is_white(2): self.eqn = True
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['EN']:
-//             if self.is_white(2): self.eqn = False
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['R1']:
-//             if self.is_white(2): self.refer2 = True
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['R2']:
-//             if self.is_white(2): self.refer2 = False
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['de']:
-//             macro=True
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['BL', 'VL', 'AL', 'LB', 'RL', 'ML', 'DL']:
-//             if self.is_white(2): self.inlist = True
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['BV']:
-//             if self.str_at(2) == 'L' and self.white(self.str_at(3)): self.inlist = True
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['LE']:
-//             if self.is_white(2): self.inlist = False
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['LP', 'PP', 'P\n']:
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['ds']:
-//             self.skip_char(2)
-//             self.skip_leading_whitespace()
-//             if self.str_at(0):
-//                 # Split at whitespace
-//                 comps = self.s.split(None, 2)
-//                 if len(comps) is 2:
-//                     name, value = comps
-//                     value = value.rstrip()
-//                     self.reg_table[name] = value
-//             self.condputs('\n')
-//             return True
-//         elif s0s1 in ['so', 'nx']:
-//             # We always ignore include directives
-//             # deroff.c for some reason allowed this to fall through to the 'tr' case
-//             # I think that was just a bug so I won't replicate it
-//             return True
-//         elif s0s1 in ['tr']:
-//             self.skip_char(2)
-//             self.skip_leading_whitespace()
-//             while self.s and self.str_at(0) != '\n':
-//                 c = self.str_at(0)
-//                 ns = self.str_at(1)
-//                 self.skip_char(2)
-//                 if not ns or ns == '\n': ns = ' '
-//                 self.tr_from += c
-//                 self.tr_to += ns
-//
-//             # Update our table, then swap in the slower tr-savvy condputs
-//             try: #Python2
-//                 self.tr = string.maketrans(self.tr_from, self.tr_to)
-//             except AttributeError: #Python3
-//                 self.tr = "".maketrans(self.tr_from, self.tr_to)
-//             self.condputs = self.condputs_tr
-//
-//             return True
-//         elif s0s1 in ['sp']:
-//             self.condputs('\n')
-//             return True
-//         else:
-//             self.condputs('\n')
-//             return True
-//
-//         if self.skipheaders and self.nobody: return True
-//
-//         self.skip_leading_whitespace()
-//         while self.s and not self.is_white(0): self.skip_char()
-//         self.skip_leading_whitespace()
-//         while True:
-//             if not self.quoted_arg() and not self.text_arg():
-//                 if self.s:
-//                     self.condputs(self.str_at(0))
-//                     self.skip_char()
-//                 else:
-//                     return True
 
 fn do_tbl(s: &str) -> bool {
     unimplemented!()
