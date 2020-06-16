@@ -1,6 +1,6 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/deroff.py
 /// Deroff, ported from deroff.py, which is ported from the venerable deroff.c
-use libflate::gzip::Decoder;
+use flate2::read::GzDecoder;
 use regex::Regex;
 
 use crate::util::TranslationTable;
@@ -1067,8 +1067,8 @@ fn deroff_files(files: &[String]) -> std::io::Result<()> {
         let mut file = File::open(arg)?;
         let mut string = String::new();
         if arg.ends_with(".gz") {
-            let mut decoder = Decoder::new(file).unwrap();
-            decoder.read_to_string(&mut string);
+            let mut decoder = GzDecoder::new(file);
+            decoder.read_to_string(&mut string)?;
         } else {
             file.read_to_string(&mut string)?;
         }
