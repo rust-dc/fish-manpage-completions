@@ -1286,9 +1286,7 @@ fn parse_manpage_at_path(
         completions.insert_str(0, &comments);
 
         if write_to_stdout {
-            let stdout = io::stdout();
-            let mut stdout = stdout.lock();
-            stdout.write_all(completions.as_bytes())?;
+            io::stdout().lock().write_all(completions.as_bytes())?;
         } else {
             let fullpath = output_directory
                 .join(cmdname.as_ref())
