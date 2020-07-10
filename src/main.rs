@@ -1291,12 +1291,14 @@ fn parse_manpage_at_path(
             let fullpath = output_directory
                 .join(cmdname.as_ref())
                 .with_extension("fish");
-            let file = File::create(fullpath);
-            if file.is_err() {
-                // add_diagnostic(format!("Unable to open file '{}': error({}): {}",
-                // fullpath, errno, strerror));
+            match File::create(fullpath) {
+                Ok(mut file) => file.write_all(completions.as_bytes())?,
+                Err(err) => {
+                    // add_diagnostic(format!("Unable to open file '{}': error({}): {}",
+                    // fullpath, errno, strerror));
+                    return Err(err);
+                }
             }
-            file?.write_all(completions.as_bytes())?;
         }
         // add_diagnostic(format!("{} parsed successfully", manpage_path))
         Ok(true)
