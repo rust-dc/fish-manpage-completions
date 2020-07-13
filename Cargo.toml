@@ -10,10 +10,16 @@ itertools = "*"
 regex = "*"
 lazy_static = "*"
 bstr = "*"
+<<<<<<< HEAD
 libflate = "*"
 encoding = "*"
 bzip2 = "*"
 xz2 = "*"
+=======
+flate2 = "1.0"
+bzip2 = "0.3"
+xz2 = "0.1"
+>>>>>>> ce61b362e284c4a6417e62a6ac9cb6cf9881bbb9
 
 [dev-dependencies]
 pretty_assertions = "*"
