@@ -1568,7 +1568,12 @@ fn parse_and_output_man_pages<P: AsRef<Path>>(
 
     if show_progress
     /* && !WRITE_TO_STDOUT */
-    {}
+    {
+        println!(
+            "Parsing man pages and writing completions to {:?}",
+            output_directory.as_ref()
+        );
+    }
 
     // As far as I can tell, we're fully supporting xz / lzma, so the checks here aren't needed
 
@@ -1639,7 +1644,6 @@ fn parse_and_output_man_pages<P: AsRef<Path>>(
             }
             Err(e) => match e {
                 CompletionsError::IOError(e) => {
-
                     // add diag, io error
                 }
                 _ => {
