@@ -1542,118 +1542,122 @@ fn parse_manpage_at_path<P: AsRef<Path>>(
 #[derive(Copy, Clone, Debug)]
 struct Progress(pub bool);
 
-// TODO Arg/output types?
-fn parse_and_output_man_pages(
-    paths: impl Iterator<Item = PathBuf>,
-    output_directory: PathBuf,
+// Output: Result<cmd_name, error>
+// TODO: Result<cmd_name, CompletionsError>
+fn parse_and_output_man_pages<P: AsRef<Path>>(
+    paths: impl Iterator<Item = P>,
+    output_directory: P,
     Progress(show_progress): Progress,
-) {
-    let mut stdout = std::io::stdout();
-    let mut paths = paths.collect::<Vec<PathBuf>>();
+) -> Result<(), String> {
+    let mut paths = paths
+        .map(|path| path.as_ref().to_owned())
+        .collect::<Vec<_>>();
     paths.sort();
+    paths.dedup();
 
     let total_count = paths.len();
 
-    let mut successful_count = 0;
-    let padding_len = (total_count as f32).log10().ceil() as usize;
+    let (mut successful_count, mut index) = (0, 0);
+
+    let mut cmd_name = "".to_owned();
+
+    // Get the number of digits in total_count
+    let padding_len = (total_count as f32).log(10.) as usize + 1;
+
     let mut last_progress_string_length = 0;
-    if show_progress {
-        println!(
-            "Parsing man pages and writing completions to {}",
-            output_directory.to_string_lossy()
-        );
-    }
 
-    for (index, manpage_path) in paths.iter().enumerate() {
-        // Get the Path from the PathBuf
-        let path = manpage_path.as_path();
+    if show_progress
+    /* && !WRITE_TO_STDOUT */
+    {}
 
-        // Get the man file name from the Path
-        let man_file_name = match path.file_name() {
-            Some(mfn) => mfn,
-            None =>
-            /* add_diag */
-            {
-                continue
-            }
+    // As far as I can tell, we're fully supporting xz / lzma, so the checks here aren't needed
+
+    for manpage_path in paths {
+        index += 1;
+        // foo/bar/gcc.1.gz -> gcc.1.gz
+        // TODO: Expect
+        let man_file_name = manpage_path
+            .file_name()
+            .expect("Failed to get name of manpage path")
+            .to_string_lossy()
+            .to_mut()
+            .to_owned();
+
+        // gcc.1.gz -> gcc
+        cmd_name = match man_file_name.split('.').next() {
+            Some(cmd_name) => cmd_name.to_owned(),
+            None => return Err(format!("Failed to get cmd_name from {}", man_file_name)),
         };
 
-        // Get the command from the Path
-        let cmd_name = match path.file_name() {
-            Some(cnm) => cnm,
-            None =>
-            /* add_diag */
-            {
-                continue
-            }
-        };
-
-        // Create the output file name
-        let output_file_name = format!("{}.fish", cmd_name.to_string_lossy());
-        let output_file_name = Path::new(&output_file_name);
-
-        // Handle progress
         if show_progress {
-            // Create the progress str
-            // "{:0>padding_len$} / {} : {}", index, total_count, man_file_name, padding_len = padding_len
+            // len(str(index))
+            let cur_len = (index as f32).log(10.) as usize + 1;
             let progress_str = format!(
-                "{:0>padding_len$} / {} : {}",
-                index,
+                "  {} / {} : {}",
+                // str(index).rjust(padding_len)
+                format!(
+                    "{}{}",
+                    (0..(padding_len - cur_len)).fold("".to_owned(), |mut acc, _| {
+                        acc.push_str(" ");
+                        acc
+                    }),
+                    index
+                ),
                 total_count,
-                man_file_name.to_string_lossy(),
-                padding_len = padding_len,
+                man_file_name,
             );
 
-            // Pad the right side of the string to overwrite the last output
-            // Pad by n spaces where n is last_progress_str_len
+            // padded_progress_str = progress_str.ljust(last_progress_string_length)
             let padded_progress_str = format!(
-                "{: <last_progress_str_len$}",
+                "{}{}",
                 progress_str,
-                last_progress_str_len = last_progress_string_length,
+                (0..(last_progress_string_length - progress_str.len())).fold(
+                    "".to_owned(),
+                    |mut acc, _| {
+                        acc.push_str(" ");
+                        acc
+                    }
+                )
             );
 
-            // set last_progress_str_len
             last_progress_string_length = progress_str.len();
-            // Write to stdout
+            // TODO: Expects
+            let stdout = std::io::stdout();
+            let mut lock = stdout.lock();
+            lock.write(format!("\r{}\r", padded_progress_str).as_bytes())
+                .expect("Failed to write to stdout");
 
-            // TODO: these unwraps
-            stdout
-                .write(format!("\r{}\r", padded_progress_str).as_bytes())
-                .unwrap();
-            stdout.flush().unwrap();
-
-            // </Handle progress>
+            lock.flush().expect("Failed to flush stdout");
         }
-        // TODO: `skip` is _used_ but is never assigned, see create_manpage_completions.py:917 & 923
 
-        // Write to stdout
-        // if WRITE_TO_STDOUT  {
-
-        // } else {
-        // or create the output path
-        let output_path: PathBuf = [output_directory.as_path(), output_file_name]
-            .iter()
-            .collect();
-
-        // Parse manpage
-        match parse_manpage_at_path(manpage_path, &output_directory) {
-            // if sucessful, increment successful_count
-            Ok(successful) => successful_count += successful as usize,
-            Err(e) => {
-                // TODO: Update this to be good
-                let e: std::io::Error = e.into();
-                eprintln!("Encountered an error: {}", e.into_inner().unwrap());
+        match parse_manpage_at_path(manpage_path, output_directory.as_ref().to_path_buf()) {
+            Ok(successful) => {
+                if successful {
+                    successful_count += 1
+                }
+                // Theres no else here, i assume they just pass over it lol
             }
-        }
-        // }
-        // TODO: flush diag to stderr
+            Err(e) => match e {
+                CompletionsError::IOError(e) => {
+
+                    // add diag, io error
+                }
+                _ => {
+                    // add diag, general error
+                }
+            },
+        };
+
+        // flush diagnostics
     }
 
-    // TODO: This
-    // print a \n
-    // add a diagnostic for how many we did :)
+    // "Newline after loop"
+    println!("");
 
-    // flush diag to stderr
+    // add diagnostic: successfully parsed {} / {} pages, successful_count, total_count
+    // flush diagnostics
+
+    Ok(())
 }
 
 macro_rules! mantypes {
