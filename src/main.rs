@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Read, Write};
+use std::ops::Deref;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -1382,6 +1383,8 @@ fn parse_and_output_man_pages<P: AsRef<Path>>(
     paths: impl Iterator<Item = P>,
     output_directory: P,
     Progress(show_progress): Progress,
+    deroff_only: bool,
+    write_to_stdout: bool,
 ) -> Result<(), String> {
     let mut paths = paths
         .map(|path| path.as_ref().to_owned())
@@ -1400,9 +1403,7 @@ fn parse_and_output_man_pages<P: AsRef<Path>>(
 
     let mut last_progress_string_length = 0;
 
-    if show_progress
-    /* && !WRITE_TO_STDOUT */
-    {
+    if show_progress && !write_to_stdout {
         println!(
             "Parsing man pages and writing completions to {:?}",
             output_directory.as_ref()
@@ -1469,21 +1470,21 @@ fn parse_and_output_man_pages<P: AsRef<Path>>(
             lock.flush().expect("Failed to flush stdout");
         }
 
-        match parse_manpage_at_path(manpage_path, output_directory.as_ref().to_path_buf()) {
+        match parse_manpage_at_path(
+            manpage_path.deref(),
+            output_directory.as_ref(),
+            deroff_only,
+            write_to_stdout,
+        ) {
             Ok(successful) => {
                 if successful {
                     successful_count += 1
                 }
                 // Theres no else here, i assume they just pass over it lol
             }
-            Err(e) => match e {
-                CompletionsError::IOError(e) => {
-                    // add diag, io error
-                }
-                _ => {
-                    // add diag, general error
-                }
-            },
+            Err(e) => {
+                // add diag, io error
+            }
         };
 
         // flush diagnostics
