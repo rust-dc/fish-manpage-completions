@@ -1376,13 +1376,126 @@ fn parse_manpage_at_path(
 #[derive(Copy, Clone, Debug)]
 struct Progress(pub bool);
 
-// TODO Arg/output types?
-fn parse_and_output_man_pages(
-    _paths: impl Iterator<Item = PathBuf>,
-    _output_directory: PathBuf,
-    Progress(_show_progress): Progress,
-) {
-    unimplemented!();
+// Output: Result<cmd_name, error>
+// TODO: Result<cmd_name, CompletionsError>
+fn parse_and_output_man_pages<P: AsRef<Path>>(
+    paths: impl Iterator<Item = P>,
+    output_directory: P,
+    Progress(show_progress): Progress,
+) -> Result<(), String> {
+    let mut paths = paths
+        .map(|path| path.as_ref().to_owned())
+        .collect::<Vec<_>>();
+    paths.sort();
+    paths.dedup();
+
+    let total_count = paths.len();
+
+    let (mut successful_count, mut index) = (0, 0);
+
+    let mut cmd_name = "".to_owned();
+
+    // Get the number of digits in total_count
+    let padding_len = (total_count as f32).log(10.) as usize + 1;
+
+    let mut last_progress_string_length = 0;
+
+    if show_progress
+    /* && !WRITE_TO_STDOUT */
+    {
+        println!(
+            "Parsing man pages and writing completions to {:?}",
+            output_directory.as_ref()
+        );
+    }
+
+    // As far as I can tell, we're fully supporting xz / lzma, so the checks here aren't needed
+
+    for manpage_path in paths {
+        index += 1;
+        // foo/bar/gcc.1.gz -> gcc.1.gz
+        // TODO: Expect
+        let man_file_name = manpage_path
+            .file_name()
+            .expect("Failed to get name of manpage path")
+            .to_string_lossy()
+            .to_mut()
+            .to_owned();
+
+        // gcc.1.gz -> gcc
+        cmd_name = match man_file_name.split('.').next() {
+            Some(cmd_name) => cmd_name.to_owned(),
+            None => return Err(format!("Failed to get cmd_name from {}", man_file_name)),
+        };
+
+        if show_progress {
+            // len(str(index))
+            let cur_len = (index as f32).log(10.) as usize + 1;
+            let progress_str = format!(
+                "  {} / {} : {}",
+                // str(index).rjust(padding_len)
+                format!(
+                    "{}{}",
+                    (0..(padding_len - cur_len)).fold("".to_owned(), |mut acc, _| {
+                        acc.push_str(" ");
+                        acc
+                    }),
+                    index
+                ),
+                total_count,
+                man_file_name,
+            );
+
+            // padded_progress_str = progress_str.ljust(last_progress_string_length)
+            let padded_progress_str = format!(
+                "{}{}",
+                progress_str,
+                (0..(last_progress_string_length - progress_str.len())).fold(
+                    "".to_owned(),
+                    |mut acc, _| {
+                        acc.push_str(" ");
+                        acc
+                    }
+                )
+            );
+
+            last_progress_string_length = progress_str.len();
+            // TODO: Expects
+            let stdout = std::io::stdout();
+            let mut lock = stdout.lock();
+            lock.write(format!("\r{}\r", padded_progress_str).as_bytes())
+                .expect("Failed to write to stdout");
+
+            lock.flush().expect("Failed to flush stdout");
+        }
+
+        match parse_manpage_at_path(manpage_path, output_directory.as_ref().to_path_buf()) {
+            Ok(successful) => {
+                if successful {
+                    successful_count += 1
+                }
+                // Theres no else here, i assume they just pass over it lol
+            }
+            Err(e) => match e {
+                CompletionsError::IOError(e) => {
+                    // add diag, io error
+                }
+                _ => {
+                    // add diag, general error
+                }
+            },
+        };
+
+        // flush diagnostics
+    }
+
+    // "Newline after loop"
+    println!("");
+
+    // add diagnostic: successfully parsed {} / {} pages, successful_count, total_count
+    // flush diagnostics
+
+    Ok(())
 }
 
 macro_rules! mantypes {
