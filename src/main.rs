@@ -1377,11 +1377,7 @@ fn parse_and_output_man_pages(
             );
 
             // padded_progress_str = progress_str.ljust(last_progress_string_length)
-            let padded = format!(
-                "{0:<1$}",
-                progress,
-                last_len.checked_sub(progress.len()).unwrap_or(0)
-            );
+            let padded = format!("{0:<1$}", progress, last_len);
 
             last_len = progress.len();
             // TODO: Expects
