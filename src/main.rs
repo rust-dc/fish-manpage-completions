@@ -1386,20 +1386,25 @@ fn parse_and_output_man_pages(
     deroff_only: bool,
     write_to_stdout: bool,
 ) -> Result<(), String> {
+    // Get the number of digits in num
+    #[inline(always)]
+    fn num_digits(num: usize) -> usize {
+        (num as f32).log(10.) as usize + 1
+    }
+
     let mut paths = paths;
     paths.sort();
     paths.dedup();
 
-    let total_count = paths.len();
+    let total = paths.len();
 
     let (mut successful_count, mut index) = (0, 0);
     // TODO;
     let mut cmd_name = "".to_owned();
 
-    // Get the number of digits in total_count
-    let padding_len = (total_count as f32).log(10.) as usize + 1;
+    let padding = num_digits(total);
 
-    let mut last_progress_string_length = 0;
+    let mut last_len: usize = 0;
 
     if show_progress && !write_to_stdout {
         println!(
@@ -1433,29 +1438,25 @@ fn parse_and_output_man_pages(
             ));
 
         if show_progress {
-            let progress_str = format!(
+            let num_spaces = padding - num_digits(index);
+
+            let progress = format!(
                 "  {0:>1$} / {2} : {3}",
-                index, padding_len, total_count, man_file_name,
+                index, num_spaces, total, man_file_name,
             );
 
             // padded_progress_str = progress_str.ljust(last_progress_string_length)
-            let padded_progress_str = format!(
-                "{}{}",
-                progress_str,
-                (0..(last_progress_string_length - progress_str.len())).fold(
-                    "".to_owned(),
-                    |mut acc, _| {
-                        acc.push_str(" ");
-                        acc
-                    }
-                )
+            let padded = format!(
+                "{0:<1$}",
+                progress,
+                last_len.checked_sub(progress.len()).unwrap_or(0)
             );
 
-            last_progress_string_length = progress_str.len();
+            last_len = progress.len();
             // TODO: Expects
             let stdout = std::io::stdout();
             let mut lock = stdout.lock();
-            lock.write(format!("\r{}\r", padded_progress_str).as_bytes())
+            lock.write(format!("\r{}\r", padded).as_bytes())
                 .expect("Failed to write to stdout");
 
             lock.flush().expect("Failed to flush stdout");
