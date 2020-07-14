@@ -1312,68 +1312,6 @@ fn parse_manpage_at_path(
     }
 }
 
-// def parse_and_output_man_pages(paths, output_directory, show_progress):
-//     global diagnostic_indent, CMDNAME
-//     paths.sort()
-//     total_count = len(paths)
-//     successful_count, index = 0, 0
-//     padding_len = len(str(total_count))
-//     last_progress_string_length = 0
-//     if show_progress and not WRITE_TO_STDOUT:
-//         print("Parsing man pages and writing completions to {0}".format(output_directory))
-//
-//     man_page_suffixes = set([os.path.splitext(m)[1][1:] for m in paths])
-//     lzma_xz_occurs = "xz" in man_page_suffixes or "lzma" in man_page_suffixes
-//     if lzma_xz_occurs and not lzma_available:
-//         add_diagnostic('At least one man page is compressed with lzma or xz, but the "lzma" module is not available.'
-//                        ' Any man page compressed with either will be skipped.',
-//                        NOT_VERBOSE)
-//         flush_diagnostics(sys.stderr)
-//
-//     for manpage_path in paths:
-//         index += 1
-//
-//         # Get the "base" command, e.g. gcc.1.gz -> gcc
-//         man_file_name = os.path.basename(manpage_path)
-//         CMDNAME = man_file_name.split('.', 1)[0]
-//         output_file_name = CMDNAME + '.fish'
-//
-//         # Show progress if we're doing that
-//         if show_progress:
-//             progress_str = '  {0} / {1} : {2}'.format((str(index).rjust(padding_len)), total_count, man_file_name)
-//             # Pad on the right with spaces so we overwrite whatever we wrote last time
-//             padded_progress_str = progress_str.ljust(last_progress_string_length)
-//             last_progress_string_length = len(progress_str)
-//             sys.stdout.write("\r{0}\r".format(padded_progress_str))
-//             sys.stdout.flush()
-//
-//         # Maybe we want to skip this item
-//         skip = False
-//         if not WRITE_TO_STDOUT:
-//             # Compute the path that we would write to
-//             output_path = os.path.join(output_directory, output_file_name)
-//
-//         # Now skip if requested
-//         if skip:
-//             continue
-//
-//         try:
-//             if parse_manpage_at_path(manpage_path, output_directory):
-//                 successful_count += 1
-//         except IOError:
-//             diagnostic_indent = 0
-//             add_diagnostic('Cannot open ' + manpage_path)
-//         except (KeyboardInterrupt, SystemExit):
-//             raise
-//         except:
-//             add_diagnostic('Error parsing %s: %s' % (manpage_path, sys.exc_info()[0]), BRIEF_VERBOSE)
-//             flush_diagnostics(sys.stderr)
-//             traceback.print_exc(file=sys.stderr)
-//         flush_diagnostics(sys.stderr)
-//     print("") #Newline after loop
-//     add_diagnostic("Successfully parsed %d / %d pages" % (successful_count, total_count), BRIEF_VERBOSE)
-//     flush_diagnostics(sys.stderr)
-
 #[derive(Copy, Clone, Debug)]
 struct Progress(pub bool);
 
