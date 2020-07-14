@@ -1327,7 +1327,7 @@ fn parse_and_output_man_pages(
     // Get the number of digits in num
     #[inline(always)]
     fn num_digits(num: usize) -> usize {
-        (num as f32).log(10.) as usize + 1
+        (num as f32).log10() as usize + 1
     }
 
     let mut paths = paths;
