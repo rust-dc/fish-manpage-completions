@@ -1493,7 +1493,7 @@ fn parse_and_output_man_pages<P: AsRef<Path>>(
     // "Newline after loop"
     println!("");
 
-    // add diagnostic: successfully parsed {} / {} pages, successful_count, total_count
+    // add_diagnostic(format!("successfully parsed {} / {} pages", successful_count, total_count), BRIEF_VERBOSE);
     // flush diagnostics
 
     Ok(())
