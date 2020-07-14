@@ -1318,7 +1318,7 @@ struct Progress(pub bool);
 // Output: Result<cmd_name, error>
 // TODO: Result<cmd_name, CompletionsError>
 fn parse_and_output_man_pages(
-    paths: Vec<PathBuf>,
+    paths: &[PathBuf],
     output_directory: PathBuf,
     Progress(show_progress): Progress,
     deroff_only: bool,
@@ -1421,7 +1421,7 @@ fn parse_and_output_man_pages(
     }
 
     // "Newline after loop"
-    println!("");
+    println!();
 
     // add_diagnostic(format!("successfully parsed {} / {} pages", successful_count, total_count), BRIEF_VERBOSE);
     // flush diagnostics
