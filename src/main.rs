@@ -1434,11 +1434,8 @@ fn parse_and_output_man_pages(
 
         if show_progress {
             let progress_str = format!(
-                "  {:>1$} / {} : {}",
-                index,
-                padding_len,
-                total_count,
-                man_file_name,
+                "  {:>1$}{} / {} : {}",
+                index, padding_len, total_count, man_file_name,
             );
 
             // padded_progress_str = progress_str.ljust(last_progress_string_length)
