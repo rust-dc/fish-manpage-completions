@@ -1393,7 +1393,7 @@ fn parse_and_output_man_pages(
     let total_count = paths.len();
 
     let (mut successful_count, mut index) = (0, 0);
-
+    // TODO;
     let mut cmd_name = "".to_owned();
 
     // Get the number of digits in total_count
@@ -1416,16 +1416,21 @@ fn parse_and_output_man_pages(
         // TODO: Expect
         let man_file_name = manpage_path
             .file_name()
-            .expect("Failed to get name of manpage path")
-            .to_string_lossy()
-            .to_mut()
-            .to_owned();
+            .and_then(|fname| Some(fname.to_string_lossy().to_mut().to_owned()))
+            .expect(&format!(
+                "Failed to get manfile name from {:?}",
+                manpage_path
+            ));
 
         // gcc.1.gz -> gcc
-        cmd_name = match man_file_name.split('.').next() {
-            Some(cmd_name) => cmd_name.to_owned(),
-            None => return Err(format!("Failed to get cmd_name from {}", man_file_name)),
-        };
+        cmd_name = man_file_name
+            .split('.')
+            .next()
+            .and_then(|cmd_name| Some(cmd_name.to_owned()))
+            .expect(&format!(
+                "Failed to get command name from {}",
+                man_file_name
+            ));
 
         if show_progress {
             // len(str(index))
