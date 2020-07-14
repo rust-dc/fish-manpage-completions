@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Read, Write};
-use std::ops::Deref;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -1325,10 +1324,7 @@ fn parse_and_output_man_pages(
     write_to_stdout: bool,
 ) {
     // Get the number of digits in num
-    #[inline(always)]
-    fn num_digits(num: usize) -> usize {
-        (num as f32).log10() as usize + 1
-    }
+    let num_digits = |n| (n as f32).log10() as usize + 1;
 
     let mut paths = paths;
     paths.sort();
@@ -1375,11 +1371,9 @@ fn parse_and_output_man_pages(
             ));
 
         if show_progress {
-            let num_spaces = padding - num_digits(index);
-
             let progress = format!(
                 "  {0:>1$} / {2} : {3}",
-                index, num_spaces, total, man_file_name,
+                index, padding, total, man_file_name,
             );
 
             // padded_progress_str = progress_str.ljust(last_progress_string_length)
@@ -1405,12 +1399,8 @@ fn parse_and_output_man_pages(
             deroff_only,
             write_to_stdout,
         ) {
-            Ok(successful) => {
-                if successful {
-                    successful_count += 1
-                }
-                // Theres no else here, i assume they just pass over it lol
-            }
+            Ok(true) => successful_count += 1,
+            Ok(false) => (),
             Err(e) => {
                 // add_diagnostic(format!("Cannot open {}", manpage_path), VERY_VERBOSE)
             }
