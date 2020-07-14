@@ -1379,16 +1379,14 @@ struct Progress(pub bool);
 
 // Output: Result<cmd_name, error>
 // TODO: Result<cmd_name, CompletionsError>
-fn parse_and_output_man_pages<P: AsRef<Path>>(
-    paths: impl Iterator<Item = P>,
-    output_directory: P,
+fn parse_and_output_man_pages(
+    paths: Vec<PathBuf>,
+    output_directory: PathBuf,
     Progress(show_progress): Progress,
     deroff_only: bool,
     write_to_stdout: bool,
 ) -> Result<(), String> {
-    let mut paths = paths
-        .map(|path| path.as_ref().to_owned())
-        .collect::<Vec<_>>();
+    let mut paths = paths;
     paths.sort();
     paths.dedup();
 
@@ -1406,7 +1404,7 @@ fn parse_and_output_man_pages<P: AsRef<Path>>(
     if show_progress && !write_to_stdout {
         println!(
             "Parsing man pages and writing completions to {:?}",
-            output_directory.as_ref()
+            output_directory
         );
     }
 
@@ -1483,7 +1481,7 @@ fn parse_and_output_man_pages<P: AsRef<Path>>(
                 // Theres no else here, i assume they just pass over it lol
             }
             Err(e) => {
-                // add diag, io error
+                // add_diagnostic(format!("Cannot open {}", manpage_path), VERY_VERBOSE)
             }
         };
 
