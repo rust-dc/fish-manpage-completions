@@ -1318,7 +1318,7 @@ struct Progress(pub bool);
 // Output: Result<cmd_name, error>
 // TODO: Result<cmd_name, CompletionsError>
 fn parse_and_output_man_pages(
-    paths: &[PathBuf],
+    paths: &mut [PathBuf],
     output_directory: PathBuf,
     Progress(show_progress): Progress,
     deroff_only: bool,
@@ -1332,7 +1332,6 @@ fn parse_and_output_man_pages(
 
     let mut paths = paths;
     paths.sort();
-    paths.dedup();
 
     let total = paths.len();
 
@@ -1401,7 +1400,7 @@ fn parse_and_output_man_pages(
         }
 
         match parse_manpage_at_path(
-            manpage_path.deref(),
+            &manpage_path,
             output_directory.as_ref(),
             deroff_only,
             write_to_stdout,
