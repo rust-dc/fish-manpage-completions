@@ -1421,7 +1421,7 @@ fn parse_and_output_man_pages(
     }
 
     // "Newline after loop"
-    println!("");
+    println!();
 
     // add_diagnostic(format!("successfully parsed {} / {} pages", successful_count, total_count), BRIEF_VERBOSE);
     // flush diagnostics
