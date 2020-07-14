@@ -1433,19 +1433,10 @@ fn parse_and_output_man_pages(
             ));
 
         if show_progress {
-            // len(str(index))
-            let cur_len = (index as f32).log(10.) as usize + 1;
             let progress_str = format!(
-                "  {} / {} : {}",
-                // str(index).rjust(padding_len)
-                format!(
-                    "{}{}",
-                    (0..(padding_len - cur_len)).fold("".to_owned(), |mut acc, _| {
-                        acc.push_str(" ");
-                        acc
-                    }),
-                    index
-                ),
+                "  {:>1$} / {} : {}",
+                index,
+                padding_len,
                 total_count,
                 man_file_name,
             );
