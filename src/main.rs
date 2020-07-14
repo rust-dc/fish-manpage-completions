@@ -1385,7 +1385,7 @@ fn parse_and_output_man_pages(
     Progress(show_progress): Progress,
     deroff_only: bool,
     write_to_stdout: bool,
-) -> Result<(), String> {
+) {
     // Get the number of digits in num
     #[inline(always)]
     fn num_digits(num: usize) -> usize {
@@ -1487,8 +1487,6 @@ fn parse_and_output_man_pages(
 
     // add_diagnostic(format!("successfully parsed {} / {} pages", successful_count, total_count), BRIEF_VERBOSE);
     // flush diagnostics
-
-    Ok(())
 }
 
 macro_rules! mantypes {
