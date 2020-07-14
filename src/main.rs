@@ -1354,21 +1354,15 @@ fn parse_and_output_man_pages(
         // TODO: Expect
         let man_file_name = manpage_path
             .file_name()
-            .and_then(|fname| Some(fname.to_string_lossy().to_mut().to_owned()))
-            .expect(&format!(
-                "Failed to get manfile name from {:?}",
-                manpage_path
-            ));
+            .map(|fname| fname.to_string_lossy().to_mut().to_owned())
+            .unwrap_or_else(|| panic!("Failed to get manfile name from {:?}", manpage_path));
 
         // gcc.1.gz -> gcc
         cmd_name = man_file_name
             .split('.')
             .next()
-            .and_then(|cmd_name| Some(cmd_name.to_owned()))
-            .expect(&format!(
-                "Failed to get command name from {}",
-                man_file_name
-            ));
+            .map(|cmd_name| cmd_name.to_owned())
+            .unwrap_or_else(|| panic!("Failed to get command name from {}", man_file_name));
 
         if show_progress {
             let progress = format!(
@@ -1383,7 +1377,7 @@ fn parse_and_output_man_pages(
             // TODO: Expects
             let stdout = std::io::stdout();
             let mut lock = stdout.lock();
-            lock.write(format!("\r{}\r", padded).as_bytes())
+            lock.write_all(format!("\r{}\r", padded).as_bytes())
                 .expect("Failed to write to stdout");
 
             lock.flush().expect("Failed to flush stdout");
@@ -1396,7 +1390,7 @@ fn parse_and_output_man_pages(
             write_to_stdout,
         ) {
             Ok(true) => successful_count += 1,
-            Ok(false) => (),
+            Ok(false) => {}
             Err(e) => {
                 // add_diagnostic(format!("Cannot open {}", manpage_path), VERY_VERBOSE)
             }
