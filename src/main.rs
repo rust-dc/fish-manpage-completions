@@ -1325,15 +1325,12 @@ fn test_num_digits() {
     assert_eq!(num_digits(0), 1);
 }
 
-#[derive(Copy, Clone, Debug)]
-struct Progress(pub bool);
-
 // Output: Result<cmd_name, error>
 // TODO: Result<cmd_name, CompletionsError>
 fn parse_and_output_man_pages(
     paths: &mut [PathBuf],
     output_directory: PathBuf,
-    Progress(show_progress): Progress,
+    show_progress: bool,
     deroff_only: bool,
     write_to_stdout: bool,
 ) {
