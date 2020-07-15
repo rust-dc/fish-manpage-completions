@@ -1364,7 +1364,7 @@ fn parse_and_output_man_pages(
         // TODO: Expect
         let man_file_name = manpage_path
             .file_name()
-            .map(|fname| fname.to_string_lossy().to_mut().to_owned())
+            .map(|fname| fname.to_string_lossy())
             .unwrap_or_else(|| panic!("Failed to get manfile name from {:?}", manpage_path));
 
         // gcc.1.gz -> gcc
