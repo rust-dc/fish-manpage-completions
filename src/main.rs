@@ -1341,7 +1341,7 @@ fn parse_and_output_man_pages(
 
     let total = paths.len();
 
-    let (mut successful_count, mut index) = (0, 0);
+    let mut successful_count = 0;
     // TODO;
     let mut cmd_name = "".to_owned();
 
@@ -1358,8 +1358,7 @@ fn parse_and_output_man_pages(
 
     // As far as I can tell, we're fully supporting xz / lzma, so the checks here aren't needed
 
-    for manpage_path in paths {
-        index += 1;
+    for (index, manpage_path) in paths.iter().enumerate() {
         // foo/bar/gcc.1.gz -> gcc.1.gz
         // TODO: Expect
         let man_file_name = manpage_path
