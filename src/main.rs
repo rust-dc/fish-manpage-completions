@@ -1311,6 +1311,19 @@ fn parse_manpage_at_path(
     }
 }
 
+/// Get the number of digits in num
+fn num_digits(n: usize) -> usize {
+    (n as f32).log10() as usize + 1
+}
+
+#[test]
+fn test_num_digits() {
+    assert_eq!(num_digits(1000), 4);
+    assert_eq!(num_digits(100), 3);
+    assert_eq!(num_digits(33), 2);
+    assert_eq!(num_digits(123456789012345), 15);
+}
+
 #[derive(Copy, Clone, Debug)]
 struct Progress(pub bool);
 
@@ -1323,9 +1336,6 @@ fn parse_and_output_man_pages(
     deroff_only: bool,
     write_to_stdout: bool,
 ) {
-    // Get the number of digits in num
-    let num_digits = |n| (n as f32).log10() as usize + 1;
-
     let mut paths = paths;
     paths.sort();
 
