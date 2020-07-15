@@ -1313,7 +1313,7 @@ fn parse_manpage_at_path(
 
 /// Get the number of digits in num
 fn num_digits(n: usize) -> usize {
-    (n as f32).log10() as usize + 1
+    (1.max(n) as f32).log10() as usize + 1
 }
 
 #[test]
@@ -1322,6 +1322,7 @@ fn test_num_digits() {
     assert_eq!(num_digits(100), 3);
     assert_eq!(num_digits(33), 2);
     assert_eq!(num_digits(123456789012345), 15);
+    assert_eq!(num_digits(0), 1);
 }
 
 #[derive(Copy, Clone, Debug)]
