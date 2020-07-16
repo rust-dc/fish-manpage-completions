@@ -505,7 +505,7 @@ impl Deroffer {
 
     fn macro_nm(&mut self) -> bool {
         if self.s == "Nm\n" {
-            self.condputs(self.name);
+            self.condputs(&self.name);
         } else {
             self.name = self.s.get(3..).unwrap_or_default().trim().into();
             self.name.push(' ');
