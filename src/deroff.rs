@@ -980,11 +980,9 @@ impl Deroffer {
         }
     }
 
-    pub fn deroff(&mut self, string: String) {
-        unimplemented!()
-    }
-
     fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
+        println!("{}", self.get_output());
+        write.write(self.get_output().as_bytes()).unwrap();
         write.flush().unwrap()
     }
 
@@ -1028,18 +1026,106 @@ impl Deroffer {
         }
     }
 
-    fn do_line(&self, s: &str) -> bool {
-        match s.chars().nth(0) {
-            Some('.') | Some('\'') => !request_or_macro(s),
-            Some(c) => {
+    fn do_tbl(&mut self) -> bool {
+        match self.tblstate {
+            TblState::Options => {
+                while !self.s.is_empty() && !"\n;".contains(self.str_at(0)) {
+                    self.skip_leading_whitespace();
+
+                    if !self.str_at(0).chars().all(|c| c.is_alphabetic()) {
+                        self.skip_char(1);
+                    } else {
+                        let mut option = self.s.to_owned();
+                        let mut arg = String::new();
+
+                        let mut idx: usize = 0;
+
+                        while option
+                            .get(idx..=idx)
+                            .and_then(|s| Some(s.chars().all(|c| c.is_alphabetic())))
+                            .unwrap_or_default()
+                        {
+                            idx += 1;
+                        }
+
+                        if option.get(idx..=idx) == Some("(") {
+                            option = option.get(..idx).unwrap_or_default().to_owned();
+                            self.s = self.s.get(idx + 1..).unwrap_or_default().to_owned();
+                            arg = self.s.clone();
+                        } else {
+                            self.s = "".to_owned();
+                        }
+
+                        if !arg.is_empty() {
+                            if let Some(idx_) = arg.find("(") {
+                                idx = idx_;
+                                arg = arg.get(..idx).unwrap_or_default().to_owned();
+                            }
+                            self.s = self.s.get(idx + 1..).unwrap_or_default().to_owned();
+                        } else {
+                            // This was commented out in the python, so it is here too :)
+                            // self.skip_char(1);
+                        }
+
+                        if option.to_lowercase() == "tab" {
+                            self.tblTab = arg.get(0..1).unwrap_or_default().to_owned();
+                        }
+                    }
+                }
+                self.tblstate = TblState::Format;
+                self.condputs("\n");
+            }
+            TblState::Format => {
+                while !self.s.is_empty() && !".\n".contains(self.str_at(0)) {
+                    self.skip_leading_whitespace();
+                    if !self.str_at(0).is_empty() {
+                        self.skip_char(1);
+                    }
+                }
+
+                if self.str_at(0) == "." {
+                    self.tblstate = TblState::Data;
+                }
+                self.condputs("\n");
+            }
+            TblState::Data => {
+                if !self.tblTab.is_empty() {
+                    self.s = self.s.replace(&self.tblTab, "\n");
+                }
+
+                self.text();
+            }
+        }
+
+        true
+    }
+
+    fn do_line(&mut self) -> bool {
+        match self.s.chars().nth(0) {
+            Some('.') | Some('\'') => !self.request_or_macro(),
+            Some(_) => {
                 if self.tbl {
-                    do_tbl(s)
+                    self.do_tbl()
                 } else {
-                    text(s)
+                    self.text()
                 }
             }
             None => panic!("do_line` called with empty string as argument"),
         }
+    }
+
+    pub fn deroff(&mut self, s: String) -> bool {
+        let lines = s.split("\n").map(|s| s.to_owned());
+
+        for mut line in lines {
+            line.push('\n');
+            self.s = line;
+            if !self.do_line() {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
@@ -1060,23 +1146,56 @@ fn test_comment() {
     assert_eq!(deroffer.s, "\nworld".to_owned());
 }
 
-fn deroff_files(files: &[String]) -> std::io::Result<()> {
+fn deroff_files<P: AsRef<std::path::Path>, S: ToString>(
+    files: &[S],
+    output_dir: P,
+) -> std::io::Result<()> {
+    let output_path = output_dir.as_ref().to_path_buf();
     for arg in files {
+        let arg = arg.to_string();
         eprintln!("processing deroff file: {}", arg);
 
-        let mut file = File::open(arg)?;
+        let mut file = File::open(&arg)?;
         let mut string = String::new();
         if arg.ends_with(".gz") {
             let mut decoder = GzDecoder::new(file);
             decoder.read_to_string(&mut string)?;
         } else {
-            file.read_to_string(&mut string)?;
+            match file.read_to_string(&mut string) {
+                Err(_) => {
+                    // TODO: This is a _bad_ workaround for latin1, we need to correctly decode input files
+                    let mut bytes = Vec::new();
+                    file.read_to_end(&mut bytes)?;
+
+                    for byte in bytes {
+                        string.push(byte as char);
+                    }
+                }
+                _ => {}
+            };
         }
         let mut d = Deroffer::new();
         println!("string: {}", string);
 
         d.deroff(string);
-        d.flush_output(std::io::stdout());
+
+        let mut output_path = output_path.clone();
+        let mut file_name = std::path::Path::new(&arg)
+            .file_name()
+            .unwrap()
+            .to_owned()
+            .into_string()
+            .unwrap();
+        file_name.push_str(".deroffed");
+        output_path.push(file_name);
+
+        println!("{:?}", output_path);
+        let output_file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(output_path)?;
+
+        d.flush_output(output_file);
     }
     Ok(())
 }
@@ -1313,102 +1432,6 @@ fn test_number() {
     d.s = String::from("+078t");
     assert_eq!(d.number(), true);
 }
-
-//     def spec(self):
-//         self.specletter = False
-//         if self.s[0:2] == '\\(' and self.not_whitespace(2) and self.not_whitespace(3):
-//             key = self.s[2:4]
-//             if key in Deroffer.g_specs_specletter:
-//                 self.condputs(Deroffer.g_specs_specletter[key])
-//                 self.specletter = True
-//             elif key in Deroffer.g_specs:
-//                 self.condputs(Deroffer.g_specs[key])
-//             self.skip_char(4)
-//             return True
-//         elif self.s.startswith('\\%'):
-//             self.specletter = True
-//             self.skip_char(2)
-//             return True
-//         else:
-//             return False
-
-fn text(s: &str) -> bool {
-    unimplemented!()
-}
-
-fn request_or_macro(s: &str) -> bool {
-    unimplemented!()
-}
-
-fn do_tbl(s: &str) -> bool {
-    unimplemented!()
-}
-//     def do_tbl(self):
-//         if self.tblstate == self.OPTIONS:
-//             while self.s and self.str_at(0) != ';' and self.str_at(0) != '\n':
-//                 self.skip_leading_whitespace()
-//                 if not self.str_at(0).isalpha():
-//                     # deroff.c has a bug where it can loop forever here...we try to work around it
-//                     self.skip_char()
-//                 else: # Parse option
-//
-//                     option = self.s
-//                     arg = ''
-//
-//                     idx = 0
-//                     while option[idx:idx+1].isalpha():
-//                         idx += 1
-//
-//                     if option[idx:idx+1] == '(':
-//                         option = option[:idx]
-//                         self.s = self.s[idx+1:]
-//                         arg = self.s
-//                     else:
-//                         self.s = ''
-//
-//                     if arg:
-//                         idx = arg.find(')')
-//                         if idx != -1:
-//                             arg = arg[:idx]
-//                         self.s = self.s[idx+1:]
-//                     else:
-//                         #self.skip_char()
-//                         pass
-//
-//                     if option.lower() == 'tab':
-//                         self.tblTab = arg[0:1]
-//
-//             self.tblstate = self.FORMAT
-//             self.condputs('\n')
-//
-//         elif self.tblstate == self.FORMAT:
-//             while self.s and self.str_at(0) != '.' and self.str_at(0) != '\n':
-//                 self.skip_leading_whitespace()
-//                 if self.str_at(0): self.skip_char()
-//
-//             if self.str_at(0) == '.': self.tblstate = self.DATA
-//             self.condputs('\n')
-//         elif self.tblstate == self.DATA:
-//             if self.tblTab:
-//                 self.s = self.s.replace(self.tblTab, '\t')
-//             self.text()
-//         return True
-
-//     def do_line(self):
-//         if self.s[0:1] in ".'":
-//             if not self.request_or_macro(): return False
-//         elif self.tbl:
-//             self.do_tbl()
-//         else:
-//             self.text()
-//         return True
-
-//     def deroff(self, str):
-//         lines = str.split('\n')
-//         for line in lines:
-//             self.s = line + '\n'
-//             if not self.do_line():
-//                 break
 
 // if __name__ == "__main__":
 //     import gzip
