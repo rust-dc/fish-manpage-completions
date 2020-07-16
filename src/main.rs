@@ -1341,7 +1341,7 @@ fn parse_and_output_man_pages(
 
     let mut successful_count = 0;
     // TODO;
-    let mut cmd_name = "".to_owned();
+    let mut cmd_name = "";
 
     let padding = num_digits(total);
 
@@ -1368,7 +1368,6 @@ fn parse_and_output_man_pages(
         cmd_name = man_file_name
             .split('.')
             .next()
-            .map(|cmd_name| cmd_name.to_owned())
             .unwrap_or_else(|| panic!("Failed to get command name from {}", man_file_name));
 
         if show_progress {
