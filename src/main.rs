@@ -1340,9 +1340,6 @@ fn parse_and_output_man_pages(
     let total = paths.len();
 
     let mut successful_count = 0;
-    // TODO;
-    let mut cmd_name = "";
-
     let padding = num_digits(total);
 
     let mut last_len: usize = 0;
@@ -1365,7 +1362,7 @@ fn parse_and_output_man_pages(
             .unwrap_or_else(|| panic!("Failed to get manfile name from {:?}", manpage_path));
 
         // gcc.1.gz -> gcc
-        cmd_name = man_file_name
+        let cmd_name = man_file_name
             .split('.')
             .next()
             .unwrap_or_else(|| panic!("Failed to get command name from {}", man_file_name));
