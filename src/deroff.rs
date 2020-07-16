@@ -1118,8 +1118,8 @@ impl Deroffer {
     }
 
     fn do_line(&mut self) -> bool {
-        match self.s.chars().nth(0) {
-            Some('.') | Some('\'') => !self.request_or_macro(),
+        match self.s.bytes().next() {
+            Some(b'.') | Some(b'\'') => !self.request_or_macro(),
             Some(_) => {
                 if self.tbl {
                     self.do_tbl()
