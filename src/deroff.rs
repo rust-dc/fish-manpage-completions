@@ -1070,7 +1070,7 @@ impl Deroffer {
                             self.s = self.s.get(idx + 1..).unwrap_or_default().to_owned();
                             arg = self.s.clone();
                         } else {
-                            self.s = "".to_owned();
+                            self.s.clear();
                         }
 
                         if !arg.is_empty() {
