@@ -1060,8 +1060,7 @@ impl Deroffer {
 
                         while option
                             .get(idx..=idx)
-                            .and_then(|s| Some(s.chars().all(|c| c.is_alphabetic())))
-                            .unwrap_or_default()
+                            .map_or(false, |s| s.chars().all(|c| c.is_alphabetic()))
                         {
                             idx += 1;
                         }
