@@ -927,8 +927,28 @@ impl Deroffer {
         }
     }
 
-    fn spec(&self) -> bool {
-        unimplemented!()
+    fn spec(&mut self) -> bool {
+        self.specletter = false;
+
+        if self.s.get(..2) == Some("\\(") && self.not_whitespace(2) && self.not_whitespace(3) {
+            let key = self.s.get(2..4).unwrap_or_default();
+
+            if let Some(value) = Self::g_specs_specletter(key) {
+                self.condputs(value);
+                self.specletter = true;
+            } else if let Some(value) = Self::g_specs(key) {
+                self.condputs(value);
+            }
+
+            self.skip_char(4);
+            true
+        } else if self.s.starts_with("\\%") {
+            self.specletter = true;
+            self.skip_char(2);
+            true
+        } else {
+            false
+        }
     }
 
     fn esc_char_backslash(&mut self) -> bool {
@@ -947,7 +967,7 @@ impl Deroffer {
         }
     }
 
-    /// AKA `not_whitespace`
+    /// AKA `prch`
     fn not_whitespace(&self, idx: usize) -> bool {
         // # Note that this return False for the empty string (idx >= len(self.s))
         // ch = self.s[idx:idx+1]
@@ -981,8 +1001,6 @@ impl Deroffer {
     }
 
     fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
-        println!("{}", self.get_output());
-        write.write(self.get_output().as_bytes()).unwrap();
         write.flush().unwrap()
     }
 
