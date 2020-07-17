@@ -1359,10 +1359,9 @@ fn parse_and_output_man_pages(
             .unwrap_or_else(|| panic!("Failed to get manfile name from {:?}", manpage_path));
 
         // gcc.1.gz -> gcc
-        let cmd_name = man_file_name
-            .split('.')
-            .next()
-            .unwrap(); // `str::split` iterator ALWAYS has a first element by definition
+        
+        // `str::split` iterator ALWAYS has a first element by definition
+        let cmd_name = man_file_name.split('.').next().unwrap(); 
 
         if show_progress && !write_to_stdout {
             let progress = format!(
