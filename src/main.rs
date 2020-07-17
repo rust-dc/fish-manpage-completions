@@ -1365,7 +1365,7 @@ fn parse_and_output_man_pages(
         let cmd_name = man_file_name
             .split('.')
             .next()
-            .unwrap_or_else(|| panic!("Failed to get command name from {}", man_file_name));
+            .unwrap(); // `str::split` iterator ALWAYS has a first element by definition
 
         if show_progress {
             let progress = format!(
