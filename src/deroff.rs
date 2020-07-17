@@ -8,7 +8,7 @@ use std::borrow::Cow;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::Read;
+use std::io::{self, Read};
 
 const SKIP_LISTS: bool = false;
 const SKIP_HEADERS: bool = false;
@@ -1157,57 +1157,23 @@ fn test_comment() {
     assert_eq!(deroffer.s, "\nworld".to_owned());
 }
 
-fn deroff_files<P: AsRef<std::path::Path>, S: ToString>(
-    files: &[S],
-    output_dir: P,
-) -> std::io::Result<()> {
-    let output_path = output_dir.as_ref().to_path_buf();
+fn deroff_files(files: &[String]) -> io::Result<()> {
     for arg in files {
-        let arg = arg.to_string();
-        eprintln!("processing deroff file: {}", arg);
-
-        let mut file = File::open(&arg)?;
+        eprintln!("{}", arg);
+        let mut file = File::open(arg)?;
         let mut string = String::new();
         if arg.ends_with(".gz") {
             let mut decoder = GzDecoder::new(file);
             decoder.read_to_string(&mut string)?;
         } else {
-            match file.read_to_string(&mut string) {
-                Err(_) => {
-                    // TODO: This is a _bad_ workaround for latin1, we need to correctly decode input files
-                    let mut bytes = Vec::new();
-                    file.read_to_end(&mut bytes)?;
-
-                    for byte in bytes {
-                        string.push(byte as char);
-                    }
-                }
-                _ => {}
-            };
+            file.read_to_string(&mut string)?;
         }
-        let mut d = Deroffer::new();
-        println!("string: {}", string);
 
-        d.deroff(string);
-
-        let mut output_path = output_path.clone();
-        let mut file_name = std::path::Path::new(&arg)
-            .file_name()
-            .unwrap()
-            .to_owned()
-            .into_string()
-            .unwrap();
-        file_name.push_str(".deroffed");
-        output_path.push(file_name);
-
-        println!("{:?}", output_path);
-        let output_file = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(output_path)?;
-
-        d.flush_output(output_file);
+        let mut deroffer = Deroffer::new();
+        deroffer.deroff(string);
+        deroffer.flush_output(io::stdout());
     }
+
     Ok(())
 }
 
