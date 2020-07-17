@@ -1075,11 +1075,10 @@ impl Deroffer {
                         }
 
                         if !arg.is_empty() {
-                            if let Some(idx_) = arg.find("(") {
-                                idx = idx_;
+                            if let Some(idx) = arg.find("(") {
                                 arg = arg.get(..idx).unwrap_or_default().to_owned();
+                                self.s.drain(..=idx);
                             }
-                            self.s = self.s.get(idx + 1..).unwrap_or_default().to_owned();
                         } else {
                             // This was commented out in the python, so it is here too :)
                             // self.skip_char(1);
