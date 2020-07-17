@@ -1334,7 +1334,6 @@ fn parse_and_output_man_pages(
     deroff_only: bool,
     write_to_stdout: bool,
 ) {
-    let mut paths = paths;
     paths.sort();
 
     let total = paths.len();
