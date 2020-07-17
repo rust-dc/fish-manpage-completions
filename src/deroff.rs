@@ -1117,31 +1117,26 @@ impl Deroffer {
     }
 
     fn do_line(&mut self) -> bool {
-        match self.s.bytes().next() {
-            Some(b'.') | Some(b'\'') => !self.request_or_macro(),
-            Some(_) => {
+        match self.s.bytes().next().unwrap_or_else(|| unreachable!()) {
+            b'.' | b'\'' => !self.request_or_macro(),
+            _ => {
                 if self.tbl {
                     self.do_tbl()
                 } else {
                     self.text()
                 }
             }
-            None => panic!("do_line` called with empty string as argument"),
         }
     }
 
-    pub fn deroff(&mut self, s: String) -> bool {
-        let lines = s.split("\n").map(|s| s.to_owned());
-
-        for mut line in lines {
-            line.push('\n');
-            self.s = line;
+    pub fn deroff(&mut self, s: String) {
+        let lines = s.split('\n');
+        for line in lines {
+            self.s = line.to_owned() + "\n";
             if !self.do_line() {
-                return false;
+                break;
             }
         }
-
-        true
     }
 }
 
