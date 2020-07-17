@@ -1325,8 +1325,6 @@ fn test_num_digits() {
     assert_eq!(num_digits(0), 1);
 }
 
-// Output: Result<cmd_name, error>
-// TODO: Result<cmd_name, CompletionsError>
 fn parse_and_output_man_pages(
     paths: &mut [PathBuf],
     output_directory: PathBuf,
@@ -1366,7 +1364,7 @@ fn parse_and_output_man_pages(
             .next()
             .unwrap(); // `str::split` iterator ALWAYS has a first element by definition
 
-        if show_progress {
+        if show_progress && !write_to_stdout {
             let progress = format!(
                 "  {0:>1$} / {2} : {3}",
                 index + 1,
