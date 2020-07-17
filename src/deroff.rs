@@ -1060,8 +1060,7 @@ impl Deroffer {
 
                         while option
                             .get(idx..=idx)
-                            .and_then(|s| Some(s.chars().all(|c| c.is_alphabetic())))
-                            .unwrap_or_default()
+                            .map_or(false, |s| s.chars().all(|c| c.is_alphabetic()))
                         {
                             idx += 1;
                         }
@@ -1071,7 +1070,7 @@ impl Deroffer {
                             self.s = self.s.get(idx + 1..).unwrap_or_default().to_owned();
                             arg = self.s.clone();
                         } else {
-                            self.s = "".to_owned();
+                            self.s.clear();
                         }
 
                         if !arg.is_empty() {
@@ -1118,8 +1117,8 @@ impl Deroffer {
     }
 
     fn do_line(&mut self) -> bool {
-        match self.s.chars().nth(0) {
-            Some('.') | Some('\'') => !self.request_or_macro(),
+        match self.s.bytes().next() {
+            Some(b'.') | Some(b'\'') => !self.request_or_macro(),
             Some(_) => {
                 if self.tbl {
                     self.do_tbl()
