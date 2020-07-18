@@ -1050,6 +1050,7 @@ impl Deroffer {
                 while !self.s.is_empty() && !"\n;".contains(self.str_at(0)) {
                     self.skip_leading_whitespace();
 
+                    // Parse option
                     if !self.str_at(0).chars().all(|c| c.is_alphabetic()) {
                         self.skip_char(1);
                     } else {
