@@ -1050,10 +1050,11 @@ impl Deroffer {
                 while !self.s.is_empty() && !"\n;".contains(self.str_at(0)) {
                     self.skip_leading_whitespace();
 
-                    // Parse option
                     if !self.str_at(0).chars().all(|c| c.is_alphabetic()) {
                         self.skip_char(1);
                     } else {
+                        // Parse option
+
                         // find first non-alphabetic character
                         match self.s.chars().position(|c| !c.is_alphabetic()) {
                             Some(idx) if self.s.get(idx..=idx) == Some("(") => {
@@ -1162,6 +1163,16 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_do_tbl() {
+    let mut deroffer = Deroffer::new();
+
+    deroffer.tblstate = TblState::Options;
+}
+
+#[test]
+fn test_spec() {}
 
 #[test]
 fn test_get_output() {
