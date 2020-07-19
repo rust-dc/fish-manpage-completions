@@ -1053,38 +1053,23 @@ impl Deroffer {
                     if !self.str_at(0).chars().all(|c| c.is_alphabetic()) {
                         self.skip_char(1);
                     } else {
-                        let mut option = self.s.to_owned();
-                        let mut arg = String::new();
+                        // find first non-alphabetic character
+                        match self.s.chars().position(|c| !c.is_alphabetic()) {
+                            Some(idx) if self.s.get(idx..=idx) == Some("(") => {
+                                // self.s -> option '(' arg '(' rest
+                                let option = self.s.split_at(idx).0;
+                                let mut iter = self.s.split_at(idx + 1).1.splitn(2, '(');
+                                let arg = iter.next().unwrap_or_default();
+                                let rest = iter.next().unwrap_or_default();
 
-                        let mut idx: usize = 0;
+                                if option.to_lowercase() == "tab" {
+                                    self.tblTab = arg.get(0..1).unwrap_or_default().to_owned();
+                                }
 
-                        while option
-                            .get(idx..=idx)
-                            .map_or(false, |s| s.chars().all(|c| c.is_alphabetic()))
-                        {
-                            idx += 1;
-                        }
-
-                        if option.get(idx..=idx) == Some("(") {
-                            option = option.get(..idx).unwrap_or_default().to_owned();
-                            self.s = self.s.get(idx + 1..).unwrap_or_default().to_owned();
-                            arg = self.s.clone();
-                        } else {
-                            self.s.clear();
-                        }
-
-                        if !arg.is_empty() {
-                            if let Some(idx) = arg.find("(") {
-                                arg = arg.get(..idx).unwrap_or_default().to_owned();
-                                self.s.drain(..=idx);
+                                // Likely faster alternative to self.s = rest
+                                self.s.drain(self.s.len() - rest.len()..);
                             }
-                        } else {
-                            // This was commented out in the python, so it is here too :)
-                            // self.skip_char(1);
-                        }
-
-                        if option.to_lowercase() == "tab" {
-                            self.tblTab = arg.get(0..1).unwrap_or_default().to_owned();
+                            _ => self.s.clear(),
                         }
                     }
                 }
