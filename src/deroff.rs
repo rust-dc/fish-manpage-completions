@@ -1056,8 +1056,8 @@ impl Deroffer {
                         // Parse option
 
                         // find first non-alphabetic character
-                        match self.s.chars().position(|c| !c.is_alphabetic()) {
-                            Some(idx) if self.s.get(idx..=idx) == Some("(") => {
+                        match self.s.char_indices().find(|(_, c)| !c.is_alphabetic()) {
+                            Some((idx, '(')) => {
                                 // self.s -> option '(' arg '(' rest
                                 let option = self.s.split_at(idx).0;
                                 let mut iter = self.s.split_at(idx + 1).1.splitn(2, '(');
@@ -1104,7 +1104,7 @@ impl Deroffer {
     }
 
     fn do_line(&mut self) -> bool {
-        match self.s.bytes().next().unwrap_or_else(|| unreachable!()) {
+        match self.s.bytes().next().expect("`do_line` called when `self.s` was empty") {
             b'.' | b'\'' => !self.request_or_macro(),
             _ => {
                 if self.tbl {
