@@ -1366,27 +1366,55 @@ fn test_esc_char_backslash() {
 
     // Taken from spec
     deroffer.s = "\\(Sdaaaa".into(); // `ð`
-    assert!(deroffer.spec());
+    assert!(deroffer.esc_char_backslash());
     assert!(deroffer.specletter);
     assert_eq!(deroffer.output.take(), "ð");
     assert_eq!(deroffer.s, "aaaa");
 
     // Taken from esc
     deroffer.s = r"\E".into();
-    assert!(deroffer.esc());
+    assert!(deroffer.esc_char_backslash());
     assert_eq!(deroffer.output.take(), "\\");
 
     // This is UB, but it's the same UB as the python
     deroffer.s = "Hello World!".into();
-    assert!(deroffer.esc());
+    assert!(deroffer.esc_char_backslash());
     assert_eq!(deroffer.output.take(), "\\");
 }
 
 #[test]
-fn test_esc_char() {}
+fn test_esc_char() {
+    // Gets passed to esc_char_backslash, stealing one test to make sure it works
+    let mut deroffer = Deroffer::new();
+    deroffer.s = r#"\"This is a comment, it will be ignored"#.into();
+    assert!(deroffer.esc_char());
+    assert!(deroffer.s.is_empty());
+
+    // Will get passed to word, stealing a test
+    deroffer.s = "Hello\\(ps".into();
+    assert!(deroffer.esc_char());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello¶");
+
+    // Will get passed to number, stealing a test
+    deroffer.s = String::from("4343xx7");
+    assert_eq!(deroffer.number(), true);
+    assert_eq!(deroffer.output.take(), "4343".to_string());
+}
 
 #[test]
-fn test_quoted_arg() {}
+fn test_quoted_arg() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = r#""Hello World!""#.into();
+    assert!(deroffer.quoted_arg());
+    assert_eq!(deroffer.s, "\"");
+    assert_eq!(deroffer.output.take(), "Hello World!");
+
+    deroffer.s = r#""Hello\(psWorld""#.into();
+    assert!(deroffer.quoted_arg());
+    assert_eq!(deroffer.s, "\"");
+    assert_eq!(deroffer.output.take(), "Hello¶World");
+}
 
 #[test]
 fn test_do_line() {}
