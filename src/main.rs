@@ -1358,7 +1358,6 @@ fn parse_and_output_man_pages(
 
     for (index, manpage_path) in paths.iter().enumerate() {
         // foo/bar/gcc.1.gz -> gcc.1.gz
-        // TODO: Expect
         let man_file_name = manpage_path
             .file_name()
             .map(|fname| fname.to_string_lossy())
@@ -1379,11 +1378,9 @@ fn parse_and_output_man_pages(
                 man_file_name,
             );
 
-            // padded_progress_str = progress_str.ljust(last_progress_string_length)
             let padded = format!("{0:<1$}", progress, last_len);
 
             last_len = progress.len();
-            // TODO: Expects
             let stdout = std::io::stdout();
             let mut lock = stdout.lock();
             lock.write_all(format!("\r{}\r", padded).as_bytes())
