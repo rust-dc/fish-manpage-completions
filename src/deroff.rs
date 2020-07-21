@@ -1058,9 +1058,9 @@ impl Deroffer {
                         // find first non-alphabetic character
                         match self.s.char_indices().find(|(_, c)| !c.is_alphabetic()) {
                             Some((idx, '(')) => {
-                                // self.s -> option '(' arg '(' rest
+                                // self.s -> option '(' arg ')' rest
                                 let option = &self.s[..idx];
-                                let mut iter = self.s[idx + 1..].splitn(2, '(');
+                                let mut iter = self.s[idx + 1..].splitn(2, ')');
                                 let arg = iter.next().unwrap_or_default();
                                 let rest = iter.next().unwrap_or_default();
 
@@ -1068,8 +1068,7 @@ impl Deroffer {
                                     self.tblTab = arg.get(0..1).unwrap_or_default().to_owned();
                                 }
 
-                                // Likely faster alternative to self.s = rest
-                                self.s.drain(self.s.len() - rest.len()..);
+                                self.s = rest.to_owned();
                             }
                             _ => self.s.clear(),
                         }
@@ -1170,10 +1169,43 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
 }
 
 #[test]
-fn test_do_tbl() {}
+fn test_do_tbl() {
+    // I made this based on the python source to make sure it's doing the right things
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Options;
+
+    deroffer.s = "aaa(bbb);Hello World!".into();
+    assert!(deroffer.do_tbl());
+    assert!(deroffer.tblTab.is_empty());
+    assert_eq!(deroffer.s, ";Hello World!");
+    assert_eq!(deroffer.output.take(), "\n");
+
+    deroffer.s = "aaa bbb);Hello World!".into();
+    assert!(deroffer.do_tbl());
+    assert!(deroffer.tblTab.is_empty());
+    assert!(deroffer.s.is_empty());
+
+    deroffer.s = ";".into();
+    assert!(deroffer.do_tbl());
+    assert!(deroffer.tblTab.is_empty());
+    assert!(deroffer.s.is_empty());
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Format;
+
+    deroffer.s = "".into();
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Data;
+
+    deroffer.s = "".into();
+}
 
 #[test]
 fn test_spec() {
+    // I create new deroffers for each test to reset the shared state
+
     let mut deroffer = Deroffer::new();
     deroffer.s = "\\(Sdaaaa".into(); // `ð`
     assert!(deroffer.spec());
