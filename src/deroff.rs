@@ -56,7 +56,7 @@ impl Deroffer {
             g_re_word: crate::regex!(r##"^[a-zA-Z_]+"##),
             g_re_number: crate::regex!(r##"^[+-]?\d+"##),
             // sequence of not backslash or whitespace
-            g_re_not_backslash_or_whitespace: crate::regex!(r##"[^ \t\n\r\f\v\\]+"##),
+            g_re_not_backslash_or_whitespace: crate::regex!(r##"^[^ \t\n\r\f\v\\]+"##),
             g_re_newline_collapse: crate::regex!(r##"\n{3,}"##),
             g_re_font: crate::regex!(
                 r##"(?x)\\f(     # Starts with backslash f
@@ -707,12 +707,7 @@ impl Deroffer {
         let s0 = self.s.chars().nth(1).unwrap_or('_'); // _ will be ignored by the match
 
         match s0 {
-            '\\' => {
-                if self.str_at(1) == "\"" {
-                    self.condputs("\n");
-                    return true;
-                }
-            }
+            // There was a condition here for `\\`, but it required that s0 was also `"`, so the code was unreachable, I removed it, and I will remove this commment once people see it, just ping me or something.
             '[' => {
                 self.refer = true;
                 self.condputs("\n");
@@ -1181,7 +1176,7 @@ fn test_text_arg() {
 
     let mut deroffer = Deroffer::new();
     deroffer.s = r"\r".into();
-    assert!(deroffer.text_arg());
+    assert!(!deroffer.text_arg());
     assert!(deroffer.s.is_empty());
     assert_eq!(deroffer.output.take(), "r");
 
@@ -1400,6 +1395,39 @@ fn test_quoted_arg() {
 
 #[test]
 fn test_do_line() {}
+
+#[test]
+fn test_request_or_macro() {
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = "'_[Hello".into();
+    assert!(deroffer.request_or_macro());
+    assert!(deroffer.refer);
+    assert!(deroffer.output.take().is_empty());
+    assert_eq!(deroffer.s, "_[Hello");
+
+    deroffer.s = "'_]Hello".into();
+    assert!(deroffer.request_or_macro());
+    assert!(!deroffer.refer);
+    assert!(deroffer.s.is_empty());
+    assert_eq!(deroffer.output.take(), "]Hello");
+
+    deroffer.s = "'_.Hello".into();
+    assert!(deroffer.request_or_macro());
+    assert!(deroffer.r#macro == 0);
+    assert_eq!(deroffer.s, "_.Hello");
+    assert_eq!(deroffer.output.take(), "\n");
+
+    deroffer.s = ".SH".into();
+    assert!(deroffer.request_or_macro());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    deroffer.s = ".] Hello World".into();
+    assert!(deroffer.request_or_macro());
+    assert!(deroffer.s.is_empty());
+    assert_eq!(deroffer.output.take(), "Hello World");
+}
 
 #[test]
 fn test_deroff() {}
