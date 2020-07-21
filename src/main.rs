@@ -1359,7 +1359,6 @@ fn parse_and_output_man_pages(
             .unwrap_or_else(|| panic!("Failed to get manfile name from {:?}", manpage_path));
 
         // gcc.1.gz -> gcc
-
         // `str::split` iterator ALWAYS has a first element by definition
         let cmd_name = man_file_name.split('.').next().unwrap();
 
