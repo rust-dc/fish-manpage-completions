@@ -1187,7 +1187,36 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
 }
 
 #[test]
-fn test_text_arg() {}
+fn test_text_arg() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.text_arg());
+    assert_eq!(deroffer.s, " World!");
+    assert_eq!(deroffer.output.take(), "Hello");
+
+    let mut deroffer = Deroffer::new();
+    assert!(!deroffer.text_arg());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "\t\n\t           \t\n".into();
+    assert!(!deroffer.text_arg());
+    assert_eq!(deroffer.s, "\t\n\t           \t\n");
+    assert!(deroffer.output.take().is_empty());
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = r"\r".into();
+    assert!(deroffer.text_arg());
+    assert!(deroffer.s.is_empty());
+    assert_eq!(deroffer.output.take(), "r");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Applebees".into();
+    assert!(deroffer.text_arg());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Applebees");
+}
 
 #[test]
 fn test_font() {}
