@@ -1102,7 +1102,7 @@ impl Deroffer {
     }
 
     fn do_line(&mut self) -> bool {
-        match self.s.bytes().next().unwrap_or_else(|| unreachable!()) {
+        match self.s.bytes().next().expect("`do_line` called when `self.s` was empty") {
             b'.' | b'\'' => !self.request_or_macro(),
             _ => {
                 if self.tbl {
