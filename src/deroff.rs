@@ -1294,6 +1294,8 @@ fn test_do_tbl() {
 
     deroffer.s = "HelloaWorld!".into();
     assert!(deroffer.do_tbl());
+    assert_eq!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.s, "");
     assert_eq!(deroffer.output.take(), "Hello\tWorld!");
 
     // </Data>
