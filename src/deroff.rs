@@ -1294,13 +1294,9 @@ fn test_do_tbl() {
 
     deroffer.s = "HelloaWorld!".into();
     assert!(deroffer.do_tbl());
-    // This also calls text, so this checks that works correctly
-    // "Hello\tWorld!" passed to self.text
     assert_eq!(deroffer.output.take(), "Hello\tWorld!");
 
     // </Data>
-
-    // TODO: Add tests for the rest of the functions
 }
 
 #[test]
