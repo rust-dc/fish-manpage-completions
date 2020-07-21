@@ -1288,7 +1288,29 @@ fn test_word() {
 }
 
 #[test]
-fn test_text() {}
+fn test_text() {
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello World!");
+
+    deroffer.s = "Hello\tWorld!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello\tWorld!");
+
+    deroffer.s = "Hello\\(psWorld!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello¶World!");
+
+    deroffer.s = "Hello 10 World!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello 10 World!");
+}
 
 #[test]
 fn test_esc_char_backslash() {}
