@@ -1255,7 +1255,35 @@ fn test_size() {
 }
 
 #[test]
-fn test_esc() {}
+fn test_esc() {
+    let mut deroffer = Deroffer::new();
+    assert!(!deroffer.esc());
+
+    // This is UB, but it's the same UB as the python
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "\\");
+
+    deroffer.s = r"\E".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "\\");
+    deroffer.s = r"\t".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "\t");
+
+    deroffer.s = r"\~".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), " ");
+
+    deroffer.s = r"\|".into();
+    assert!(deroffer.esc());
+    assert!(deroffer.output.take().is_empty());
+
+    deroffer.s = r"\apple".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "a");
+    assert_eq!(deroffer.s, "pple");
+}
 
 #[test]
 fn test_word() {}
