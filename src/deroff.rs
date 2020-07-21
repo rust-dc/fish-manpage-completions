@@ -1169,6 +1169,48 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
 }
 
 #[test]
+fn test_text_arg() {}
+
+#[test]
+fn test_font() {}
+
+#[test]
+fn test_numreq() {}
+
+#[test]
+fn test_size() {}
+
+#[test]
+fn test_esc() {}
+
+#[test]
+fn test_word() {}
+
+#[test]
+fn test_text() {}
+
+#[test]
+fn test_esc_char_backslash() {}
+
+#[test]
+fn test_flush_output() {}
+
+#[test]
+fn test_esc_char() {}
+
+#[test]
+fn test_quoted_arg() {}
+
+#[test]
+fn test_do_line() {}
+
+#[test]
+fn test_deroff() {}
+
+#[test]
+fn test_deroff_files() {}
+
+#[test]
 fn test_do_tbl() {
     // I made this based on the python source to make sure it's doing the right things
 
