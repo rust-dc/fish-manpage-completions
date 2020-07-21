@@ -1170,14 +1170,44 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
 }
 
 #[test]
-fn test_do_tbl() {
-    let mut deroffer = Deroffer::new();
-
-    deroffer.tblstate = TblState::Options;
-}
+fn test_do_tbl() {}
 
 #[test]
-fn test_spec() {}
+fn test_spec() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "\\(Sdaaaa".into(); // `ð`
+    assert!(deroffer.spec());
+    assert!(deroffer.specletter);
+    assert_eq!(deroffer.output.take(), "ð");
+    assert_eq!(deroffer.s, "aaaa");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "\\(miaaaa".into(); // `-`
+    assert!(deroffer.spec());
+    assert!(!deroffer.specletter);
+    assert_eq!(deroffer.output.take(), "-");
+    assert_eq!(deroffer.s, "aaaa");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "\\(aaaaaa".into();
+    assert!(deroffer.spec());
+    assert!(!deroffer.specletter);
+    assert!(deroffer.output.take().is_empty());
+    assert_eq!(deroffer.s, "aaaa");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "\\%asdasdasd".into();
+    assert!(deroffer.spec());
+    assert!(deroffer.specletter);
+    assert!(deroffer.output.take().is_empty());
+    assert_eq!(deroffer.s, "asdasdasd");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Hello World!".into();
+    assert!(!deroffer.spec());
+    assert_eq!(deroffer.s, "Hello World!");
+    assert!(deroffer.output.take().is_empty());
+}
 
 #[test]
 fn test_get_output() {
