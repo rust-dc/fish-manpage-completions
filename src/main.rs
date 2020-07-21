@@ -1325,8 +1325,6 @@ fn test_num_digits() {
     assert_eq!(num_digits(0), 1);
 }
 
-// Output: Result<cmd_name, error>
-// TODO: Result<cmd_name, CompletionsError>
 fn parse_and_output_man_pages(
     paths: &mut [PathBuf],
     output_directory: PathBuf,
@@ -1334,15 +1332,11 @@ fn parse_and_output_man_pages(
     deroff_only: bool,
     write_to_stdout: bool,
 ) {
-    let mut paths = paths;
     paths.sort();
 
     let total = paths.len();
 
     let mut successful_count = 0;
-    // TODO;
-    let mut cmd_name = "";
-
     let padding = num_digits(total);
 
     let mut last_len: usize = 0;
@@ -1364,12 +1358,10 @@ fn parse_and_output_man_pages(
             .unwrap_or_else(|| panic!("Failed to get manfile name from {:?}", manpage_path));
 
         // gcc.1.gz -> gcc
-        cmd_name = man_file_name
-            .split('.')
-            .next()
-            .unwrap_or_else(|| panic!("Failed to get command name from {}", man_file_name));
+        // `str::split` iterator ALWAYS has a first element by definition
+        let cmd_name = man_file_name.split('.').next().unwrap();
 
-        if show_progress {
+        if show_progress && !write_to_stdout {
             let progress = format!(
                 "  {0:>1$} / {2} : {3}",
                 index + 1,
