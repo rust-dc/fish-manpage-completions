@@ -1383,9 +1383,6 @@ fn test_esc_char_backslash() {
 }
 
 #[test]
-fn test_flush_output() {}
-
-#[test]
 fn test_esc_char() {}
 
 #[test]
