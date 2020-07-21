@@ -1002,7 +1002,6 @@ impl Deroffer {
     }
 
     fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
-        println!("{}", self.get_output());
         write.write(self.get_output().as_bytes()).unwrap();
         write.flush().unwrap()
     }
