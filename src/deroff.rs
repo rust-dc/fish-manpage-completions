@@ -1096,7 +1096,7 @@ impl Deroffer {
             .next()
             .expect("`do_line` called when `self.s` was empty")
         {
-            b'.' | b'\'' => !self.request_or_macro(),
+            b'.' | b'\'' => self.request_or_macro(),
             _ => {
                 if self.tbl {
                     self.do_tbl()
@@ -1394,7 +1394,29 @@ fn test_quoted_arg() {
 }
 
 #[test]
-fn test_do_line() {}
+fn test_do_line() {
+    let mut deroffer = Deroffer::new();
+
+    // Gets passed to request_or_macro, stealing a test
+    deroffer.s = ".SH".into();
+    assert!(deroffer.do_line());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    // same, to_tbl
+    deroffer.s = "aaa(bbb);Hello World!".into();
+    assert!(deroffer.do_tbl());
+    assert!(deroffer.tblTab.is_empty());
+    assert_eq!(deroffer.s, ";Hello World!");
+    assert_eq!(deroffer.output.take(), "\n");
+    assert_eq!(deroffer.tblstate, TblState::Format);
+
+    // same, text
+    deroffer.s = "Hello\\(psWorld!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello¶World!");
+}
 
 #[test]
 fn test_request_or_macro() {
