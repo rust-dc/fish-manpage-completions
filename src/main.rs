@@ -1348,8 +1348,6 @@ fn parse_and_output_man_pages(
         );
     }
 
-    // As far as I can tell, we're fully supporting xz / lzma, so the checks here aren't needed
-
     for (index, manpage_path) in paths.iter().enumerate() {
         // foo/bar/gcc.1.gz -> gcc.1.gz
         let man_file_name = manpage_path
