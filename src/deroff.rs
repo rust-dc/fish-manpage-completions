@@ -1002,6 +1002,8 @@ impl Deroffer {
     }
 
     fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
+        println!("{}", self.get_output());
+        write.write(self.get_output().as_bytes()).unwrap();
         write.flush().unwrap()
     }
 
@@ -1158,7 +1160,18 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
             let mut decoder = GzDecoder::new(file);
             decoder.read_to_string(&mut string)?;
         } else {
-            file.read_to_string(&mut string)?;
+            match file.read_to_string(&mut string) {
+                Err(_) => {
+                    // TODO: This is a _bad_ workaround for latin1, we need to correctly decode input files
+                    let mut bytes = Vec::new();
+                    file.read_to_end(&mut bytes)?;
+
+                    for byte in bytes {
+                        string.push(byte as char);
+                    }
+                }
+                _ => {}
+            };
         }
 
         let mut deroffer = Deroffer::new();
