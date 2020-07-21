@@ -1059,8 +1059,8 @@ impl Deroffer {
                         match self.s.char_indices().find(|(_, c)| !c.is_alphabetic()) {
                             Some((idx, '(')) => {
                                 // self.s -> option '(' arg '(' rest
-                                let option = self.s.split_at(idx).0;
-                                let mut iter = self.s.split_at(idx + 1).1.splitn(2, '(');
+                                let option = &self.s[..idx];
+                                let mut iter = self.s[idx + 1..].splitn(2, '(');
                                 let arg = iter.next().unwrap_or_default();
                                 let rest = iter.next().unwrap_or_default();
 
