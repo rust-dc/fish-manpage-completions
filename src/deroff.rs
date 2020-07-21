@@ -771,10 +771,7 @@ impl Deroffer {
     }
 
     fn numreq(&mut self) -> bool {
-        // In the python, it has a check that is already handled in esc_char_backslash, which is
-        // the only place it gets called, so I'll omit that check here
-
-        if self.str_at(2) != "'" {
+        if self.str_at(2) != "'" || !"hvwud".contains(self.str_at(1)) {
             return false;
         }
 
@@ -1206,7 +1203,23 @@ fn test_font() {
 }
 
 #[test]
-fn test_numreq() {}
+fn test_numreq() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Hello World!".into();
+    assert!(!deroffer.numreq());
+    assert_eq!(deroffer.s, "Hello World!");
+    assert!(deroffer.output.take().is_empty());
+
+    deroffer.s = r"\w'Apple'".into();
+    assert!(deroffer.numreq());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    deroffer.s = r"\w'Hello\tWorld!'".into();
+    assert!(deroffer.numreq());
+    assert_eq!(deroffer.s, "!'");
+    assert!(deroffer.output.take().is_empty());
+}
 
 #[test]
 fn test_size() {}
