@@ -775,11 +775,6 @@ impl Deroffer {
         // In the python, it has a check that is already handled in esc_char_backslash, which is
         // the only place it gets called, so I'll omit that check here
 
-        // This is written as `self.macro += 1` in the source, but I dont know why
-        // it does the same thing (false -> true, true -> still true) :shrug:
-        // self.r#macro = true;
-        // Upon further investigation, this is the weirdest function ever
-        // This is just a state placeholder thing
         if self.str_at(2) != "'" {
             return false;
         }
@@ -1219,7 +1214,14 @@ fn test_text_arg() {
 }
 
 #[test]
-fn test_font() {}
+fn test_font() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = r"\f(aa)lemon".into();
+    assert!(deroffer.font());
+    assert_eq!(deroffer.s, ")lemon");
+    assert!(!deroffer.font());
+    assert_eq!(deroffer.s, ")lemon");
+}
 
 #[test]
 fn test_numreq() {}
