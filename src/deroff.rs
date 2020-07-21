@@ -1172,6 +1172,8 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
 fn test_do_tbl() {
     // I made this based on the python source to make sure it's doing the right things
 
+    // <Options>
+
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
 
@@ -1181,15 +1183,41 @@ fn test_do_tbl() {
     assert_eq!(deroffer.s, ";Hello World!");
     assert_eq!(deroffer.output.take(), "\n");
 
-    deroffer.s = "aaa bbb);Hello World!".into();
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Options;
+    deroffer.s = "aaa(bbb;Hello World!".into();
     assert!(deroffer.do_tbl());
     assert!(deroffer.tblTab.is_empty());
     assert!(deroffer.s.is_empty());
 
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Options;
     deroffer.s = ";".into();
     assert!(deroffer.do_tbl());
     assert!(deroffer.tblTab.is_empty());
+    assert_eq!(deroffer.s, ";");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Options;
+    deroffer.s = "\n".into();
+    assert!(deroffer.do_tbl());
+    assert!(deroffer.tblTab.is_empty());
+    assert_eq!(deroffer.s, "\n");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Options;
+    assert!(deroffer.do_tbl());
+    assert!(deroffer.tblTab.is_empty());
     assert!(deroffer.s.is_empty());
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Options;
+    deroffer.s = "Tab(arg);".into();
+    assert!(deroffer.do_tbl());
+    assert_eq!(deroffer.tblTab, "a");
+    assert_eq!(deroffer.s, ";");
+
+    // </Options>
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Format;
