@@ -13,6 +13,7 @@ use std::io::{self, Read};
 const SKIP_LISTS: bool = false;
 const SKIP_HEADERS: bool = false;
 
+#[derive(PartialEq, Debug, Clone, Copy)]
 enum TblState {
     Options,
     Format,
@@ -1092,7 +1093,7 @@ impl Deroffer {
             }
             TblState::Data => {
                 if !self.tblTab.is_empty() {
-                    self.s = self.s.replace(&self.tblTab, "\n");
+                    self.s = self.s.replace(&self.tblTab, "\t");
                 }
 
                 self.text();
@@ -1171,6 +1172,7 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
 #[test]
 fn test_do_tbl() {
     // I made this based on the python source to make sure it's doing the right things
+    // also, I create new deroffers for each test to reset the shared state
 
     // <Options>
 
@@ -1182,6 +1184,7 @@ fn test_do_tbl() {
     assert!(deroffer.tblTab.is_empty());
     assert_eq!(deroffer.s, ";Hello World!");
     assert_eq!(deroffer.output.take(), "\n");
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
@@ -1189,6 +1192,7 @@ fn test_do_tbl() {
     assert!(deroffer.do_tbl());
     assert!(deroffer.tblTab.is_empty());
     assert!(deroffer.s.is_empty());
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
@@ -1196,6 +1200,7 @@ fn test_do_tbl() {
     assert!(deroffer.do_tbl());
     assert!(deroffer.tblTab.is_empty());
     assert_eq!(deroffer.s, ";");
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
@@ -1203,6 +1208,7 @@ fn test_do_tbl() {
     assert!(deroffer.do_tbl());
     assert!(deroffer.tblTab.is_empty());
     assert_eq!(deroffer.s, "\n");
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
@@ -1216,18 +1222,68 @@ fn test_do_tbl() {
     assert!(deroffer.do_tbl());
     assert_eq!(deroffer.tblTab, "a");
     assert_eq!(deroffer.s, ";");
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     // </Options>
 
+    // <Format>
+
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Format;
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.do_tbl());
+    assert_ne!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.output.take(), "\n");
+    assert!(deroffer.s.is_empty());
 
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Format;
     deroffer.s = "".into();
+    assert!(deroffer.do_tbl());
+    assert_ne!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.output.take(), "\n");
+    assert!(deroffer.s.is_empty());
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Format;
+    deroffer.s = "Hello World!.foo bar!".into();
+    assert!(deroffer.do_tbl());
+    assert_eq!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.s, ".foo bar!");
+    assert_eq!(deroffer.output.take(), "\n");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Format;
+    deroffer.s = "\n".into();
+    assert!(deroffer.do_tbl());
+    assert_ne!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.s, "\n");
+    assert_eq!(deroffer.output.take(), "\n");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Format;
+    deroffer.s = ".".into();
+    assert!(deroffer.do_tbl());
+    assert_eq!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.s, ".");
+    assert_eq!(deroffer.output.take(), "\n");
+
+    // </Format>
+    // <Data>
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Data;
+    deroffer.tblTab = "a".into();
 
-    deroffer.s = "".into();
+    deroffer.s = "HelloaWorld!".into();
+    assert!(deroffer.do_tbl());
+    // This also calls text, so this checks that works correctly
+    // "Hello\tWorld!" passed to self.text
+    assert_eq!(deroffer.output.take(), "Hello\tWorld!");
+
+    // </Data>
+
+    // TODO: Add tests for the rest of the functions
 }
 
 #[test]
