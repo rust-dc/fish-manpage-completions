@@ -1160,7 +1160,7 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
             decoder.read_to_string(&mut string)?;
         } else {
             match file.read_to_string(&mut string) {
-                Err(_) => {
+                Err(e) if e.kind() == io::ErrorKind::InvalidData => { // not valid UTF-8
                     // TODO: This is a _bad_ workaround for latin1, we need to correctly decode input files
                     let mut bytes = Vec::new();
                     file.read_to_end(&mut bytes)?;
@@ -1169,7 +1169,11 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
                         string.push(byte as char);
                     }
                 }
-                _ => {}
+                Err(e) => {
+                    eprintln!("unknown error {:?}", e);
+                    continue;
+                }
+                Ok(_) => {}
             };
         }
 
