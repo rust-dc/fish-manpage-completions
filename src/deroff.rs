@@ -1222,7 +1222,19 @@ fn test_numreq() {
 }
 
 #[test]
-fn test_size() {}
+fn test_size() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Hello World!".into();
+    assert!(!deroffer.size());
+
+    deroffer.s = r"\s10Hello World!".into();
+    assert!(deroffer.size());
+    assert_eq!(deroffer.s, "Hello World!");
+
+    deroffer.s = r"\s-11 ignore me".into();
+    assert!(deroffer.size());
+    assert_eq!(deroffer.s, " ignore me");
+}
 
 #[test]
 fn test_esc() {}
