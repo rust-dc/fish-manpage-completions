@@ -53,7 +53,7 @@ pub struct Deroffer {
 impl Deroffer {
     pub fn new() -> Deroffer {
         Deroffer {
-            g_re_word: crate::regex!(r##"[a-zA-Z_]+"##),
+            g_re_word: crate::regex!(r##"^[a-zA-Z_]+"##),
             g_re_number: crate::regex!(r##"^[+-]?\d+"##),
             // sequence of not backslash or whitespace
             g_re_not_backslash_or_whitespace: crate::regex!(r##"[^ \t\n\r\f\v\\]+"##),
@@ -1268,7 +1268,24 @@ fn test_esc() {
 }
 
 #[test]
-fn test_word() {}
+fn test_word() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Hello World!".into();
+
+    assert!(deroffer.word());
+    assert_eq!(deroffer.s, " World!");
+    assert_eq!(deroffer.output.take(), "Hello");
+
+    deroffer.s = "Hello\\(ps".into();
+    assert!(deroffer.word());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello¶");
+
+    deroffer.s = "100 thousand".into();
+    assert!(!deroffer.word());
+    assert_eq!(deroffer.s, "100 thousand");
+    assert_eq!(deroffer.output.take(), "");
+}
 
 #[test]
 fn test_text() {}
