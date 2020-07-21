@@ -13,6 +13,7 @@ use std::io::{self, Read};
 const SKIP_LISTS: bool = false;
 const SKIP_HEADERS: bool = false;
 
+#[derive(PartialEq, Debug, Clone, Copy)]
 enum TblState {
     Options,
     Format,
