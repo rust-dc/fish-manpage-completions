@@ -1331,7 +1331,56 @@ fn test_text() {
 }
 
 #[test]
-fn test_esc_char_backslash() {}
+fn test_esc_char_backslash() {
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = r#"\"This is a comment, it will be ignored"#.into();
+    assert!(deroffer.esc_char_backslash());
+    assert!(deroffer.s.is_empty());
+
+    // This gets passed to `font`, so i stole a test from there
+    deroffer.s = r"\f(aa)lemon".into();
+    assert!(deroffer.esc_char_backslash());
+    assert_eq!(deroffer.s, ")lemon");
+
+    // This gets passed to `size`
+    deroffer.s = r"\s-11 ignore me".into();
+    assert!(deroffer.esc_char_backslash());
+    assert_eq!(deroffer.s, " ignore me");
+
+    // You get the idea
+    // Taken from numreq
+    deroffer.s = r"\w'Apple'".into();
+    assert!(deroffer.esc_char_backslash());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    // Taken from var
+    deroffer.s = "\\*[test_reg]".to_owned();
+    deroffer
+        .reg_table
+        .insert("test_reg".to_owned(), "It me!".to_owned());
+    assert!(deroffer.esc_char_backslash());
+    assert_eq!(deroffer.s, " me!");
+    assert!(deroffer.output.take().contains("It"));
+
+    // Taken from spec
+    deroffer.s = "\\(Sdaaaa".into(); // `ð`
+    assert!(deroffer.spec());
+    assert!(deroffer.specletter);
+    assert_eq!(deroffer.output.take(), "ð");
+    assert_eq!(deroffer.s, "aaaa");
+
+    // Taken from esc
+    deroffer.s = r"\E".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "\\");
+
+    // This is UB, but it's the same UB as the python
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "\\");
+}
 
 #[test]
 fn test_flush_output() {}
