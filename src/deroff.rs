@@ -1054,8 +1054,8 @@ impl Deroffer {
                         self.skip_char(1);
                     } else {
                         // find first non-alphabetic character
-                        match self.s.chars().position(|c| !c.is_alphabetic()) {
-                            Some(idx) if self.s.get(idx..=idx) == Some("(") => {
+                        match self.s.char_indices().find(|(_, c)| !c.is_alphabetic()) {
+                            Some((idx, '(')) => {
                                 // self.s -> option '(' arg '(' rest
                                 let option = self.s.split_at(idx).0;
                                 let mut iter = self.s.split_at(idx + 1).1.splitn(2, '(');
