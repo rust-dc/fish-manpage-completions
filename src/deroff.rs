@@ -1296,6 +1296,8 @@ fn test_do_tbl() {
     assert!(deroffer.do_tbl());
     // This also calls text, so this checks that works correctly
     // "Hello\tWorld!" passed to self.text
+    assert_eq!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.s, "");
     assert_eq!(deroffer.output.take(), "Hello\tWorld!");
 
     // </Data>
