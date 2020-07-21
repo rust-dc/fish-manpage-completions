@@ -505,13 +505,13 @@ impl Deroffer {
     }
 
     fn macro_nm(&mut self) -> bool {
-        //def macro_nm(self):
-        //  if self.s == 'Nm\n':
-        //    self.condputs(self.name)
-        //  else:
-        //    self.name = self.s[3:].strip() + ' '
-        //  return True
-        unimplemented!()
+        if self.s == "Nm\n" {
+            self.condputs(&self.name);
+        } else {
+            self.name = self.s.get(3..).unwrap_or_default().trim().into();
+            self.name.push(' ');
+        }
+        true
     }
 
     fn macro_close_bracket(&mut self) -> bool {
