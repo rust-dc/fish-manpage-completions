@@ -13,6 +13,7 @@ use std::io::{self, Read};
 const SKIP_LISTS: bool = false;
 const SKIP_HEADERS: bool = false;
 
+#[derive(PartialEq, Debug, Clone, Copy)]
 enum TblState {
     Options,
     Format,
@@ -1001,6 +1002,7 @@ impl Deroffer {
     }
 
     fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
+        write.write(self.get_output().as_bytes()).unwrap();
         write.flush().unwrap()
     }
 
@@ -1092,7 +1094,7 @@ impl Deroffer {
             }
             TblState::Data => {
                 if !self.tblTab.is_empty() {
-                    self.s = self.s.replace(&self.tblTab, "\n");
+                    self.s = self.s.replace(&self.tblTab, "\t");
                 }
 
                 self.text();
@@ -1157,7 +1159,23 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
             let mut decoder = GzDecoder::new(file);
             decoder.read_to_string(&mut string)?;
         } else {
-            file.read_to_string(&mut string)?;
+            match file.read_to_string(&mut string) {
+                Err(e) if e.kind() == io::ErrorKind::InvalidData => {
+                    // not valid UTF-8
+                    // TODO: This is a _bad_ workaround for latin1, we need to correctly decode input files
+                    let mut bytes = Vec::new();
+                    file.read_to_end(&mut bytes)?;
+
+                    for byte in bytes {
+                        string.push(byte as char);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("unknown error {:?}", e);
+                    continue;
+                }
+                Ok(_) => {}
+            };
         }
 
         let mut deroffer = Deroffer::new();
@@ -1171,6 +1189,7 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
 #[test]
 fn test_do_tbl() {
     // I made this based on the python source to make sure it's doing the right things
+    // also, I create new deroffers for each test to reset the shared state
 
     // <Options>
 
@@ -1182,6 +1201,7 @@ fn test_do_tbl() {
     assert!(deroffer.tblTab.is_empty());
     assert_eq!(deroffer.s, ";Hello World!");
     assert_eq!(deroffer.output.take(), "\n");
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
@@ -1189,6 +1209,7 @@ fn test_do_tbl() {
     assert!(deroffer.do_tbl());
     assert!(deroffer.tblTab.is_empty());
     assert!(deroffer.s.is_empty());
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
@@ -1196,6 +1217,7 @@ fn test_do_tbl() {
     assert!(deroffer.do_tbl());
     assert!(deroffer.tblTab.is_empty());
     assert_eq!(deroffer.s, ";");
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
@@ -1203,6 +1225,7 @@ fn test_do_tbl() {
     assert!(deroffer.do_tbl());
     assert!(deroffer.tblTab.is_empty());
     assert_eq!(deroffer.s, "\n");
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
@@ -1216,18 +1239,66 @@ fn test_do_tbl() {
     assert!(deroffer.do_tbl());
     assert_eq!(deroffer.tblTab, "a");
     assert_eq!(deroffer.s, ";");
+    assert_eq!(deroffer.tblstate, TblState::Format);
 
     // </Options>
 
+    // <Format>
+
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Format;
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.do_tbl());
+    assert_ne!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.output.take(), "\n");
+    assert!(deroffer.s.is_empty());
 
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Format;
     deroffer.s = "".into();
+    assert!(deroffer.do_tbl());
+    assert_ne!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.output.take(), "\n");
+    assert!(deroffer.s.is_empty());
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Format;
+    deroffer.s = "Hello World!.foo bar!".into();
+    assert!(deroffer.do_tbl());
+    assert_eq!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.s, ".foo bar!");
+    assert_eq!(deroffer.output.take(), "\n");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Format;
+    deroffer.s = "\n".into();
+    assert!(deroffer.do_tbl());
+    assert_ne!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.s, "\n");
+    assert_eq!(deroffer.output.take(), "\n");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.tblstate = TblState::Format;
+    deroffer.s = ".".into();
+    assert!(deroffer.do_tbl());
+    assert_eq!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.s, ".");
+    assert_eq!(deroffer.output.take(), "\n");
+
+    // </Format>
+    // <Data>
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Data;
+    deroffer.tblTab = "a".into();
 
-    deroffer.s = "".into();
+    deroffer.s = "HelloaWorld!".into();
+    assert!(deroffer.do_tbl());
+    assert_eq!(deroffer.tblstate, TblState::Data);
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello\tWorld!");
+
+    // </Data>
 }
 
 #[test]
