@@ -705,7 +705,11 @@ impl Deroffer {
     fn request_or_macro(&mut self) -> bool {
         self.skip_char(1);
 
-        let s0 = self.s.chars().nth(1).unwrap_or('_'); // _ will be ignored by the match
+        let s0 = self
+            .s
+            .chars()
+            .nth(1)
+            .unwrap_or(self.s.chars().nth(0).unwrap_or_default());
 
         match s0 {
             '[' => {
@@ -1079,7 +1083,7 @@ impl Deroffer {
             }
             TblState::Data => {
                 if !self.tblTab.is_empty() {
-                    self.s = self.s.replace(&self.tblTab, "\n");
+                    self.s = self.s.replace(&self.tblTab, "\t");
                 }
 
                 self.text();
@@ -1137,7 +1141,7 @@ fn test_comment() {
 
 fn deroff_files(files: &[String]) -> io::Result<()> {
     for arg in files {
-        eprintln!("{}", arg);
+        // eprintln!("{}", arg);
         let mut file = File::open(arg)?;
         let mut string = String::new();
         if arg.ends_with(".gz") {
@@ -1450,12 +1454,199 @@ fn test_request_or_macro() {
     assert!(deroffer.s.is_empty());
     assert_eq!(deroffer.output.take(), "Hello World");
 }
-
 #[test]
-fn test_deroff() {}
+fn test_deroff() -> io::Result<()> {
+    use diff::lines;
+    use git2::Repository;
+    use itertools::izip;
+    use std::{
+        ffi::OsString,
+        fs::{self, read_dir},
+        io::Write,
+        path::{Path, PathBuf},
+    };
 
-#[test]
-fn test_deroff_files() {}
+    const TEST_OUTPUT_DIR: &'static str = "./test_deroff_output";
+
+    // Clear previous test output
+    if Path::new(TEST_OUTPUT_DIR).exists() {
+        fs::remove_dir_all(TEST_OUTPUT_DIR)?;
+    }
+    // Create the output directory
+    fs::create_dir(TEST_OUTPUT_DIR)?;
+
+    // If we don't have the manpages, get them
+    if !Path::new("./manpages").exists() {
+        match Repository::clone("https://github.com/rust-dc/manpages.git", "./manpages") {
+            Err(e) => panic!("Failed to retrieve remote manpages: {}", e),
+            _ => println!("Successfully retrieved remote manpages"),
+        };
+    }
+
+    let stdout = io::stdout();
+    let mut lock = stdout.lock();
+
+    let mut man_file_names: Vec<String> = vec![];
+    let mut manpage_paths: Vec<PathBuf> = vec![];
+
+    for entry in read_dir("./manpages/manpages")? {
+        let entry = entry?;
+        let manpage_path = entry.path();
+
+        man_file_names.push(
+            manpage_path
+                .as_path()
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned(),
+        );
+
+        manpage_paths.push(manpage_path);
+    }
+
+    let mut output_paths = man_file_names
+        .iter()
+        .map(|file_stem| {
+            let mut path_buf = PathBuf::new();
+            path_buf.push(TEST_OUTPUT_DIR);
+            path_buf.push(format!("{}.deroffed", file_stem));
+            path_buf
+        })
+        .collect::<Vec<_>>();
+
+    let mut expected_paths = read_dir("./manpages/deroff")?
+        .map(|entry| entry.unwrap().path())
+        .collect::<Vec<_>>();
+
+    manpage_paths.sort();
+    output_paths.sort();
+    expected_paths.sort();
+
+    // input, output, expected
+    let ioe_paths = izip!(
+        manpage_paths.iter(),
+        output_paths.iter(),
+        expected_paths.iter()
+    );
+
+    let mut utf8_errors = 0;
+    let mut num_bad_files = 0;
+    let mut num_bad_lines: Vec<(PathBuf, usize)> = vec![];
+
+    let mut failed_deroffs = File::create("failed.deroff")?;
+    let mut num_failed = 0;
+    for (input, output, expected) in ioe_paths {
+        if format!("{:?}", input).contains("perl") {
+            continue;
+        }
+        let mut input_str = "".to_owned();
+        let mut input_file = File::open(input.clone())?;
+        match input_file.read_to_string(&mut input_str) {
+            Err(e) if e.kind() == io::ErrorKind::InvalidData => {
+                println!("InvalidData in {:?}", input);
+                utf8_errors += 1;
+                continue;
+            }
+            _ => {}
+        }
+
+        if !format!("{:?}", input).contains(expected.file_stem().unwrap().to_str().unwrap()) {
+            println!("FILES OUT OF ORDER!");
+        }
+
+        let mut expected_str = "".to_owned();
+        let mut expected_file = File::open(expected)?;
+        expected_file.read_to_string(&mut expected_str)?;
+
+        let mut deroffer = Deroffer::new();
+
+        println!("Processing {:?}...", input.clone());
+
+        print!("\tDeroffing... ");
+        lock.flush()?;
+        deroffer.deroff(input_str);
+        println!("ok!");
+
+        print!("\tGetting output... ");
+        lock.flush()?;
+        let output_str = deroffer.get_output();
+        println!("ok!");
+
+        if output_str.chars().all(|c| c.is_whitespace()) {
+            println!("\tDeroff failed, got only whitespace. Adding to failed\n");
+            num_failed += 1;
+            failed_deroffs.write(format!("{}\n", input.to_str().unwrap()).as_bytes())?;
+            continue;
+        }
+
+        print!("\tGetting number of bad lines... ");
+        lock.flush()?;
+        let nbad = lines(&expected_str, &output_str)
+            .iter()
+            .filter(|item| match *item {
+                diff::Result::Both(_, _) => false,
+                diff::Result::Left(diff) => !diff.chars().all(char::is_whitespace),
+                diff::Result::Right(diff) => !diff.chars().all(char::is_whitespace),
+            })
+            .collect::<Vec<_>>()
+            .len();
+        println!(
+            "{}\n",
+            if nbad == 0 {
+                "none!".to_owned()
+            } else {
+                format!("{} :(", nbad)
+            }
+        );
+
+        if nbad != 0 {
+            num_bad_files += 1;
+            num_bad_lines.push((expected.clone(), nbad));
+            let mut output_file = File::create(output)?;
+            output_file.write(output_str.as_bytes())?;
+        }
+    }
+
+    num_bad_lines.sort_by(|(_, a), (_, b)| b.cmp(a));
+    num_bad_lines = num_bad_lines.iter().take(10).cloned().collect();
+    let max_lwidth = num_bad_lines.iter().fold(0usize, |acc, (path, _)| {
+        let new = path.clone().into_os_string().into_string().unwrap().len();
+        if new < acc {
+            acc
+        } else {
+            new
+        }
+    });
+    let max_rwidth = (1.max(num_bad_lines.iter().next().unwrap().1) as f32).log10() as usize + 1;
+    println!("{} deroffs failed :(", num_failed);
+    println!(
+        "{} / {} deroffs were incorrect",
+        num_bad_files,
+        man_file_names.len()
+    );
+    println!(
+        "Average bad lines: {}",
+        num_bad_lines.iter().fold(0, |acc, (_, lines)| acc + lines) as f32 / num_bad_files as f32
+    );
+    println!(
+        "Worst offenders: \n{0:^1$} : {2:^3$}",
+        "Path", max_lwidth, "Num mistakes", max_rwidth
+    );
+    for (path, num_wrong) in num_bad_lines.iter() {
+        println!(
+            "{1:>0$} : {3:<2$}",
+            max_lwidth,
+            path.clone().into_os_string().into_string().unwrap(),
+            max_rwidth,
+            num_wrong
+        )
+    }
+
+    // Cleanup
+    Ok(())
+}
 
 #[test]
 fn test_do_tbl() {
