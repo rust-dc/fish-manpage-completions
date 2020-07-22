@@ -708,7 +708,6 @@ impl Deroffer {
         let s0 = self.s.chars().nth(1).unwrap_or('_'); // _ will be ignored by the match
 
         match s0 {
-            // There was a condition here for `\\`, but it required that s0 was also `"`, so the code was unreachable, I removed it, and I will remove this commment once people see it, just ping me or something.
             '[' => {
                 self.refer = true;
                 self.condputs("\n");
