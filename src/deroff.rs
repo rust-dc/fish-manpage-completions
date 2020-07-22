@@ -766,7 +766,7 @@ impl Deroffer {
     }
 
     fn numreq(&mut self) -> bool {
-        if self.str_at(2) != "'" || !"hvwud".contains(self.str_at(1)) {
+        if !"hvwud".contains(self.str_at(1)) || self.str_at(2) != "'" {
             return false;
         }
 
