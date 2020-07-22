@@ -92,7 +92,13 @@ impl Deroffer {
 
     /// Take the output, leaving the the default value.
     pub fn get_output(&self) -> String {
-        let output = self.output.take();
+        let mut output = self.output.take();
+        while let Some(_) = self.g_re_newline_collapse.find(&output) {
+            output = match self.g_re_newline_collapse.replace_all(&output, "\n") {
+                Cow::Borrowed(_) => output,
+                Cow::Owned(result) => result,
+            };
+        }
         match self.g_re_newline_collapse.replace_all(&output, "\n") {
             Cow::Borrowed(_) => output,
             Cow::Owned(result) => result,
@@ -707,12 +713,11 @@ impl Deroffer {
         let s0 = self.s.chars().nth(1).unwrap_or('_'); // _ will be ignored by the match
 
         match s0 {
-            '\\' => {
-                if self.str_at(1) == "\"" {
-                    self.condputs("\n");
-                    return true;
-                }
+            '\\' if self.s.chars().nth(2) == Some('"') => {
+                self.condputs("\n");
+                return true;
             }
+            // There was a condition here for `\\`, but it required that s0 was also `"`, so the code was unreachable, I removed it, and I will remove this commment once people see it, just ping me or something.
             '[' => {
                 self.refer = true;
                 self.condputs("\n");
@@ -1065,7 +1070,8 @@ impl Deroffer {
                                 let rest = iter.next().unwrap_or_default();
 
                                 if option.to_lowercase() == "tab" {
-                                    self.tblTab = arg.get(0..1).unwrap_or_default().to_owned();
+                                    self.tblTab =
+                                        arg.chars().next().unwrap_or_default().to_string();
                                 }
 
                                 self.s = rest.to_owned();
@@ -1092,7 +1098,7 @@ impl Deroffer {
             }
             TblState::Data => {
                 if !self.tblTab.is_empty() {
-                    self.s = self.s.replace(&self.tblTab, "\n");
+                    self.s = self.s.replace(&self.tblTab, "\t");
                 }
 
                 self.text();
@@ -1122,8 +1128,8 @@ impl Deroffer {
 
     pub fn deroff(&mut self, s: String) {
         let lines = s.split('\n');
-        for line in lines {
-            self.s = line.to_owned() + "\n";
+        for line in lines.filter(|line| !line.chars().all(|c| c.is_whitespace() || c == '.')) {
+            self.s = line.trim().to_owned() + "\n";
             if !self.do_line() {
                 break;
             }
@@ -1513,3 +1519,6 @@ fn test_number() {
 //         p = pstats.Stats('fooprof')
 //         p.sort_stats('time').print_stats(100)
 //         #p.sort_stats('calls').print_callers(.5, 'startswith')
+
+#[test]
+fn test_random() {}

@@ -1647,25 +1647,63 @@ fn program_name() -> String {
 }
 
 fn main() -> Result<(), String> {
-    let opts = Opts::from_args();
+    // let opts = Opts::from_args();
 
-    if opts.completions {
-        Opts::clap().gen_completions_to(
-            program_name(),
-            shell().parse().unwrap(),
-            &mut std::io::stdout(),
-        );
-        return Ok(());
-    }
+    // if opts.completions {
+    //     Opts::clap().gen_completions_to(
+    //         program_name(),
+    //         shell().parse().unwrap(),
+    //         &mut std::io::stdout(),
+    //     );
+    //     return Ok(());
+    // }
 
-    // TODO Make this less special case-y
-    if opts.read_from_stdin() && opts.stdout {
-        let mut stdin = std::io::stdin();
-        let mut stdout = std::io::stdout();
-        let mut app = App::default();
-        return Ok(app.single_man_page(&mut stdin, &mut stdout, "STDIN"));
-    }
+    // // TODO Make this less special case-y
+    // if opts.read_from_stdin() && opts.stdout {
+    //     let mut stdin = std::io::stdin();
+    //     let mut stdout = std::io::stdout();
+    //     let mut app = App::default();
+    //     return Ok(app.single_man_page(&mut stdin, &mut stdout, "STDIN"));
+    // }
 
+    // Ok(())
+    let input = r#".TH PIC 1 "7 November 2018" "Groff Version 1.22.3"
+    .SH NAME
+    pic \- compile pictures for troff or TeX
+    .
+    .
+    .\" --------------------------------------------------------------------
+    .\" License (copying)
+    .\" --------------------------------------------------------------------
+    .
+    .de co
+    Copyright \[co] 1989-2014 Free Software Foundation, Inc.
+    
+    Permission is granted to make and distribute verbatim copies of
+    this manual provided the copyright notice and this permission notice
+    are preserved on all copies.
+    
+    Permission is granted to copy and distribute modified versions of this
+    manual under the conditions for verbatim copying, provided that the
+    entire resulting derived work is distributed under the terms of a
+    permission notice identical to this one.
+    
+    Permission is granted to copy and distribute translations of this
+    manual into another language, under the above conditions for modified
+    versions, except that this permission notice may be included in
+    translations approved by the Free Software Foundation instead of in
+    the original English.
+    ..
+    .
+    .\" --------------------------------------------------------------------
+    .\" Definitions
+    .\" --------------------------------------------------------------------
+    .""#
+    .to_owned();
+
+    let mut deroffer = deroff::Deroffer::new();
+    deroffer.deroff(input);
+    println!("{}", deroffer.get_output());
     Ok(())
 }
 

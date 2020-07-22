@@ -16,3 +16,5 @@ xz2 = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "*"
+git2 = "0.13.7"
+diff = "0.1.12"
