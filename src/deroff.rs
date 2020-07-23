@@ -1235,6 +1235,8 @@ fn test_size() {
     deroffer.s = r"\s-11 ignore me".into();
     assert!(deroffer.size());
     assert_eq!(deroffer.s, " ignore me");
+    
+    assert!(deroffer.output.take().is_empty());
 }
 
 #[test]
