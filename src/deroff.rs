@@ -1273,8 +1273,8 @@ fn test_esc() {
 #[test]
 fn test_word() {
     let mut deroffer = Deroffer::new();
-    deroffer.s = "Hello World!".into();
 
+    deroffer.s = "Hello World!".into();
     assert!(deroffer.word());
     assert_eq!(deroffer.s, " World!");
     assert_eq!(deroffer.output.take(), "Hello");
