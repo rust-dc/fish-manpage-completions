@@ -1438,8 +1438,8 @@ fn test_request_or_macro() {
     deroffer.s = "'_[Hello".into();
     assert!(deroffer.request_or_macro());
     assert!(deroffer.refer);
-    assert!(deroffer.output.take().is_empty());
     assert_eq!(deroffer.s, "_[Hello");
+    assert!(deroffer.output.take().is_empty());
 
     deroffer.s = "'_]Hello".into();
     assert!(deroffer.request_or_macro());
