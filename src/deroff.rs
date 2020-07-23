@@ -1313,6 +1313,11 @@ fn test_text() {
     assert!(deroffer.text());
     assert_eq!(deroffer.s, "");
     assert_eq!(deroffer.output.take(), "Hello 10 World!");
+
+    deroffer.s = "你好世界！".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "你好世界！");
 }
 
 #[test]
