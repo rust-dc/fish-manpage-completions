@@ -703,28 +703,31 @@ impl Deroffer {
     }
 
     fn request_or_macro(&mut self) -> bool {
+        // self.s[0] is a period or open single quote
         self.skip_char(1);
 
-        let s0 = self.s.chars().nth(1).unwrap_or('_'); // _ will be ignored by the match
-
-        match s0 {
-            '[' => {
+        match self.s.chars().nth(1) {
+            Some('\\') if self.str_at(1) == "\"" => {
+                self.condputs("\n");
+                return true;
+            }
+            Some('[') => {
                 self.refer = true;
                 self.condputs("\n");
                 return true;
             }
-            ']' => {
+            Some(']') => {
                 self.refer = false;
                 self.skip_char(1);
                 return self.text();
             }
-            '.' => {
+            Some('.') => {
                 self.r#macro = 0;
                 self.condputs("\n");
                 return true;
             }
-            _ => (),
-        };
+            _ => {}
+        }
 
         self.nobody = false;
         let s0s1 = self.s.chars().take(2).collect::<String>();
@@ -741,9 +744,7 @@ impl Deroffer {
         while !self.s.is_empty() && !self.is_white(0) {
             self.skip_char(1);
         }
-
         self.skip_leading_whitespace();
-
         loop {
             if !self.quoted_arg() && !self.text_arg() {
                 if !self.s.is_empty() {
