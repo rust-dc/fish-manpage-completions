@@ -1185,7 +1185,7 @@ fn test_text_arg() {
     assert!(deroffer.text_arg());
     assert_eq!(deroffer.s, "");
     assert_eq!(deroffer.output.take(), "Applebees");
-    
+
     let mut deroffer = Deroffer::new();
     deroffer.s = "忍一时风平浪静，退一步海阔天空。".into();
     assert!(deroffer.text_arg());
@@ -1235,7 +1235,7 @@ fn test_size() {
     deroffer.s = r"\s-11 ignore me".into();
     assert!(deroffer.size());
     assert_eq!(deroffer.s, " ignore me");
-    
+
     assert!(deroffer.output.take().is_empty());
 }
 
