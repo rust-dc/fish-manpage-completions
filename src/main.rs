@@ -1337,14 +1337,14 @@ fn parse_and_output_man_pages(
     let total = paths.len();
 
     let mut successful_count = 0;
-    let padding = num_digits(total);
+    let max_digits = num_digits(total);
 
     let mut last_len: usize = 0;
 
     if show_progress && !write_to_stdout {
         println!(
-            "Parsing man pages and writing completions to {}",
-            output_directory.as_ref()
+            "Parsing man pages and writing completions to {:?}",
+            output_directory
         );
     }
 
@@ -1353,7 +1353,7 @@ fn parse_and_output_man_pages(
         let man_file_name = manpage_path
             .file_name()
             .map(|fname| fname.to_string_lossy())
-            .unwrap_or_else(|| panic!("Failed to get manfile name from {}", manpage_path.as_ref()));
+            .unwrap_or_else(|| panic!("Failed to get manfile name from {:?}", manpage_path));
 
         // gcc.1.gz -> gcc
         // `str::split` iterator ALWAYS has a first element by definition
@@ -1361,9 +1361,9 @@ fn parse_and_output_man_pages(
 
         if show_progress && !write_to_stdout {
             let progress = format!(
-                "  {0:>1$} / {2} : {3}",
+                "{0:>1$} / {2} : {3}",
                 index + 1,
-                padding,
+                max_digits,
                 total,
                 man_file_name,
             );
