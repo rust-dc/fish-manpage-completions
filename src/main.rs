@@ -1375,7 +1375,6 @@ fn parse_and_output_man_pages(
             let mut lock = stdout.lock();
             lock.write_all(format!("\r\x1b[K{}", padded).as_bytes())
                 .expect("Failed to write to stdout");
-
             lock.flush().expect("Failed to flush stdout");
         }
 
