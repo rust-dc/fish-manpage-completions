@@ -1343,8 +1343,8 @@ fn parse_and_output_man_pages(
 
     if show_progress && !write_to_stdout {
         println!(
-            "Parsing man pages and writing completions to {:?}",
-            output_directory
+            "Parsing man pages and writing completions to {}",
+            output_directory.as_ref()
         );
     }
 
