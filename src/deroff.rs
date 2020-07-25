@@ -707,10 +707,6 @@ impl Deroffer {
         self.skip_char(1);
 
         match self.s.chars().nth(1) {
-            Some('\\') if self.str_at(1) == "\"" => {
-                self.condputs("\n");
-                return true;
-            }
             Some('[') => {
                 self.refer = true;
                 self.condputs("\n");
