@@ -1341,8 +1341,8 @@ fn parse_and_output_man_pages(
 
     if show_progress && !write_to_stdout {
         println!(
-            "Parsing man pages and writing completions to {:?}",
-            output_directory
+            "Parsing man pages and writing completions to {}",
+            output_directory.display()
         );
     }
 
@@ -1351,7 +1351,12 @@ fn parse_and_output_man_pages(
         let man_file_name = manpage_path
             .file_name()
             .map(|fname| fname.to_string_lossy())
-            .unwrap_or_else(|| panic!("Failed to get manfile name from {:?}", manpage_path));
+            .unwrap_or_else(|| {
+                panic!(
+                    "Failed to get manfile name from {:?}",
+                    manpage_path.display()
+                )
+            });
 
         // gcc.1.gz -> gcc
         // `str::split` iterator ALWAYS has a first element by definition
