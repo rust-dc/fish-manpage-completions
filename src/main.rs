@@ -1339,8 +1339,6 @@ fn parse_and_output_man_pages(
     let mut successful_count = 0;
     let max_digits = num_digits(total);
 
-    let mut last_len: usize = 0;
-
     if show_progress && !write_to_stdout {
         println!(
             "Parsing man pages and writing completions to {:?}",
@@ -1368,12 +1366,9 @@ fn parse_and_output_man_pages(
                 man_file_name,
             );
 
-            let padded = format!("{0:<1$}", progress, last_len);
-
-            last_len = progress.len();
             let stdout = std::io::stdout();
             let mut lock = stdout.lock();
-            lock.write_all(format!("\r\x1b[K{}", padded).as_bytes())
+            lock.write_all(format!("\r\x1b[K{}", progress).as_bytes())
                 .expect("Failed to write to stdout");
             lock.flush().expect("Failed to flush stdout");
         }
