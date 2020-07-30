@@ -54,10 +54,10 @@ pub struct Deroffer {
 impl Deroffer {
     pub fn new() -> Deroffer {
         Deroffer {
-            g_re_word: crate::regex!(r##"[a-zA-Z_]+"##),
+            g_re_word: crate::regex!(r##"^[a-zA-Z_]+"##),
             g_re_number: crate::regex!(r##"^[+-]?\d+"##),
             // sequence of not backslash or whitespace
-            g_re_not_backslash_or_whitespace: crate::regex!(r##"[^ \t\n\r\f\v\\]+"##),
+            g_re_not_backslash_or_whitespace: crate::regex!(r##"^[^ \t\n\r\f\v\\]+"##),
             g_re_newline_collapse: crate::regex!(r##"\n{3,}"##),
             g_re_font: crate::regex!(
                 r##"(?x)\\f(     # Starts with backslash f
@@ -708,12 +708,6 @@ impl Deroffer {
         let s0 = self.s.chars().nth(1).unwrap_or('_'); // _ will be ignored by the match
 
         match s0 {
-            '\\' => {
-                if self.str_at(1) == "\"" {
-                    self.condputs("\n");
-                    return true;
-                }
-            }
             '[' => {
                 self.refer = true;
                 self.condputs("\n");
@@ -772,15 +766,7 @@ impl Deroffer {
     }
 
     fn numreq(&mut self) -> bool {
-        // In the python, it has a check that is already handled in esc_char_backslash, which is
-        // the only place it gets called, so I'll omit that check here
-
-        // This is written as `self.macro += 1` in the source, but I dont know why
-        // it does the same thing (false -> true, true -> still true) :shrug:
-        // self.r#macro = true;
-        // Upon further investigation, this is the weirdest function ever
-        // This is just a state placeholder thing
-        if self.str_at(2) != "'" {
+        if !"hvwud".contains(self.str_at(1)) || self.str_at(2) != "'" {
             return false;
         }
 
@@ -1111,7 +1097,7 @@ impl Deroffer {
             .next()
             .expect("`do_line` called when `self.s` was empty")
         {
-            b'.' | b'\'' => !self.request_or_macro(),
+            b'.' | b'\'' => self.request_or_macro(),
             _ => {
                 if self.tbl {
                     self.do_tbl()
@@ -1185,6 +1171,321 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_text_arg() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.text_arg());
+    assert_eq!(deroffer.s, " World!");
+    assert_eq!(deroffer.output.take(), "Hello");
+
+    let mut deroffer = Deroffer::new();
+    assert!(!deroffer.text_arg());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "\t\n\t           \t\n".into();
+    assert!(!deroffer.text_arg());
+    assert_eq!(deroffer.s, "\t\n\t           \t\n");
+    assert!(deroffer.output.take().is_empty());
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = r"\r".into();
+    assert!(!deroffer.text_arg());
+    assert!(deroffer.s.is_empty());
+    assert_eq!(deroffer.output.take(), "r");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Applebees".into();
+    assert!(deroffer.text_arg());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Applebees");
+
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "忍一时风平浪静，退一步海阔天空。".into();
+    assert!(deroffer.text_arg());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "忍一时风平浪静，退一步海阔天空。");
+}
+
+#[test]
+fn test_font() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = r"\f(aa)lemon".into();
+    assert!(deroffer.font());
+    assert_eq!(deroffer.s, ")lemon");
+    assert!(!deroffer.font());
+    assert_eq!(deroffer.s, ")lemon");
+}
+
+#[test]
+fn test_numreq() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Hello World!".into();
+    assert!(!deroffer.numreq());
+    assert_eq!(deroffer.s, "Hello World!");
+    assert!(deroffer.output.take().is_empty());
+
+    deroffer.s = r"\w'Apple'".into();
+    assert!(deroffer.numreq());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    deroffer.s = r"\w'Hello\tWorld!'".into();
+    assert!(deroffer.numreq());
+    assert_eq!(deroffer.s, "!'");
+    assert!(deroffer.output.take().is_empty());
+}
+
+#[test]
+fn test_size() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = "Hello World!".into();
+    assert!(!deroffer.size());
+
+    deroffer.s = r"\s10Hello World!".into();
+    assert!(deroffer.size());
+    assert_eq!(deroffer.s, "Hello World!");
+
+    deroffer.s = r"\s-11 ignore me".into();
+    assert!(deroffer.size());
+    assert_eq!(deroffer.s, " ignore me");
+
+    assert!(deroffer.output.take().is_empty());
+}
+
+#[test]
+fn test_esc() {
+    let mut deroffer = Deroffer::new();
+    assert!(!deroffer.esc());
+
+    // This is UB, but it's the same UB as the python
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "\\");
+
+    deroffer.s = r"\E".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "\\");
+    deroffer.s = r"\t".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "\t");
+
+    deroffer.s = r"\~".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), " ");
+
+    deroffer.s = r"\|".into();
+    assert!(deroffer.esc());
+    assert!(deroffer.output.take().is_empty());
+
+    deroffer.s = r"\apple".into();
+    assert!(deroffer.esc());
+    assert_eq!(deroffer.output.take(), "a");
+    assert_eq!(deroffer.s, "pple");
+}
+
+#[test]
+fn test_word() {
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.word());
+    assert_eq!(deroffer.s, " World!");
+    assert_eq!(deroffer.output.take(), "Hello");
+
+    deroffer.s = "Hello\\(ps".into();
+    assert!(deroffer.word());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello¶");
+
+    deroffer.s = "100 thousand".into();
+    assert!(!deroffer.word());
+    assert_eq!(deroffer.s, "100 thousand");
+    assert_eq!(deroffer.output.take(), "");
+}
+
+#[test]
+fn test_text() {
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello World!");
+
+    deroffer.s = "Hello\tWorld!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello\tWorld!");
+
+    deroffer.s = "Hello\\(psWorld!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello¶World!");
+
+    deroffer.s = "Hello 10 World!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello 10 World!");
+
+    deroffer.s = "你好世界！".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "你好世界！");
+}
+
+#[test]
+fn test_esc_char_backslash() {
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = r#"\"This is a comment, it will be ignored"#.into();
+    assert!(deroffer.esc_char_backslash());
+    assert!(deroffer.s.is_empty());
+
+    // This gets passed to `font`, so i stole a test from there
+    deroffer.s = r"\f(aa)lemon".into();
+    assert!(deroffer.esc_char_backslash());
+    assert_eq!(deroffer.s, ")lemon");
+
+    // This gets passed to `size`
+    deroffer.s = r"\s-11 ignore me".into();
+    assert!(deroffer.esc_char_backslash());
+    assert_eq!(deroffer.s, " ignore me");
+
+    // You get the idea
+    // Taken from numreq
+    deroffer.s = r"\w'Apple'".into();
+    assert!(deroffer.esc_char_backslash());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    // Taken from var
+    deroffer.s = "\\*[test_reg]".to_owned();
+    deroffer
+        .reg_table
+        .insert("test_reg".to_owned(), "It me!".to_owned());
+    assert!(deroffer.esc_char_backslash());
+    assert_eq!(deroffer.s, " me!");
+    assert!(deroffer.output.take().contains("It"));
+
+    // Taken from spec
+    deroffer.s = "\\(Sdaaaa".into(); // `ð`
+    assert!(deroffer.esc_char_backslash());
+    assert!(deroffer.specletter);
+    assert_eq!(deroffer.output.take(), "ð");
+    assert_eq!(deroffer.s, "aaaa");
+
+    // Taken from esc
+    deroffer.s = r"\E".into();
+    assert!(deroffer.esc_char_backslash());
+    assert_eq!(deroffer.output.take(), "\\");
+
+    // This is UB, but it's the same UB as the python
+    deroffer.s = "Hello World!".into();
+    assert!(deroffer.esc_char_backslash());
+    assert_eq!(deroffer.output.take(), "\\");
+}
+
+#[test]
+fn test_esc_char() {
+    // Gets passed to esc_char_backslash, stealing one test to make sure it works
+    let mut deroffer = Deroffer::new();
+    deroffer.s = r#"\"This is a comment, it will be ignored"#.into();
+    assert!(deroffer.esc_char());
+    assert!(deroffer.s.is_empty());
+
+    // Will get passed to word, stealing a test
+    deroffer.s = "Hello\\(ps".into();
+    assert!(deroffer.esc_char());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello¶");
+
+    // Will get passed to number, stealing a test
+    deroffer.s = String::from("4343xx7");
+    assert_eq!(deroffer.number(), true);
+    assert_eq!(deroffer.output.take(), "4343".to_string());
+}
+
+#[test]
+fn test_quoted_arg() {
+    let mut deroffer = Deroffer::new();
+    deroffer.s = r#""Hello World!""#.into();
+    assert!(deroffer.quoted_arg());
+    assert_eq!(deroffer.s, "\"");
+    assert_eq!(deroffer.output.take(), "Hello World!");
+
+    deroffer.s = r#""Hello\(psWorld""#.into();
+    assert!(deroffer.quoted_arg());
+    assert_eq!(deroffer.s, "\"");
+    assert_eq!(deroffer.output.take(), "Hello¶World");
+}
+
+#[test]
+fn test_do_line() {
+    let mut deroffer = Deroffer::new();
+
+    // Gets passed to request_or_macro, stealing a test
+    deroffer.s = ".SH".into();
+    assert!(deroffer.do_line());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    // same, to_tbl
+    deroffer.s = "aaa(bbb);Hello World!".into();
+    assert!(deroffer.do_tbl());
+    assert!(deroffer.tblTab.is_empty());
+    assert_eq!(deroffer.s, ";Hello World!");
+    assert_eq!(deroffer.output.take(), "\n");
+    assert_eq!(deroffer.tblstate, TblState::Format);
+
+    // same, text
+    deroffer.s = "Hello\\(psWorld!".into();
+    assert!(deroffer.text());
+    assert_eq!(deroffer.s, "");
+    assert_eq!(deroffer.output.take(), "Hello¶World!");
+}
+
+#[test]
+fn test_request_or_macro() {
+    let mut deroffer = Deroffer::new();
+
+    deroffer.s = "'_[Hello".into();
+    assert!(deroffer.request_or_macro());
+    assert!(deroffer.refer);
+    assert_eq!(deroffer.s, "_[Hello");
+    assert!(deroffer.output.take().is_empty());
+
+    deroffer.s = "'_]Hello".into();
+    assert!(deroffer.request_or_macro());
+    assert!(!deroffer.refer);
+    assert!(deroffer.s.is_empty());
+    assert_eq!(deroffer.output.take(), "]Hello");
+
+    deroffer.s = "'_.Hello".into();
+    assert!(deroffer.request_or_macro());
+    assert!(deroffer.r#macro == 0);
+    assert_eq!(deroffer.s, "_.Hello");
+    assert_eq!(deroffer.output.take(), "\n");
+
+    deroffer.s = ".SH".into();
+    assert!(deroffer.request_or_macro());
+    assert!(deroffer.s.is_empty());
+    assert!(deroffer.output.take().is_empty());
+
+    deroffer.s = ".] Hello World".into();
+    assert!(deroffer.request_or_macro());
+    assert!(deroffer.s.is_empty());
+    assert_eq!(deroffer.output.take(), "Hello World");
+}
+
+#[test]
+fn test_deroff() {}
+
+#[test]
+fn test_deroff_files() {}
 
 #[test]
 fn test_do_tbl() {
