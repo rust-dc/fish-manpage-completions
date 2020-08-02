@@ -83,3 +83,35 @@ fn test_translationtable_translate() {
         "This h is a helicopter!".to_owned(),
     )
 }
+
+// Tries to guess the encoding, not perfect but does it's job
+pub fn decode_bytes<Bytes: Into<Vec<u8>>>(bytes: Bytes) -> Option<String> {
+    let bytes = bytes.into();
+    let (label, confidence, _) = chardet::detect(&bytes);
+
+    println!("Trying to decode with {}", label);
+    if confidence < 0.5 {
+        // TODO: What should we do here?
+        eprintln!("low confidence ({})", confidence);
+    }
+
+    let encoding = encoding_rs::Encoding::for_label(label.as_bytes())?;
+
+    let (output, had_misses) = encoding.decode_with_bom_removal(&bytes);
+    if had_misses {
+        // TODO: What should we do here?
+        eprintln!("Had misses :(");
+    }
+    Some(output.into_owned())
+}
+
+#[test]
+fn test_decode_bytes() {
+    // TODO: Add more tests, pls be forgiving, it's not perfect, it's a guess
+    // better than nothing ?
+    let bytes = (0xB0..=0xEF).collect::<Vec<u8>>();
+    assert_eq!(
+        decode_bytes(bytes).unwrap(),
+        "АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюя"
+    );
+}

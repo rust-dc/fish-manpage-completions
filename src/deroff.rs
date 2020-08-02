@@ -1145,25 +1145,21 @@ fn deroff_files(files: &[String]) -> io::Result<()> {
             let mut decoder = GzDecoder::new(file);
             decoder.read_to_string(&mut string)?;
         } else {
-            match file.read_to_string(&mut string) {
-                Err(e) if e.kind() == io::ErrorKind::InvalidData => {
-                    // not valid UTF-8
-                    // TODO: This is a _bad_ workaround for latin1, we need to correctly decode input files
-                    let mut bytes = Vec::new();
-                    file.read_to_end(&mut bytes)?;
+            let mut bytes = Vec::new();
+            file.read_to_end(&mut bytes)?;
 
-                    for byte in bytes {
-                        string.push(byte as char);
+            match String::from_utf8(bytes.clone()) {
+                Ok(s) => string = s,
+                Err(e) => {
+                    // If UTF-8 Decoding failed, pass the work to encoding_rs_io
+                    println!("Unknown encoding, trying to decode");
+                    match crate::util::decode_bytes(bytes) {
+                        Some(s) => string = s,
+                        None => return Err(io::Error::new(io::ErrorKind::InvalidData, e)),
                     }
                 }
-                Err(e) => {
-                    eprintln!("unknown error {:?}", e);
-                    continue;
-                }
-                Ok(_) => {}
             };
         }
-
         let mut deroffer = Deroffer::new();
         deroffer.deroff(string);
         deroffer.flush_output(io::stdout());
