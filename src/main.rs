@@ -1348,78 +1348,94 @@ fn parse_manpage_at_path(
     }
 }
 
-// def parse_and_output_man_pages(paths, output_directory, show_progress):
-//     global diagnostic_indent, CMDNAME
-//     paths.sort()
-//     total_count = len(paths)
-//     successful_count, index = 0, 0
-//     padding_len = len(str(total_count))
-//     last_progress_string_length = 0
-//     if show_progress and not WRITE_TO_STDOUT:
-//         print("Parsing man pages and writing completions to {0}".format(output_directory))
-//
-//     man_page_suffixes = set([os.path.splitext(m)[1][1:] for m in paths])
-//     lzma_xz_occurs = "xz" in man_page_suffixes or "lzma" in man_page_suffixes
-//     if lzma_xz_occurs and not lzma_available:
-//         add_diagnostic('At least one man page is compressed with lzma or xz, but the "lzma" module is not available.'
-//                        ' Any man page compressed with either will be skipped.',
-//                        NOT_VERBOSE)
-//         flush_diagnostics(sys.stderr)
-//
-//     for manpage_path in paths:
-//         index += 1
-//
-//         # Get the "base" command, e.g. gcc.1.gz -> gcc
-//         man_file_name = os.path.basename(manpage_path)
-//         CMDNAME = man_file_name.split('.', 1)[0]
-//         output_file_name = CMDNAME + '.fish'
-//
-//         # Show progress if we're doing that
-//         if show_progress:
-//             progress_str = '  {0} / {1} : {2}'.format((str(index).rjust(padding_len)), total_count, man_file_name)
-//             # Pad on the right with spaces so we overwrite whatever we wrote last time
-//             padded_progress_str = progress_str.ljust(last_progress_string_length)
-//             last_progress_string_length = len(progress_str)
-//             sys.stdout.write("\r{0}\r".format(padded_progress_str))
-//             sys.stdout.flush()
-//
-//         # Maybe we want to skip this item
-//         skip = False
-//         if not WRITE_TO_STDOUT:
-//             # Compute the path that we would write to
-//             output_path = os.path.join(output_directory, output_file_name)
-//
-//         # Now skip if requested
-//         if skip:
-//             continue
-//
-//         try:
-//             if parse_manpage_at_path(manpage_path, output_directory):
-//                 successful_count += 1
-//         except IOError:
-//             diagnostic_indent = 0
-//             add_diagnostic('Cannot open ' + manpage_path)
-//         except (KeyboardInterrupt, SystemExit):
-//             raise
-//         except:
-//             add_diagnostic('Error parsing %s: %s' % (manpage_path, sys.exc_info()[0]), BRIEF_VERBOSE)
-//             flush_diagnostics(sys.stderr)
-//             traceback.print_exc(file=sys.stderr)
-//         flush_diagnostics(sys.stderr)
-//     print("") #Newline after loop
-//     add_diagnostic("Successfully parsed %d / %d pages" % (successful_count, total_count), BRIEF_VERBOSE)
-//     flush_diagnostics(sys.stderr)
+/// Get the number of digits in num
+fn num_digits(n: usize) -> usize {
+    (1.max(n) as f32).log10() as usize + 1
+}
 
-#[derive(Copy, Clone, Debug)]
-struct Progress(pub bool);
+#[test]
+fn test_num_digits() {
+    assert_eq!(num_digits(1000), 4);
+    assert_eq!(num_digits(100), 3);
+    assert_eq!(num_digits(33), 2);
+    assert_eq!(num_digits(123456789012345), 15);
+    assert_eq!(num_digits(0), 1);
+}
 
-// TODO Arg/output types?
 fn parse_and_output_man_pages(
-    _paths: impl Iterator<Item = PathBuf>,
-    _output_directory: PathBuf,
-    Progress(_show_progress): Progress,
+    paths: &mut [PathBuf],
+    output_directory: PathBuf,
+    show_progress: bool,
+    deroff_only: bool,
+    write_to_stdout: bool,
 ) {
-    unimplemented!();
+    paths.sort();
+
+    let total = paths.len();
+
+    let mut successful_count = 0;
+    let max_digits = num_digits(total);
+
+    if show_progress && !write_to_stdout {
+        println!(
+            "Parsing man pages and writing completions to {}",
+            output_directory.display()
+        );
+    }
+
+    for (index, manpage_path) in paths.iter().enumerate() {
+        // foo/bar/gcc.1.gz -> gcc.1.gz
+        let man_file_name = manpage_path
+            .file_name()
+            .map(|fname| fname.to_string_lossy())
+            .unwrap_or_else(|| {
+                panic!(
+                    "Failed to get manfile name from {:?}",
+                    manpage_path.display()
+                )
+            });
+
+        // gcc.1.gz -> gcc
+        // `str::split` iterator ALWAYS has a first element by definition
+        let cmd_name = man_file_name.split('.').next().unwrap();
+
+        if show_progress && !write_to_stdout {
+            let progress = format!(
+                "{0:>1$} / {2} : {3}",
+                index + 1,
+                max_digits,
+                total,
+                man_file_name,
+            );
+
+            let stdout = std::io::stdout();
+            let mut lock = stdout.lock();
+            lock.write_all(format!("\r\x1b[K{}", progress).as_bytes())
+                .expect("Failed to write to stdout");
+            lock.flush().expect("Failed to flush stdout");
+        }
+
+        match parse_manpage_at_path(
+            &manpage_path,
+            output_directory.as_ref(),
+            deroff_only,
+            write_to_stdout,
+        ) {
+            Ok(true) => successful_count += 1,
+            Ok(false) => {}
+            Err(e) => {
+                // add_diagnostic(format!("Cannot open {}", manpage_path), VERY_VERBOSE)
+            }
+        };
+
+        // flush diagnostics
+    }
+
+    // "Newline after loop"
+    println!();
+
+    // add_diagnostic(format!("successfully parsed {} / {} pages", successful_count, total_count), BRIEF_VERBOSE);
+    // flush diagnostics
 }
 
 macro_rules! mantypes {
