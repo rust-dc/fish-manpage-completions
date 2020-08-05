@@ -1505,16 +1505,18 @@ fn test_deroff() -> io::Result<()> {
     // Create the output directory
     fs::create_dir(TEST_OUTPUT_DIR)?;
 
-    // If we don't have the manpages, get them
-    if !Path::new("./manpages").exists() {
-        match Repository::clone("https://github.com/rust-dc/manpages.git", "./manpages") {
-            Err(e) => panic!("Failed to retrieve remote manpages: {}", e),
-            _ => println!("Successfully retrieved remote manpages"),
-        };
-    }
-
     let stdout = io::stdout();
     let mut lock = stdout.lock();
+
+    // If we don't have the manpages, get them
+    if !Path::new("./manpages").exists() {
+        print!("Cloning remote manpages... ");
+        lock.flush()?;
+        match Repository::clone("https://github.com/rust-dc/manpages.git", "./manpages") {
+            Err(e) => panic!("Failed! {}", e),
+            _ => println!("Ok!"),
+        };
+    }
 
     let mut man_file_names: Vec<String> = vec![];
     let mut manpage_paths: Vec<PathBuf> = vec![];
@@ -1561,7 +1563,7 @@ fn test_deroff() -> io::Result<()> {
         expected_paths.iter()
     );
 
-    let mut utf8_errors = 0;
+    let mut utf8_errors: Vec<PathBuf> = vec![];
     let mut num_bad_files = 0;
     let mut num_bad_lines: Vec<(PathBuf, usize)> = vec![];
 
@@ -1576,7 +1578,7 @@ fn test_deroff() -> io::Result<()> {
         match input_file.read_to_string(&mut input_str) {
             Err(e) if e.kind() == io::ErrorKind::InvalidData => {
                 println!("InvalidData in {:?}", input);
-                utf8_errors += 1;
+                utf8_errors.push(input.clone());
                 continue;
             }
             _ => {}
@@ -1659,6 +1661,17 @@ fn test_deroff() -> io::Result<()> {
     println!(
         "Average bad lines: {}",
         num_bad_lines.iter().fold(0, |acc, (_, lines)| acc + lines) as f32 / num_bad_files as f32
+    );
+    println!("{} UTF-8 Errors:", utf8_errors.len());
+    println!(
+        "{}",
+        utf8_errors.iter().fold(String::new(), |mut acc, v| {
+            acc.push_str(&format!(
+                "\t{}\n",
+                v.clone().into_os_string().into_string().unwrap()
+            ));
+            acc
+        })
     );
     println!(
         "Worst offenders: \n{0:^1$} : {2:^3$}",
