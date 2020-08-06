@@ -1500,10 +1500,10 @@ fn get_paths_from_man_locations() -> Vec<PathBuf> {
         env::split_paths(&paths).collect()
     } else if let Ok(output) = Command::new("manpath").output() {
         let output = String::from_utf8(output.stdout).unwrap();
-        env::split_paths(&output).collect()
+        env::split_paths(&output.trim()).collect()
     } else if let Ok(output) = Command::new("man").arg("--path").output() {
         let output = String::from_utf8(output.stdout).unwrap();
-        env::split_paths(&output).collect()
+        env::split_paths(&output.trim()).collect()
     // HACK: Use some fallbacks in case we can't get anything else.
     // `mandoc` does not provide `manpath` or `man --path` and $MANPATH might not be set.
     // The alternative is reading its config file (/etc/man.conf)
