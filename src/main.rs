@@ -536,9 +536,7 @@ fn test_remove_groff_formatting() {
 trait ManParser {
     fn is_my_type(&self, manpage: &str) -> bool;
 
-    fn parse_man_page(&self, _manpage: &str, _cmdname: &str) -> Option<String> {
-        None
-    }
+    fn parse_man_page(&self, _manpage: &str, _cmdname: &str) -> Option<String>;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -1463,6 +1461,12 @@ macro_rules! mantypes {
             fn is_my_type(&self, manpage: &str) -> bool {
                 match self {$(
                     ManType::$typ(t) => t.is_my_type(manpage),
+                )*}
+            }
+
+            fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
+                match self {$(
+                    ManType::$typ(t) => t.parse_man_page(manpage, cmdname),
                 )*}
             }
         }
