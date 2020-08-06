@@ -1254,19 +1254,18 @@ fn parse_manpage_at_path(
     // diagnostic_indent += 1
 
     let mut manpage = String::new();
-    if manpage_path.ends_with(".gz") {
+    let extension = manpage_path.extension().unwrap_or_default();
+    let extension = extension.to_string_lossy();
+    if extension.as_ref() == "gz" {
         let mut gz = GzDecoder::new(File::open(manpage_path)?);
         gz.read_to_string(&mut manpage)?;
-    } else if manpage_path.ends_with(".bz2") {
+    } else if extension.as_ref() == "bz2" {
         let mut bz = BzDecoder::new(File::open(manpage_path)?);
         bz.read_to_string(&mut manpage)?;
-    } else if manpage_path.ends_with(".xz") || manpage_path.ends_with(".lzma") {
+    } else if extension.as_ref() == "xz" || extension.as_ref() == "lzma" {
         let mut xz = XzDecoder::new(File::open(manpage_path)?);
         xz.read_to_string(&mut manpage)?;
-    } else if [".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9"]
-        .iter()
-        .any(|suffix| manpage_path.ends_with(suffix))
-    {
+    } else if (1..=9).any(|suffix| suffix.to_string() == extension.as_ref()) {
         File::open(manpage_path)?.read_to_string(&mut manpage)?;
     }
 
