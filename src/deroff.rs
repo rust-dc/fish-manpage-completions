@@ -1759,6 +1759,7 @@ fn test_var() {
     assert_eq!(d.s, "abcd");
 }
 
+#[test]
 fn test_condputs() {
     let mut d = Deroffer::new();
 
