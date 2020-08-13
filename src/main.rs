@@ -1022,21 +1022,19 @@ impl ManParser for TypeDeroff {
                     || line.starts_with("COMMAND OPTIONS"))
             })
             // Look for BUGS and stop there
-            .take_while(|line| !line.starts_with("BUGS"));
+            .take_while(|line| !line.starts_with("BUGS"))
+            .peekable();
 
         let mut completions = Completions::new(cmdname);
-        while lines.by_ref().peekable().peek().is_some() {
-            let lines = lines.by_ref();
-
-            // Pop until we get to the next option
-            let options = match lines.skip_while(|line| !TypeDeroff::is_option(line)).next() {
-                Some(line) => line,
-                None => break,
-            };
+        while let Some(options) = lines.next() {
+            // Skip until we get to the next option
+            if !TypeDeroff::is_option(options) {
+                continue;
+            }
 
             // Pop until we get to either an empty line or a line starting with -
             let description: Vec<_> = lines
-                .take_while(|line| TypeDeroff::could_be_description(line))
+                .peeking_take_while(|line| TypeDeroff::could_be_description(line))
                 .collect();
             let description = description.join(" ");
 
