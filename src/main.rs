@@ -548,7 +548,7 @@ impl ManParser for Type1 {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let options_section_re = regex!(r#"\.SH "OPTIONS"((?s:.)*?)(\.SH|\\Z)"#);
+        let options_section_re = regex!(r#"\.SH "OPTIONS"((?s:.)*?)(\.SH|\z)"#);
         let options_section_matched = options_section_re.find(manpage);
         let mut options_section = options_section_matched.unwrap().as_str();
 
@@ -679,7 +679,7 @@ impl ManParser for Type2 {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let options_section_re = regex!(r#"\.SH OPTIONS((?s:.)*?)(\.SH|\Z)"#);
+        let options_section_re = regex!(r#"\.SH OPTIONS((?s:.)*?)(\.SH|\z)"#);
         let options_section_matched = options_section_re.captures(manpage);
         let mut options_section = options_section_matched.unwrap().get(1).unwrap().as_str();
 
@@ -729,7 +729,7 @@ impl ManParser for Type3 {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let options_section_re = regex!(r"\.SH DESCRIPTION((?s:.)*?)(\.SH|\\Z)");
+        let options_section_re = regex!(r"\.SH DESCRIPTION((?s:.)*?)(\.SH|\z)");
         let options_section_matched = options_section_re.find(manpage);
         let mut options_section = options_section_matched.unwrap().as_str();
 
@@ -781,7 +781,7 @@ impl ManParser for Type4 {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let options_section_re = regex!(r"\.SH FUNCTION LETTERS((?s:.)*?)(\.SH|\\Z)");
+        let options_section_re = regex!(r"\.SH FUNCTION LETTERS((?s:.)*?)(\.SH|\z)");
         let options_section_matched = options_section_re.captures(manpage);
         let mut options_section = options_section_matched.unwrap().get(1).unwrap().as_str();
 
