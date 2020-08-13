@@ -1622,12 +1622,16 @@ fn main() -> Result<(), String> {
     }
 
     let output_directory = opts.directory.clone().or_else(|| {
-        let mut xdg_data_home = dirs::data_dir().unwrap();
-        xdg_data_home.push("fish/generated_completions/");
-        if !xdg_data_home.is_dir() {
-            std::fs::create_dir_all(&xdg_data_home).expect("Failed to create directory");
+        if opts.stdout {
+            None
+        } else {
+            let mut xdg_data_home = dirs::data_dir().unwrap();
+            xdg_data_home.push("fish/generated_completions/");
+            if !xdg_data_home.is_dir() {
+                std::fs::create_dir_all(&xdg_data_home).expect("Failed to create directory");
+            }
+            Some(xdg_data_home)
         }
-        Some(xdg_data_home)
     });
 
     if let Some(output_directory) = output_directory.as_ref() {
