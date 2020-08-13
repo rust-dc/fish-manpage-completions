@@ -627,7 +627,6 @@ impl Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-
         Some(completions.build())
     }
 
@@ -875,8 +874,12 @@ impl ManParser for TypeDarwin {
             };
             completions.add(&name, &desc);
         }
-
-        Some(completions.build())
+        let completions = completions.build();
+        if completions.is_empty() {
+            None
+        } else {
+            Some(completions)
+        }
     }
 }
 
@@ -1039,7 +1042,12 @@ impl ManParser for TypeDeroff {
 
             completions.add(&options, &description);
         }
-        Some(completions.build())
+        let completions = completions.build();
+        if completions.is_empty() {
+            None
+        } else {
+            Some(completions)
+        }
     }
 }
 
