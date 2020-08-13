@@ -184,8 +184,14 @@ fn unquote_single_quotes(data: &str) -> &str {
     }
 }
 
-fn fish_escape_single_quote(string: &str) -> String {
-    format!("'{}'", string.replace(r"\", r"\\").replace(r"'", r"\'"))
+fn fish_escape_single_quote(s: &str) -> String {
+    if s.chars()
+        .all(|c| c.is_ascii_alphanumeric() || "_+-|/:=@~".contains(c))
+    {
+        String::from(s)
+    } else {
+        format!("'{}'", s.replace(r"\", r"\\").replace(r"'", r"\'"))
+    }
 }
 
 // # Make a string Unicode by attempting to decode it as latin-1, or UTF8. See #658
@@ -271,42 +277,50 @@ fn fish_options(options: &str, existing_options: &mut HashSet<String>) -> Vec<St
 
 #[test]
 fn test_fish_options() {
-    {
-        let expected_output: Vec<String> = vec!["-s 'f'".into(), "-l 'force'".into()];
-        let options = "-f, --force[=false]";
-        let mut existing_options: HashSet<String> = Default::default();
-        assert_eq!(
-            fish_options(options, &mut existing_options),
-            expected_output
-        );
-        assert_eq!(
-            expected_output.iter().cloned().collect::<HashSet<_>>(),
-            existing_options
-        );
-    }
+    use std::iter::once;
 
-    {
-        use std::iter::once;
+    let expected_output: Vec<String> = vec!["-s f".into(), "-l force".into()];
+    let options = "-f, --force[=false]";
+    let mut existing_options: HashSet<String> = Default::default();
+    assert_eq!(
+        fish_options(options, &mut existing_options),
+        expected_output
+    );
+    assert_eq!(
+        expected_output.iter().cloned().collect::<HashSet<_>>(),
+        existing_options
+    );
 
-        let expected_output: Vec<String> = vec!["-l 'force'".into()];
-        let options = "-f, --force[=false]";
-        let mut existing_options: HashSet<String> = Default::default();
-        existing_options.insert("-s 'f'".into());
-        existing_options.insert("-l 'something'".into());
-        assert_eq!(
-            fish_options(options, &mut existing_options),
-            expected_output
-        );
-        assert_eq!(
-            expected_output
-                .iter()
-                .cloned()
-                .chain(once("-s 'f'".to_string()))
-                .chain(once("-l 'something'".to_string()))
-                .collect::<HashSet<_>>(),
-            existing_options,
-        );
-    }
+    let expected_output: Vec<String> = vec!["-s \'\\\'\'".into()];
+    let options = "-'";
+    let mut existing_options: HashSet<String> = Default::default();
+    assert_eq!(
+        fish_options(options, &mut existing_options),
+        expected_output
+    );
+    assert_eq!(
+        expected_output.iter().cloned().collect::<HashSet<_>>(),
+        existing_options
+    );
+
+    let expected_output: Vec<String> = vec!["-l force".into()];
+    let options = "-f, --force[=false]";
+    let mut existing_options: HashSet<String> = Default::default();
+    existing_options.insert("-s f".into());
+    existing_options.insert("-l something".into());
+    assert_eq!(
+        fish_options(options, &mut existing_options),
+        expected_output
+    );
+    assert_eq!(
+        expected_output
+            .iter()
+            .cloned()
+            .chain(once("-s f".to_string()))
+            .chain(once("-l something".to_string()))
+            .collect::<HashSet<_>>(),
+        existing_options,
+    );
 }
 
 /// # Panics
