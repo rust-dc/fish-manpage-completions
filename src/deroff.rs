@@ -10,7 +10,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Read};
 
-const SKIP_LISTS: bool = false;
 const SKIP_HEADERS: bool = false;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -41,7 +40,7 @@ pub struct Deroffer {
     pic: bool,
     tbl: bool,
     tblstate: TblState,
-    tblTab: String,
+    tbl_tab: String,
     eqn: bool,
     output: Cell<String>,
     skipheaders: bool,
@@ -80,7 +79,7 @@ impl Deroffer {
             pic: false,
             tbl: false,
             tblstate: TblState::Options,
-            tblTab: String::new(),
+            tbl_tab: String::new(),
             eqn: false,
             output: Cell::new(String::new()),
             skipheaders: false,
@@ -452,7 +451,7 @@ impl Deroffer {
             "AB" => self.macro_i_ir(),
             "Nm" => self.macro_nm(),
             "] " => self.macro_close_bracket(),
-            "PS" => self.macro_ps(s),
+            "PS" => self.macro_ps(),
             "PE" => self.macro_pe(),
             "TS" => self.macro_ts(),
             "T&" => self.macro_t_and(),
@@ -519,7 +518,7 @@ impl Deroffer {
         false
     }
 
-    fn macro_ps(&mut self, s: &str) -> bool {
+    fn macro_ps(&mut self) -> bool {
         if self.is_white(2) {
             self.pic = true;
         }
@@ -1050,7 +1049,7 @@ impl Deroffer {
                                 let rest = iter.next().unwrap_or_default();
 
                                 if option.to_lowercase() == "tab" {
-                                    self.tblTab = arg.get(0..1).unwrap_or_default().to_owned();
+                                    self.tbl_tab = arg.get(0..1).unwrap_or_default().to_owned();
                                 }
 
                                 self.s = rest.to_owned();
@@ -1076,8 +1075,8 @@ impl Deroffer {
                 self.condputs("\n");
             }
             TblState::Data => {
-                if !self.tblTab.is_empty() {
-                    self.s = self.s.replace(&self.tblTab, "\t");
+                if !self.tbl_tab.is_empty() {
+                    self.s = self.s.replace(&self.tbl_tab, "\t");
                 }
 
                 self.text();
@@ -1433,7 +1432,7 @@ fn test_do_line() {
     // same, to_tbl
     deroffer.s = "aaa(bbb);Hello World!".into();
     assert!(deroffer.do_tbl());
-    assert!(deroffer.tblTab.is_empty());
+    assert!(deroffer.tbl_tab.is_empty());
     assert_eq!(deroffer.s, ";Hello World!");
     assert_eq!(deroffer.output.take(), "\n");
     assert_eq!(deroffer.tblstate, TblState::Format);
@@ -1496,7 +1495,7 @@ fn test_do_tbl() {
 
     deroffer.s = "aaa(bbb);Hello World!".into();
     assert!(deroffer.do_tbl());
-    assert!(deroffer.tblTab.is_empty());
+    assert!(deroffer.tbl_tab.is_empty());
     assert_eq!(deroffer.s, ";Hello World!");
     assert_eq!(deroffer.output.take(), "\n");
     assert_eq!(deroffer.tblstate, TblState::Format);
@@ -1505,7 +1504,7 @@ fn test_do_tbl() {
     deroffer.tblstate = TblState::Options;
     deroffer.s = "aaa(bbb;Hello World!".into();
     assert!(deroffer.do_tbl());
-    assert!(deroffer.tblTab.is_empty());
+    assert!(deroffer.tbl_tab.is_empty());
     assert!(deroffer.s.is_empty());
     assert_eq!(deroffer.tblstate, TblState::Format);
 
@@ -1513,7 +1512,7 @@ fn test_do_tbl() {
     deroffer.tblstate = TblState::Options;
     deroffer.s = ";".into();
     assert!(deroffer.do_tbl());
-    assert!(deroffer.tblTab.is_empty());
+    assert!(deroffer.tbl_tab.is_empty());
     assert_eq!(deroffer.s, ";");
     assert_eq!(deroffer.tblstate, TblState::Format);
 
@@ -1521,21 +1520,21 @@ fn test_do_tbl() {
     deroffer.tblstate = TblState::Options;
     deroffer.s = "\n".into();
     assert!(deroffer.do_tbl());
-    assert!(deroffer.tblTab.is_empty());
+    assert!(deroffer.tbl_tab.is_empty());
     assert_eq!(deroffer.s, "\n");
     assert_eq!(deroffer.tblstate, TblState::Format);
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
     assert!(deroffer.do_tbl());
-    assert!(deroffer.tblTab.is_empty());
+    assert!(deroffer.tbl_tab.is_empty());
     assert!(deroffer.s.is_empty());
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Options;
     deroffer.s = "Tab(arg);".into();
     assert!(deroffer.do_tbl());
-    assert_eq!(deroffer.tblTab, "a");
+    assert_eq!(deroffer.tbl_tab, "a");
     assert_eq!(deroffer.s, ";");
     assert_eq!(deroffer.tblstate, TblState::Format);
 
@@ -1588,7 +1587,7 @@ fn test_do_tbl() {
 
     let mut deroffer = Deroffer::new();
     deroffer.tblstate = TblState::Data;
-    deroffer.tblTab = "a".into();
+    deroffer.tbl_tab = "a".into();
 
     deroffer.s = "HelloaWorld!".into();
     assert!(deroffer.do_tbl());
