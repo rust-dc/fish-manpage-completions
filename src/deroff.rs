@@ -416,7 +416,8 @@ impl Deroffer {
             if let Some(m) = possible {
                 // Output the characters in the match
                 self.condputs(m.as_str());
-                self.skip_char(m.end());
+                let end = m.end();
+                self.skip_char(end);
                 got_something = true;
             }
 
@@ -754,7 +755,8 @@ impl Deroffer {
 
     fn font(&mut self) -> bool {
         if let Some(m) = self.g_re_font.find(&self.s) {
-            self.skip_char(m.end());
+            let end = m.end();
+            self.skip_char(end);
             true
         } else {
             false
@@ -882,7 +884,8 @@ impl Deroffer {
         while let Some(m) = self.g_re_word.find(&self.s) {
             got_something = true;
             self.condputs(m.as_str());
-            self.skip_char(m.end());
+            let end = m.end();
+            self.skip_char(end);
 
             while self.spec() {
                 if !self.specletter {
@@ -991,7 +994,8 @@ impl Deroffer {
     fn number(&mut self) -> bool {
         if let Some(mat) = self.g_re_number.find(&self.s) {
             self.condputs(mat.as_str());
-            self.skip_char(mat.end());
+            let end = mat.end();
+            self.skip_char(end);
             true
         } else {
             false
