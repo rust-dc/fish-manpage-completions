@@ -887,12 +887,7 @@ impl ManParser for TypeDarwin {
             };
             completions.add(&name, &desc);
         }
-        let completions = completions.build();
-        if completions.is_empty() {
-            None
-        } else {
-            Some(completions)
-        }
+        Some(completions.build()).filter(|c| !c.is_empty())
     }
 }
 
@@ -1052,12 +1047,7 @@ impl ManParser for TypeDeroff {
 
             completions.add(&options, &description);
         }
-        let completions = completions.build();
-        if completions.is_empty() {
-            None
-        } else {
-            Some(completions)
-        }
+        Some(completions.build()).filter(|c| !c.is_empty())
     }
 }
 
