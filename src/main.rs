@@ -510,7 +510,6 @@ fn test_complete_command() {
 }
 
 fn remove_groff_formatting(data: &str) -> Cow<str> {
-    // TODO revisit this later
     // // TODO Can we remove all of these strings in one go?
     // let mut data = data.to_owned();
     // for marker in &[
@@ -533,9 +532,13 @@ fn remove_groff_formatting(data: &str) -> Cow<str> {
     // let data = regex!(r##".PD( \d+)"##).replace_all(&data, "");
     // data.to_string()
     // using regex is twice as fast as manual replace
-    let re =
-        regex!(r"\\fI|\\fP|\\f1|\\fB|\\fR|\\e|\.BI|\.BR|0\.5i|\.rb|\\\^|\{ | \}|\.B|\.I|.PD( \d+)");
-    re.replace_all(&data, "")
+    let re1 =
+        regex!(r"\\fI|\\fP|\\f1|\\fB|\\fR|\\e|\.BI|\.BR|0\.5i|\.rb|\\\^|\{ | \}|\.B|\.I|(.PD( \d+))");
+    let re2 = regex!(r"\\-");
+    match re1.replace_all(&data, "") {
+        Cow::Borrowed(s) => re2.replace_all(&s, "-"),
+        Cow::Owned(s) => Cow::Owned(re2.replace_all(&s, "-").into_owned()),
+    }
 }
 
 #[test]
@@ -543,6 +546,10 @@ fn test_remove_groff_formatting() {
     assert_eq!(
         remove_groff_formatting(r#"Foo\fIbar\fP Zoom.PD 325 Zoom"#),
         "Foobar Zoom Zoom"
+    );
+    assert_eq!(
+        remove_groff_formatting(r#"\n\\fB\\-\\-working\\-directory\\fR=\\fIvalue\\fR\nWorking directory.\n"#),
+        "\\n\\\\-\\-working\\-directory\\=\\value\\\\nWorking directory.\\n"
     );
 }
 
