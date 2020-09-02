@@ -715,7 +715,7 @@ impl ManParser for Type2 {
         while let Some(mat) = options_matched {
             let data = mat.get(3).unwrap().as_str();
             let data = remove_groff_formatting(data);
-            let data = data.splitn(2, '\n').next_tuple::<(_, _)>();
+            let data = data.trim().splitn(2, '\n').next_tuple::<(_, _)>();
             if let Some((option_name, option_desc)) =
                 data.filter(|(_, desc)| !desc.trim().is_empty())
             {
