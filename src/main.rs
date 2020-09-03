@@ -456,8 +456,8 @@ impl<'a> Completions<'a> {
         ));
     }
 
-    fn build(self) -> String {
-        self.built_command_output.join("\n")
+    fn build(self) -> Option<String> {
+        Some(self.built_command_output.join("\n")).filter(|c| !c.is_empty())
     }
 }
 
@@ -611,7 +611,7 @@ impl ManParser for Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -647,7 +647,7 @@ impl Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-        Some(completions.build())
+        completions.build()
     }
 
     fn fallback2(&self, options_section: &str, cmdname: &str) -> Option<String> {
@@ -685,7 +685,7 @@ impl Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(&options_section);
         }
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -735,7 +735,7 @@ impl ManParser for Type2 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -787,7 +787,7 @@ impl ManParser for Type3 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(&options_section);
         }
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -835,8 +835,7 @@ impl ManParser for Type4 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -894,7 +893,7 @@ impl ManParser for TypeDarwin {
             };
             completions.add(&name, &desc);
         }
-        Some(completions.build()).filter(|c| !c.is_empty())
+        completions.build()
     }
 }
 
@@ -1054,7 +1053,7 @@ impl ManParser for TypeDeroff {
 
             completions.add(&options, &description);
         }
-        Some(completions.build()).filter(|c| !c.is_empty())
+        completions.build()
     }
 }
 
