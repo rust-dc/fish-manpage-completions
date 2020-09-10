@@ -533,12 +533,16 @@ fn remove_groff_formatting(data: &str) -> Cow<str> {
     // data.to_string()
     // using regex is twice as fast as manual replace
     let re1 = regex!(
-        r"\\fI|\\fP|\\f1|\\fB|\\fR|\\e|\.BI|\.BR|0\.5i|\.rb|\\\^|\{ | \}|\.B|\.I|(.PD( \d+))"
+        r"\\fI|\\fP|\\f1|\\fB|\\fR|\\e|\.BI|\.BR|0\.5i|\.rb|\\\^|\{ | \}|\.B|\.I|\f|(.PD( \d+))"
     );
     let re2 = regex!(r"\\-");
+    let re3 = regex!(r"\(cq");
     match re1.replace_all(&data, "") {
-        Cow::Borrowed(s) => re2.replace_all(&s, "-"),
-        Cow::Owned(s) => Cow::Owned(re2.replace_all(&s, "-").into_owned()),
+        Cow::Borrowed(s) => match re2.replace_all(&s, "-") {
+            Cow::Borrowed(s) => re3.replace_all(&s, "'"),
+            Cow::Owned(s) => Cow::Owned(re3.replace_all(&s, "'").into_owned()),
+        },
+        Cow::Owned(s) => Cow::Owned(re3.replace_all(&re2.replace_all(&s, "-"), "'").into_owned()),
     }
 }
 
