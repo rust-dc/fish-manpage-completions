@@ -743,6 +743,7 @@ impl ManParser for Type2 {
             options_matched = options_parts_re.captures(options_section);
         }
         completions.build()
+        // TODO not sure why but the original version never succeed here
     }
 }
 
@@ -1270,6 +1271,20 @@ fn parse_manpage_at_path(
     // add_diagnostic(format!("Considering {}", manpage_path));
     // diagnostic_indent += 1
 
+    // Get the "base" command, e.g. gcc.1.gz -> gcc
+    // These casts are safe as OsStr is internally a wrapper around [u8] on all
+    // platforms. Taken from libstd.
+    let cmdname = manpage_path
+        .file_name()
+        .and_then(|file| file.as_bytes().splitn(2, |b| *b == b'.').next());
+    let cmdname = String::from_utf8_lossy(cmdname.unwrap());
+    let ignored_commands = [
+        "cc", "g++", "gcc", "c++", "cpp", "emacs", "gprof", "wget", "ld", "awk",
+    ];
+    if ignored_commands.contains(&cmdname.as_ref()) {
+        return Ok(false);
+    }
+
     let mut manpage = String::new();
     let extension = manpage_path.extension().unwrap_or_default();
     let extension = extension.to_string_lossy();
@@ -1284,20 +1299,6 @@ fn parse_manpage_at_path(
         xz.read_to_string(&mut manpage)?;
     } else if (1..=9).any(|suffix| suffix.to_string() == extension.as_ref()) {
         File::open(manpage_path)?.read_to_string(&mut manpage)?;
-    }
-
-    // Get the "base" command, e.g. gcc.1.gz -> gcc
-    // These casts are safe as OsStr is internally a wrapper around [u8] on all
-    // platforms. Taken from libstd.
-    let cmdname = manpage_path
-        .file_name()
-        .and_then(|file| file.as_bytes().splitn(2, |b| *b == b'.').next());
-    let cmdname = String::from_utf8_lossy(cmdname.unwrap());
-    let ignored_commands = [
-        "cc", "g++", "gcc", "c++", "cpp", "emacs", "gprof", "wget", "ld", "awk",
-    ];
-    if ignored_commands.contains(&cmdname.as_ref()) {
-        return Ok(false);
     }
 
     // Ignore perl's gazillion man pages
