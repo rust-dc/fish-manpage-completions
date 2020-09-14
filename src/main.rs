@@ -1494,14 +1494,14 @@ mantypes![Type1, Type2, Type3, Type4, TypeDarwin, TypeDeroff];
 /// Return all the paths to man(1) and man(8) files in the manpath.
 fn get_paths_from_man_locations() -> Vec<PathBuf> {
     // $MANPATH take precedence, just like with `man` on the CLI.
-    let mut parent_paths: Vec<_> = if let Some(paths) = env::var_os("MANPATH") {
-        env::split_paths(&paths).collect()
-    } else if let Ok(output) = Command::new("manpath").output() {
+    let mut parent_paths: Vec<_> = if let Ok(output) = Command::new("manpath").output() {
         let output = String::from_utf8(output.stdout).unwrap();
         env::split_paths(&output.trim()).collect()
     } else if let Ok(output) = Command::new("man").arg("--path").output() {
         let output = String::from_utf8(output.stdout).unwrap();
         env::split_paths(&output.trim()).collect()
+    } else if let Some(paths) = env::var_os("MANPATH") {
+        env::split_paths(&paths).collect()
     // HACK: Use some fallbacks in case we can't get anything else.
     // `mandoc` does not provide `manpath` or `man --path` and $MANPATH might not be set.
     // The alternative is reading its config file (/etc/man.conf)
