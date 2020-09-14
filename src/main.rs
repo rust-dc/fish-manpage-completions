@@ -1535,6 +1535,7 @@ fn get_paths_from_man_locations() -> Vec<PathBuf> {
 
 mod deroff;
 
+/// Generate fish completions from manpages.
 #[derive(StructOpt, Debug)]
 struct Opts {
     /// Level of debug output.
@@ -1543,10 +1544,10 @@ struct Opts {
     /// Write the completions to stdout.
     #[structopt(short, long, conflicts_with = "directory")]
     stdout: bool,
-    /// Parse deroff only.
+    /// Use deroff parser only.
     #[structopt(short = "z", long)]
     deroff_only: bool,
-    /// Save the completions in directory.
+    /// Directory to save the completions in.
     #[structopt(short, long)]
     directory: Option<PathBuf>,
     /// Use manpath from system and environment variable.
