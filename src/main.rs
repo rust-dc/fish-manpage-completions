@@ -364,10 +364,8 @@ fn truncated_description(description: &str) -> String {
         .split(".")
         .filter(|sentence| !sentence.trim().is_empty());
 
-    let mut out = format!(
-        "{}.",
-        lossy_unicode(&sentences.next().unwrap_or_default().as_bytes())
-    );
+    let out = sentences.next().unwrap_or_default().trim_end_matches('.');
+    let mut out = lossy_unicode(out.as_bytes());
     let mut out_len = char_len(&out);
 
     if out_len > MAX_DESCRIPTION_WIDTH {
