@@ -372,7 +372,6 @@ fn truncated_description(description: &str) -> String {
         out = char_truncate_string(&out, MAX_DESCRIPTION_WIDTH, TRUNCATION_SUFFIX).into_owned();
     } else {
         for line in sentences {
-            let line = lossy_unicode(&line.as_bytes());
             out_len += 1 // space
                 + char_len(&line)
                 + 1 // period
