@@ -364,8 +364,8 @@ fn truncated_description(description: &str) -> String {
         .split(".")
         .filter(|sentence| !sentence.trim().is_empty());
 
-    let out = sentences.next().unwrap_or_default().trim_end_matches('.');
-    let mut out = lossy_unicode(out.as_bytes());
+    let out = sentences.next().unwrap_or_default();
+    let mut out = format!("{}.", lossy_unicode(out.as_bytes()));
     let mut out_len = char_len(&out);
 
     if out_len > MAX_DESCRIPTION_WIDTH {
@@ -374,8 +374,7 @@ fn truncated_description(description: &str) -> String {
         for line in sentences {
             out_len += 1 // space
                 + char_len(&line)
-                + 1 // period
-                ;
+                + 1; // period
             if out_len > MAX_DESCRIPTION_WIDTH {
                 break;
             }
@@ -383,28 +382,28 @@ fn truncated_description(description: &str) -> String {
         }
     }
 
-    fish_escape_single_quote(&out)
+    fish_escape_single_quote(&out.trim_end_matches('.'))
 }
 
 #[test]
 fn test_truncated_description() {
-    assert_eq!(truncated_description(r"\'\."), r"'\'.'");
+    assert_eq!(truncated_description(r"\'\."), r"'\''");
 
     assert_eq!(
         truncated_description(r"Don't use this command."),
-        r"'Don\'t use this command.'"
+        r"'Don\'t use this command'"
     );
 
     assert_eq!(
         truncated_description(r"Don't use this command. It's really dumb."),
-        r"'Don\'t use this command.  It\'s really dumb.'"
+        r"'Don\'t use this command.  It\'s really dumb'"
     );
 
     assert_eq!(
         truncated_description(
             r"The description for the command is so long. This second sentence will be dropped, in fact, because it is too long to be displayed comfortably."
         ),
-        r"'The description for the command is so long.'"
+        r"'The description for the command is so long'"
     );
 
     assert_eq!(
@@ -419,7 +418,7 @@ fn test_truncated_description() {
         truncated_description(
             r"     Dumb command.   \It's really dumb\.  Extra spaces aren\'t removed.    "
         ),
-        r"'     Dumb command.    \\It\'s really dumb.   Extra spaces aren\'t removed.'"
+        r"'     Dumb command.    \\It\'s really dumb.   Extra spaces aren\'t removed'"
     );
 }
 
