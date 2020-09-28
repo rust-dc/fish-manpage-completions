@@ -378,7 +378,7 @@ fn truncated_description(description: &str) -> String {
             if out_len > MAX_DESCRIPTION_WIDTH {
                 break;
             }
-            out = format!("{} {}.", out, line);
+            out = format!("{} {}.", out, String::from_utf8_lossy(line.as_bytes()));
         }
     }
 
