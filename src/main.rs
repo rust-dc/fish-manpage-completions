@@ -193,6 +193,8 @@ fn fish_escape_single_quote(s: &str) -> String {
     }
 }
 
+// Rust port replaced with String::from_utf8_lossy(s.as_bytes())
+//
 // # Make a string Unicode by attempting to decode it as latin-1, or UTF8. See #658
 // def lossy_unicode(s):
 //     # All strings are unicode in Python 3
@@ -207,20 +209,16 @@ fn fish_escape_single_quote(s: &str) -> String {
 //         pass
 //     return s.decode('latin-1', 'ignore')
 
-fn lossy_unicode(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).to_string()
-}
-
-#[test]
-fn test_lossy_unicode() {
-    let bytes = b"123 456";
-    let s = lossy_unicode(bytes);
-    assert_eq!("123 456", s);
-
-    let bad_bytes = &[255];
-    let bad_s = lossy_unicode(bad_bytes);
-    assert_eq!("�", bad_s);
-}
+// #[test]
+// fn test_lossy_unicode() {
+//     let bytes = b"123 456";
+//     let s = lossy_unicode(bytes);
+//     assert_eq!("123 456", s);
+//
+//     let bad_bytes = &[255];
+//     let bad_s = lossy_unicode(bad_bytes);
+//     assert_eq!("�", bad_s);
+// }
 
 const MAX_DESCRIPTION_WIDTH: usize = 78;
 const TRUNCATION_SUFFIX: char = '…';
@@ -365,7 +363,7 @@ fn truncated_description(description: &str) -> String {
         .filter(|sentence| !sentence.trim().is_empty());
 
     let out = sentences.next().unwrap_or_default();
-    let mut out = format!("{}.", lossy_unicode(out.as_bytes()));
+    let mut out = format!("{}.", String::from_utf8_lossy(out.as_bytes()));
     let mut out_len = char_len(&out);
 
     if out_len > MAX_DESCRIPTION_WIDTH {
