@@ -13,6 +13,7 @@ bstr = "*"
 flate2 = "1.0"
 bzip2 = "0.3"
 xz2 = "0.1"
+dirs = "3.0"
 
 [dev-dependencies]
 pretty_assertions = "*"

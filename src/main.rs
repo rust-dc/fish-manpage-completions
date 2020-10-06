@@ -1,6 +1,5 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/create_manpage_completions.py
 use std::collections::{HashMap, HashSet};
-use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::os::unix::ffi::OsStrExt;
@@ -184,10 +183,18 @@ fn unquote_single_quotes(data: &str) -> &str {
     }
 }
 
-fn fish_escape_single_quote(string: &str) -> String {
-    format!("'{}'", string.replace(r"\", r"\\").replace(r"'", r"\'"))
+fn fish_escape_single_quote(s: &str) -> String {
+    if s.chars()
+        .all(|c| c.is_ascii_alphanumeric() || "_+-|/:=@~".contains(c))
+    {
+        String::from(s)
+    } else {
+        format!("'{}'", s.replace(r"\", r"\\").replace(r"'", r"\'"))
+    }
 }
 
+// Rust port replaced with String::from_utf8_lossy(s.as_bytes())
+//
 // # Make a string Unicode by attempting to decode it as latin-1, or UTF8. See #658
 // def lossy_unicode(s):
 //     # All strings are unicode in Python 3
@@ -202,20 +209,16 @@ fn fish_escape_single_quote(string: &str) -> String {
 //         pass
 //     return s.decode('latin-1', 'ignore')
 
-fn lossy_unicode(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).to_string()
-}
-
-#[test]
-fn test_lossy_unicode() {
-    let bytes = b"123 456";
-    let s = lossy_unicode(bytes);
-    assert_eq!("123 456", s);
-
-    let bad_bytes = &[255];
-    let bad_s = lossy_unicode(bad_bytes);
-    assert_eq!("�", bad_s);
-}
+// #[test]
+// fn test_lossy_unicode() {
+//     let bytes = b"123 456";
+//     let s = lossy_unicode(bytes);
+//     assert_eq!("123 456", s);
+//
+//     let bad_bytes = &[255];
+//     let bad_s = lossy_unicode(bad_bytes);
+//     assert_eq!("�", bad_s);
+// }
 
 const MAX_DESCRIPTION_WIDTH: usize = 78;
 const TRUNCATION_SUFFIX: char = '…';
@@ -271,42 +274,50 @@ fn fish_options(options: &str, existing_options: &mut HashSet<String>) -> Vec<St
 
 #[test]
 fn test_fish_options() {
-    {
-        let expected_output: Vec<String> = vec!["-s 'f'".into(), "-l 'force'".into()];
-        let options = "-f, --force[=false]";
-        let mut existing_options: HashSet<String> = Default::default();
-        assert_eq!(
-            fish_options(options, &mut existing_options),
-            expected_output
-        );
-        assert_eq!(
-            expected_output.iter().cloned().collect::<HashSet<_>>(),
-            existing_options
-        );
-    }
+    use std::iter::once;
 
-    {
-        use std::iter::once;
+    let expected_output: Vec<String> = vec!["-s f".into(), "-l force".into()];
+    let options = "-f, --force[=false]";
+    let mut existing_options: HashSet<String> = Default::default();
+    assert_eq!(
+        fish_options(options, &mut existing_options),
+        expected_output
+    );
+    assert_eq!(
+        expected_output.iter().cloned().collect::<HashSet<_>>(),
+        existing_options
+    );
 
-        let expected_output: Vec<String> = vec!["-l 'force'".into()];
-        let options = "-f, --force[=false]";
-        let mut existing_options: HashSet<String> = Default::default();
-        existing_options.insert("-s 'f'".into());
-        existing_options.insert("-l 'something'".into());
-        assert_eq!(
-            fish_options(options, &mut existing_options),
-            expected_output
-        );
-        assert_eq!(
-            expected_output
-                .iter()
-                .cloned()
-                .chain(once("-s 'f'".to_string()))
-                .chain(once("-l 'something'".to_string()))
-                .collect::<HashSet<_>>(),
-            existing_options,
-        );
-    }
+    let expected_output: Vec<String> = vec!["-s \'\\\'\'".into()];
+    let options = "-'";
+    let mut existing_options: HashSet<String> = Default::default();
+    assert_eq!(
+        fish_options(options, &mut existing_options),
+        expected_output
+    );
+    assert_eq!(
+        expected_output.iter().cloned().collect::<HashSet<_>>(),
+        existing_options
+    );
+
+    let expected_output: Vec<String> = vec!["-l force".into()];
+    let options = "-f, --force[=false]";
+    let mut existing_options: HashSet<String> = Default::default();
+    existing_options.insert("-s f".into());
+    existing_options.insert("-l something".into());
+    assert_eq!(
+        fish_options(options, &mut existing_options),
+        expected_output
+    );
+    assert_eq!(
+        expected_output
+            .iter()
+            .cloned()
+            .chain(once("-s f".to_string()))
+            .chain(once("-l something".to_string()))
+            .collect::<HashSet<_>>(),
+        existing_options,
+    );
 }
 
 /// # Panics
@@ -351,50 +362,46 @@ fn truncated_description(description: &str) -> String {
         .split(".")
         .filter(|sentence| !sentence.trim().is_empty());
 
-    let mut out = format!(
-        "{}.",
-        lossy_unicode(&sentences.next().unwrap_or_default().as_bytes())
-    );
+    let out = sentences.next().unwrap_or_default();
+    let mut out = format!("{}.", String::from_utf8_lossy(out.as_bytes()));
     let mut out_len = char_len(&out);
 
     if out_len > MAX_DESCRIPTION_WIDTH {
         out = char_truncate_string(&out, MAX_DESCRIPTION_WIDTH, TRUNCATION_SUFFIX).into_owned();
     } else {
         for line in sentences {
-            let line = lossy_unicode(&line.as_bytes());
             out_len += 1 // space
                 + char_len(&line)
-                + 1 // period
-                ;
+                + 1; // period
             if out_len > MAX_DESCRIPTION_WIDTH {
                 break;
             }
-            out = format!("{} {}.", out, line);
+            out = format!("{} {}.", out, String::from_utf8_lossy(line.as_bytes()));
         }
     }
 
-    fish_escape_single_quote(&out)
+    fish_escape_single_quote(&out.trim_end_matches('.'))
 }
 
 #[test]
 fn test_truncated_description() {
-    assert_eq!(truncated_description(r"\'\."), r"'\'.'");
+    assert_eq!(truncated_description(r"\'\."), r"'\''");
 
     assert_eq!(
         truncated_description(r"Don't use this command."),
-        r"'Don\'t use this command.'"
+        r"'Don\'t use this command'"
     );
 
     assert_eq!(
         truncated_description(r"Don't use this command. It's really dumb."),
-        r"'Don\'t use this command.  It\'s really dumb.'"
+        r"'Don\'t use this command.  It\'s really dumb'"
     );
 
     assert_eq!(
         truncated_description(
             r"The description for the command is so long. This second sentence will be dropped, in fact, because it is too long to be displayed comfortably."
         ),
-        r"'The description for the command is so long.'"
+        r"'The description for the command is so long'"
     );
 
     assert_eq!(
@@ -409,7 +416,7 @@ fn test_truncated_description() {
         truncated_description(
             r"     Dumb command.   \It's really dumb\.  Extra spaces aren\'t removed.    "
         ),
-        r"'     Dumb command.    \\It\'s really dumb.   Extra spaces aren\'t removed.'"
+        r"'     Dumb command.    \\It\'s really dumb.   Extra spaces aren\'t removed'"
     );
 }
 
@@ -443,8 +450,8 @@ impl<'a> Completions<'a> {
         ));
     }
 
-    fn build(self) -> String {
-        self.built_command_output.join("\n")
+    fn build(self) -> Option<String> {
+        Some(self.built_command_output.join("\n")).filter(|c| !c.is_empty())
     }
 }
 
@@ -497,7 +504,6 @@ fn test_complete_command() {
 }
 
 fn remove_groff_formatting(data: &str) -> Cow<str> {
-    // TODO revisit this later
     // // TODO Can we remove all of these strings in one go?
     // let mut data = data.to_owned();
     // for marker in &[
@@ -520,9 +526,18 @@ fn remove_groff_formatting(data: &str) -> Cow<str> {
     // let data = regex!(r##".PD( \d+)"##).replace_all(&data, "");
     // data.to_string()
     // using regex is twice as fast as manual replace
-    let re =
-        regex!(r"\\fI|\\fP|\\f1|\\fB|\\fR|\\e|\.BI|\.BR|0\.5i|\.rb|\\\^|\{ | \}|\.B|\.I|.PD( \d+)");
-    re.replace_all(&data, "")
+    let re1 = regex!(
+        r"\\fI|\\fP|\\f1|\\fB|\\fR|\\e|\.BI|\.BR|0\.5i|\.rb|\\\^|\{ | \}|\.B|\.I|\f|(.PD( \d+))"
+    );
+    let re2 = regex!(r"\\-");
+    let re3 = regex!(r"\(cq");
+    match re1.replace_all(&data, "") {
+        Cow::Borrowed(s) => match re2.replace_all(&s, "-") {
+            Cow::Borrowed(s) => re3.replace_all(&s, "'"),
+            Cow::Owned(s) => Cow::Owned(re3.replace_all(&s, "'").into_owned()),
+        },
+        Cow::Owned(s) => Cow::Owned(re3.replace_all(&re2.replace_all(&s, "-"), "'").into_owned()),
+    }
 }
 
 #[test]
@@ -531,14 +546,18 @@ fn test_remove_groff_formatting() {
         remove_groff_formatting(r#"Foo\fIbar\fP Zoom.PD 325 Zoom"#),
         "Foobar Zoom Zoom"
     );
+    assert_eq!(
+        remove_groff_formatting(
+            r#"\n\\fB\\-\\-working\\-directory\\fR=\\fIvalue\\fR\nWorking directory.\n"#
+        ),
+        "\\n\\\\-\\-working\\-directory\\=\\value\\\\nWorking directory.\\n"
+    );
 }
 
 trait ManParser {
     fn is_my_type(&self, manpage: &str) -> bool;
 
-    fn parse_man_page(&self, _manpage: &str, _cmdname: &str) -> Option<String> {
-        None
-    }
+    fn parse_man_page(&self, _manpage: &str, _cmdname: &str) -> Option<String>;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -550,7 +569,7 @@ impl ManParser for Type1 {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let options_section_re = regex!(r#"\.SH "OPTIONS"((?s:.)*?)(\.SH|\\Z)"#);
+        let options_section_re = regex!(r#"\.SH "OPTIONS"((?s:.)*?)(\.SH|\z)"#);
         let options_section_matched = options_section_re.find(manpage);
         let mut options_section = options_section_matched.unwrap().as_str();
 
@@ -593,7 +612,7 @@ impl ManParser for Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -629,8 +648,7 @@ impl Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-
-        Some(completions.build())
+        completions.build()
     }
 
     fn fallback2(&self, options_section: &str, cmdname: &str) -> Option<String> {
@@ -668,7 +686,7 @@ impl Type1 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(&options_section);
         }
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -681,7 +699,7 @@ impl ManParser for Type2 {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let options_section_re = regex!(r#"\.SH OPTIONS((?s:.)*?)(\.SH|\Z)"#);
+        let options_section_re = regex!(r#"\.SH OPTIONS((?s:.)*?)(\.SH|\z)"#);
         let options_section_matched = options_section_re.captures(manpage);
         let mut options_section = options_section_matched.unwrap().get(1).unwrap().as_str();
 
@@ -698,7 +716,7 @@ impl ManParser for Type2 {
         while let Some(mat) = options_matched {
             let data = mat.get(3).unwrap().as_str();
             let data = remove_groff_formatting(data);
-            let data = data.splitn(2, '\n').next_tuple::<(_, _)>();
+            let data = data.trim().splitn(2, '\n').next_tuple::<(_, _)>();
             if let Some((option_name, option_desc)) =
                 data.filter(|(_, desc)| !desc.trim().is_empty())
             {
@@ -718,7 +736,8 @@ impl ManParser for Type2 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
-        Some(completions.build())
+        completions.build()
+        // TODO not sure why but the original version never succeed here
     }
 }
 
@@ -731,7 +750,7 @@ impl ManParser for Type3 {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let options_section_re = regex!(r"\.SH DESCRIPTION((?s:.)*?)(\.SH|\\Z)");
+        let options_section_re = regex!(r"\.SH DESCRIPTION((?s:.)*?)(\.SH|\z)");
         let options_section_matched = options_section_re.find(manpage);
         let mut options_section = options_section_matched.unwrap().as_str();
 
@@ -770,7 +789,7 @@ impl ManParser for Type3 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(&options_section);
         }
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -783,7 +802,7 @@ impl ManParser for Type4 {
     }
 
     fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
-        let options_section_re = regex!(r"\.SH FUNCTION LETTERS((?s:.)*?)(\.SH|\\Z)");
+        let options_section_re = regex!(r"\.SH FUNCTION LETTERS((?s:.)*?)(\.SH|\z)");
         let options_section_matched = options_section_re.captures(manpage);
         let mut options_section = options_section_matched.unwrap().get(1).unwrap().as_str();
 
@@ -818,8 +837,55 @@ impl ManParser for Type4 {
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
             options_matched = options_parts_re.captures(options_section);
         }
+        completions.build()
+    }
+}
 
-        Some(completions.build())
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+struct TypeScdoc;
+
+impl ManParser for TypeScdoc {
+    fn is_my_type(&self, manpage: &str) -> bool {
+        regex!(r#"\.\\" Generated by scdoc(?s:.)?*\.SH OPTIONS"#).is_match(manpage)
+    }
+
+    fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
+        let options_section_re = regex!(r"\.SH OPTIONS((?s:.)*?)\.SH");
+        let options_section_matched = options_section_re.captures(manpage);
+        let mut options_section = options_section_matched.unwrap().get(1)?.as_str();
+
+        let options_parts_re = regex!(r"((?s:.)*?)\.RE");
+        let mut options_matched = options_parts_re.captures(options_section);
+        // add_diagnostic(format!("Command is {}", cmdname));
+
+        if options_matched.is_none() {
+            // add_diagnostic("Unable to find options section");
+            return None;
+        }
+
+        let mut completions = Completions::new(cmdname);
+        while let Some(mat) = options_matched {
+            let data = mat.get(1).unwrap().as_str();
+            let data = remove_groff_formatting(data);
+
+            // Should be at least two lines, split name and desc, other lines ignored
+            let lines = data.split('\n');
+            let mut iter = lines.filter(|s| !["", ".P", ".RS 4"].contains(s));
+            if let Some((option_name, option_desc)) = iter.next_tuple() {
+                let option_name = unquote_double_quotes(option_name);
+                let option_name = unquote_single_quotes(option_name);
+                if !option_name.contains('-') {
+                    // add_diagnostic(format!("{} doesn't contain '-'", option_name));
+                }
+                completions.add(option_name, option_desc);
+            } else {
+                // add_diagnostic(format!("Unable to split option from description"));
+            }
+
+            options_section = &options_section[mat.get(0).unwrap().end()..];
+            options_matched = options_parts_re.captures(options_section);
+        }
+        completions.build()
     }
 }
 
@@ -877,8 +943,7 @@ impl ManParser for TypeDarwin {
             };
             completions.add(&name, &desc);
         }
-
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -957,8 +1022,7 @@ fn test_TypeDarwin_count_argument_dashes() {
 
 impl TypeDarwin {
     fn count_argument_dashes(line: &str) -> u32 {
-        let (string, result) = replace_all(&line);
-        result
+        replace_all(&line).1
     }
 }
 
@@ -1000,7 +1064,7 @@ impl TypeDarwin {
 struct TypeDeroff;
 
 impl ManParser for TypeDeroff {
-    fn is_my_type(&self, manpage: &str) -> bool {
+    fn is_my_type(&self, _manpage: &str) -> bool {
         // TODO Revisit post-MVP
         // I think this is just to account for TypeDeroff being the last ManParser implementation
         // that is checked; it's the fallback.
@@ -1021,27 +1085,25 @@ impl ManParser for TypeDeroff {
                     || line.starts_with("COMMAND OPTIONS"))
             })
             // Look for BUGS and stop there
-            .take_while(|line| !line.starts_with("BUGS"));
+            .take_while(|line| !line.starts_with("BUGS"))
+            .peekable();
 
         let mut completions = Completions::new(cmdname);
-        while lines.by_ref().peekable().peek().is_some() {
-            let lines = lines.by_ref();
-
-            // Pop until we get to the next option
-            let options = match lines.skip_while(|line| !TypeDeroff::is_option(line)).next() {
-                Some(line) => line,
-                None => break,
-            };
+        while let Some(options) = lines.next() {
+            // Skip until we get to the next option
+            if !TypeDeroff::is_option(options) {
+                continue;
+            }
 
             // Pop until we get to either an empty line or a line starting with -
             let description: Vec<_> = lines
-                .take_while(|line| TypeDeroff::could_be_description(line))
+                .peeking_take_while(|line| TypeDeroff::could_be_description(line))
                 .collect();
             let description = description.join(" ");
 
             completions.add(&options, &description);
         }
-        Some(completions.build())
+        completions.build()
     }
 }
 
@@ -1184,15 +1246,13 @@ fn test_cleanup_autogenerated_file_in_directory() {
 
 /// Delete the file if it is autogenerated
 fn cleanup_autogenerated_file(path: &Path) {
-    use std::error::Error;
-
     if file_is_overwritable(path) == Ok(true) {
         // Original proceeds while ignoring errors
         if let Err(err) = std::fs::remove_file(path) {
             eprintln!(
                 "Error in cleaning up auto-generated file ({}): {}",
                 path.to_string_lossy(),
-                err.description(),
+                err.to_string(),
             );
         }
     }
@@ -1242,9 +1302,8 @@ fn test_cleanup_autogenerated_file() {
 
 fn parse_manpage_at_path(
     manpage_path: &Path,
-    output_directory: &Path,
+    output_directory: Option<&Path>,
     deroff_only: bool,
-    write_to_stdout: bool,
 ) -> io::Result<bool> {
     // Clear diagnostic
     // diagnostic_output[:] = []
@@ -1253,23 +1312,6 @@ fn parse_manpage_at_path(
     // Set up some diagnostic
     // add_diagnostic(format!("Considering {}", manpage_path));
     // diagnostic_indent += 1
-
-    let mut manpage = String::new();
-    if manpage_path.ends_with(".gz") {
-        let mut gz = GzDecoder::new(File::open(manpage_path)?);
-        gz.read_to_string(&mut manpage)?;
-    } else if manpage_path.ends_with(".bz2") {
-        let mut bz = BzDecoder::new(File::open(manpage_path)?);
-        bz.read_to_string(&mut manpage)?;
-    } else if manpage_path.ends_with(".xz") || manpage_path.ends_with(".lzma") {
-        let mut xz = XzDecoder::new(File::open(manpage_path)?);
-        xz.read_to_string(&mut manpage)?;
-    } else if [".1", ".2", ".3", ".4", ".5", ".6", ".7", ".8", ".9"]
-        .iter()
-        .any(|suffix| manpage_path.ends_with(suffix))
-    {
-        File::open(manpage_path)?.read_to_string(&mut manpage)?;
-    }
 
     // Get the "base" command, e.g. gcc.1.gz -> gcc
     // These casts are safe as OsStr is internally a wrapper around [u8] on all
@@ -1283,6 +1325,22 @@ fn parse_manpage_at_path(
     ];
     if ignored_commands.contains(&cmdname.as_ref()) {
         return Ok(false);
+    }
+
+    let mut manpage = String::new();
+    let extension = manpage_path.extension().unwrap_or_default();
+    let extension = extension.to_string_lossy();
+    if extension.as_ref() == "gz" {
+        let mut gz = GzDecoder::new(File::open(manpage_path)?);
+        gz.read_to_string(&mut manpage)?;
+    } else if extension.as_ref() == "bz2" {
+        let mut bz = BzDecoder::new(File::open(manpage_path)?);
+        bz.read_to_string(&mut manpage)?;
+    } else if extension.as_ref() == "xz" || extension.as_ref() == "lzma" {
+        let mut xz = XzDecoder::new(File::open(manpage_path)?);
+        xz.read_to_string(&mut manpage)?;
+    } else if (1..=9).any(|suffix| suffix.to_string() == extension.as_ref()) {
+        File::open(manpage_path)?.read_to_string(&mut manpage)?;
     }
 
     // Ignore perl's gazillion man pages
@@ -1316,15 +1374,13 @@ fn parse_manpage_at_path(
         .find_map(|parser| parser.parse_man_page(&manpage, &cmdname))
     {
         let comments = format!(
-            "# {}\n#Autogenerated from man page {}\n",
+            "# {}\n# Autogenerated from man page {}\n",
             &cmdname,
             manpage_path.display()
         );
         completions.insert_str(0, &comments);
 
-        if write_to_stdout {
-            io::stdout().lock().write_all(completions.as_bytes())?;
-        } else {
+        if let Some(output_directory) = output_directory {
             let fullpath = output_directory
                 .join(cmdname.as_ref())
                 .with_extension("fish");
@@ -1336,6 +1392,8 @@ fn parse_manpage_at_path(
                     return Err(err);
                 }
             }
+        } else {
+            io::stdout().lock().write_all(completions.as_bytes())?;
         }
         // add_diagnostic(format!("{} parsed successfully", manpage_path))
         Ok(true)
@@ -1364,10 +1422,9 @@ fn test_num_digits() {
 
 fn parse_and_output_man_pages(
     paths: &mut [PathBuf],
-    output_directory: PathBuf,
+    output_directory: Option<PathBuf>,
     show_progress: bool,
     deroff_only: bool,
-    write_to_stdout: bool,
 ) {
     paths.sort();
 
@@ -1376,11 +1433,13 @@ fn parse_and_output_man_pages(
     let mut successful_count = 0;
     let max_digits = num_digits(total);
 
-    if show_progress && !write_to_stdout {
-        println!(
-            "Parsing man pages and writing completions to {}",
-            output_directory.display()
-        );
+    if let Some(output_directory) = output_directory.as_ref() {
+        if show_progress {
+            println!(
+                "Parsing man pages and writing completions to {}",
+                output_directory.display()
+            );
+        }
     }
 
     for (index, manpage_path) in paths.iter().enumerate() {
@@ -1395,11 +1454,7 @@ fn parse_and_output_man_pages(
                 )
             });
 
-        // gcc.1.gz -> gcc
-        // `str::split` iterator ALWAYS has a first element by definition
-        let cmd_name = man_file_name.split('.').next().unwrap();
-
-        if show_progress && !write_to_stdout {
+        if show_progress && output_directory.is_some() {
             let progress = format!(
                 "{0:>1$} / {2} : {3}",
                 index + 1,
@@ -1415,15 +1470,10 @@ fn parse_and_output_man_pages(
             lock.flush().expect("Failed to flush stdout");
         }
 
-        match parse_manpage_at_path(
-            &manpage_path,
-            output_directory.as_ref(),
-            deroff_only,
-            write_to_stdout,
-        ) {
+        match parse_manpage_at_path(&manpage_path, output_directory.as_deref(), deroff_only) {
             Ok(true) => successful_count += 1,
             Ok(false) => {}
-            Err(e) => {
+            Err(_) => {
                 // add_diagnostic(format!("Cannot open {}", manpage_path), VERY_VERBOSE)
             }
         };
@@ -1471,44 +1521,29 @@ macro_rules! mantypes {
                     ManType::$typ(t) => t.is_my_type(manpage),
                 )*}
             }
+
+            fn parse_man_page(&self, manpage: &str, cmdname: &str) -> Option<String> {
+                match self {$(
+                    ManType::$typ(t) => t.parse_man_page(manpage, cmdname),
+                )*}
+            }
         }
     };
 }
 
-mantypes![Type1, Type2, Type3, Type4, TypeDarwin, TypeDeroff];
-
-impl App {
-    // TODO Result type
-    // This function might be useable as a helper function for parse_manpage_at_path
-    fn single_man_page<R: Read, W: Write>(&mut self, input: &mut R, output: &mut W, cmdname: &str) {
-        let mut buf = vec![];
-        input.read_to_end(&mut buf).unwrap();
-        dbg!(buf.len());
-        // TODO Either use lossy conversion or do something sensible with the Err
-        let buf = String::from_utf8(buf).unwrap();
-        // TODO mimic multiple parser logic with lazy evaluation
-        let parsers = ManType::ALL.iter().filter(|parser| parser.is_my_type(&buf));
-        let mut parsers = parsers.peekable();
-        if parsers.peek().is_none() {
-            self.add_diagnostic(&format!("{}: Not supported", cmdname), None);
-        }
-        if let Some(completions) = parsers.find_map(|parser| parser.parse_man_page(&buf, cmdname)) {
-            output.write_all(completions.as_bytes()).unwrap();
-        }
-    }
-}
+mantypes![Type1, Type2, Type3, Type4, TypeScdoc, TypeDarwin, TypeDeroff];
 
 /// Return all the paths to man(1) and man(8) files in the manpath.
 fn get_paths_from_man_locations() -> Vec<PathBuf> {
     // $MANPATH take precedence, just like with `man` on the CLI.
-    let mut parent_paths: Vec<_> = if let Some(paths) = env::var_os("MANPATH") {
-        env::split_paths(&paths).collect()
-    } else if let Ok(output) = Command::new("manpath").output() {
+    let mut parent_paths: Vec<_> = if let Ok(output) = Command::new("manpath").output() {
         let output = String::from_utf8(output.stdout).unwrap();
-        env::split_paths(&output).collect()
+        env::split_paths(&output.trim()).collect()
     } else if let Ok(output) = Command::new("man").arg("--path").output() {
         let output = String::from_utf8(output.stdout).unwrap();
-        env::split_paths(&output).collect()
+        env::split_paths(&output.trim()).collect()
+    } else if let Some(paths) = env::var_os("MANPATH") {
+        env::split_paths(&paths).collect()
     // HACK: Use some fallbacks in case we can't get anything else.
     // `mandoc` does not provide `manpath` or `man --path` and $MANPATH might not be set.
     // The alternative is reading its config file (/etc/man.conf)
@@ -1542,106 +1577,40 @@ fn get_paths_from_man_locations() -> Vec<PathBuf> {
 
 mod deroff;
 
+/// Generate fish completions from manpages.
 #[derive(StructOpt, Debug)]
 struct Opts {
-    files: Vec<PathBuf>,
-    #[structopt(short, long, default_value = "0")]
+    /// Level of debug output.
+    #[structopt(short, long, default_value = "0", possible_values = &["0", "1", "2"])]
     verbose: u8,
-    /// Print to stdout rather than to a directory of completions
-    #[structopt(short, long)]
+    /// Write the completions to stdout.
+    #[structopt(short, long, conflicts_with = "directory")]
     stdout: bool,
+    /// Use deroff parser only.
+    #[structopt(short = "z", long)]
+    deroff_only: bool,
+    /// Directory to save the completions in.
     #[structopt(short, long)]
     directory: Option<PathBuf>,
+    /// Use manpath from system and environment variable.
     #[structopt(short, long)]
-    manpath: Option<PathBuf>,
+    manpath: bool,
+    /// Show progress bar.
     #[structopt(short, long)]
     progress: bool,
+    /// Directory to clean up.
     #[structopt(short, long)]
+    cleanup_in: Option<PathBuf>,
+    /// Keep files in target directory.
+    #[structopt(short, long)]
+    keep: bool,
+    /// Generate fish completions.
+    // TODO generate this in build.rs and remove this option
+    #[structopt(long)]
     completions: bool,
+    /// Files to parse and generate completions.
+    files: Vec<PathBuf>,
 }
-
-impl Opts {
-    fn read_from_stdin(&self) -> bool {
-        self.manpath.is_none() && self.files.is_empty()
-    }
-}
-
-// def usage(script_name):
-//     print("Usage: {0} [-v, --verbose] [-s, --stdout] [-d, --directory] [-p, --progress] files...".format(script_name))
-//     print("""Command options are:
-//      -h, --help\t\tShow this help message
-//      -v, --verbose [0, 1, 2]\tShow debugging output to stderr. Larger is more verbose.
-//      -s, --stdout\tWrite all completions to stdout (trumps the --directory option)
-//      -d, --directory [dir]\tWrite all completions to the given directory, instead of to ~/.local/share/fish/generated_completions
-//      -m, --manpath\tProcess all man1 and man8 files available in the manpath (as determined by manpath)
-//      -p, --progress\tShow progress
-//     """)
-
-// if __name__ == "__main__":
-//     script_name = sys.argv[0]
-//     try:
-//         opts, file_paths = getopt.gnu_getopt(sys.argv[1:], 'v:sd:hmpc:z', ['verbose=', 'stdout', 'directory=', 'cleanup-in=', 'help', 'manpath', 'progress'])
-//     except getopt.GetoptError as err:
-//         print(err.msg) # will print something like "option -a not recognized"
-//         usage(script_name)
-//         sys.exit(2)
-//
-//     # Directories within which we will clean up autogenerated completions
-//     # This script originally wrote completions into ~/.config/fish/completions
-//     # Now it writes them into a separate directory
-//     cleanup_directories = []
-//
-//     use_manpath, show_progress, custom_dir = False, False, False
-//     output_directory = ''
-//     for opt, value in opts:
-//         if opt in ('-v', '--verbose'):
-//             VERBOSITY = int(value)
-//         elif opt in ('-s', '--stdout'):
-//             WRITE_TO_STDOUT = True
-//         elif opt in ('-d', '--directory'):
-//             output_directory = value
-//         elif opt in ('-h', '--help'):
-//             usage(script_name)
-//             sys.exit(0)
-//         elif opt in ('-m', '--manpath'):
-//             use_manpath = True
-//         elif opt in ('-p', '--progress'):
-//             show_progress = True
-//         elif opt in ('-c', '--cleanup-in'):
-//             cleanup_directories.append(value)
-//         elif opt in ('-z',):
-//             DEROFF_ONLY = True
-//         else:
-//             assert False, "unhandled option"
-//
-//     if use_manpath:
-//         # Fetch all man1 and man8 files from the manpath or man.conf
-//         file_paths.extend(get_paths_from_man_locations())
-//
-//     if cleanup_directories:
-//         for cleanup_dir in cleanup_directories:
-//             cleanup_autogenerated_completions_in_directory(cleanup_dir)
-//
-//     if not file_paths:
-//         print("No paths specified")
-//         sys.exit(0)
-//
-//     if not WRITE_TO_STDOUT and not output_directory:
-//         # Default to ~/.local/share/fish/generated_completions/
-//         # Create it if it doesn't exist
-//         xdg_data_home = os.getenv('XDG_DATA_HOME', '~/.local/share')
-//         output_directory = os.path.expanduser(xdg_data_home + '/fish/generated_completions/')
-//         try:
-//             os.makedirs(output_directory)
-//         except OSError as e:
-//             if e.errno != errno.EEXIST:
-//                 raise
-//
-//     if not WRITE_TO_STDOUT:
-//         # Remove old generated files
-//         cleanup_autogenerated_completions_in_directory(output_directory)
-//
-//     parse_and_output_man_pages(file_paths, output_directory, show_progress)
 
 fn shell() -> String {
     std::path::Path::new(
@@ -1674,13 +1643,47 @@ fn main() -> Result<(), String> {
         return Ok(());
     }
 
-    // TODO Make this less special case-y
-    if opts.read_from_stdin() && opts.stdout {
-        let mut stdin = std::io::stdin();
-        let mut stdout = std::io::stdout();
-        let mut app = App::default();
-        return Ok(app.single_man_page(&mut stdin, &mut stdout, "STDIN"));
+    // TODO: Set logging verbosity
+
+    if let Some(cleanup_dir) = opts.cleanup_in.as_ref() {
+        cleanup_autogenerated_completions_in_directory(cleanup_dir).ok();
     }
+
+    let mut paths = opts.files.clone();
+    if opts.manpath {
+        paths.extend(get_paths_from_man_locations());
+    }
+
+    if paths.is_empty() {
+        println!("No paths specified");
+        return Ok(());
+    }
+
+    let output_directory = opts.directory.clone().or_else(|| {
+        if opts.stdout {
+            None
+        } else {
+            let mut xdg_data_home = dirs::data_dir().unwrap();
+            xdg_data_home.push("fish/generated_completions/");
+            if !xdg_data_home.is_dir() {
+                std::fs::create_dir_all(&xdg_data_home).expect("Failed to create directory");
+            }
+            Some(xdg_data_home)
+        }
+    });
+
+    if let Some(output_directory) = output_directory.as_ref() {
+        if !opts.keep {
+            cleanup_autogenerated_completions_in_directory(output_directory).ok();
+        }
+    }
+
+    parse_and_output_man_pages(
+        &mut paths,
+        output_directory,
+        opts.progress,
+        opts.deroff_only,
+    );
 
     Ok(())
 }
