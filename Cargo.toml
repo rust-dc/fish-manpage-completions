@@ -5,15 +5,17 @@ authors = ["Scott Steele <scottlsteele@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-structopt = "*"
-itertools = "*"
-regex = "*"
-lazy_static = "*"
-bstr = "*"
-flate2 = "1.0"
-bzip2 = "0.3"
-xz2 = "0.1"
-dirs = "3.0"
+structopt = "0.3.21"
+itertools = "0.9.0"
+regex = "1.4.2"
+lazy_static = "1.4.0"
+bstr = "0.2.14"
+flate2 = "1.0.19"
+bzip2 = "0.4.1"
+xz2 = "0.1.6"
+dirs = "3.0.1"
+tracing = "0.1.22"
+tracing-subscriber = "0.2.15"
 
 [dev-dependencies]
-pretty_assertions = "*"
+pretty_assertions = "0.6.1"
