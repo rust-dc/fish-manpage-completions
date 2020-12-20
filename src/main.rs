@@ -1,5 +1,5 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/create_manpage_completions.py
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::os::unix::ffi::OsStrExt;
@@ -11,66 +11,13 @@ use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
 use itertools::Itertools;
 use structopt::StructOpt;
+use tracing_subscriber::filter::LevelFilter;
 use xz2::read::XzDecoder;
 
 #[cfg(test)]
-use pretty_assertions::{assert_eq, assert_ne};
+use pretty_assertions::assert_eq;
 
 mod util;
-
-// # -*- coding: utf-8 -*-
-//
-// # Run me like this: ./create_manpage_completions.py /usr/share/man/man{1,8}/* > man_completions.fish
-//
-// """
-// <OWNER> = Siteshwar Vashisht
-// <YEAR> = 2012
-//
-// Copyright (c) 2012, Siteshwar Vashisht
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-//
-// Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-// Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// """
-//
-// import string, sys, re, os.path, bz2, gzip, traceback, getopt, errno, codecs
-// from deroff import Deroffer
-//
-// lzma_available = True
-// try:
-//     try:
-//         import lzma
-//     except ImportError:
-//         from backports import lzma
-// except ImportError:
-//     lzma_available = False
-//
-// # Whether we're Python 3
-// IS_PY3 = sys.version_info[0] >= 3
-//
-// # This gets set to the name of the command that we are currently executing
-// CMDNAME = ""
-//
-// # Information used to track which of our parsers were successful
-// PARSER_INFO = {}
-//
-// # built_command writes into this global variable, yuck
-// built_command_output = []
-//
-// # Diagnostic output
-// diagnostic_output = []
-// diagnostic_indent = 0
-//
-// # Three diagnostic verbosity levels
-// VERY_VERBOSE, BRIEF_VERBOSE, NOT_VERBOSE = 2, 1, 0
-//
-// # Pick some reasonable default values for settings
-// global VERBOSITY, WRITE_TO_STDOUT, DEROFF_ONLY
-// VERBOSITY, WRITE_TO_STDOUT, DEROFF_ONLY = NOT_VERBOSE, False, False
-//
 
 macro_rules! regex {
     ($pattern: expr) => {{
@@ -80,78 +27,6 @@ macro_rules! regex {
         &REGEX
     }};
 }
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum Verbosity {
-    Not,
-    Brief,
-    Very,
-}
-
-impl Default for Verbosity {
-    fn default() -> Self {
-        Verbosity::Not
-    }
-}
-
-#[derive(Default)]
-struct App {
-    verbosity: Verbosity,
-    diagnostic_output: String,
-    diagnostic_indent: usize,
-    already_output_completions: HashMap<String, HashSet<String>>,
-}
-
-// def add_diagnostic(dgn, msg_verbosity = VERY_VERBOSE):
-//     # Add a diagnostic message, if msg_verbosity <= VERBOSITY
-//     if msg_verbosity <= VERBOSITY:
-//         diagnostic_output.append('   '*diagnostic_indent + dgn)
-
-const DIAGNOSTIC_INDENTER: &'static str = "   ";
-
-impl App {
-    fn add_diagnostic(&mut self, diagnostic: &str, msg_verbosity: impl Into<Option<Verbosity>>) {
-        let msg_verbosity = msg_verbosity.into().unwrap_or_default();
-
-        if msg_verbosity <= self.verbosity {
-            for _ in 0..self.diagnostic_indent {
-                self.diagnostic_output.push_str(DIAGNOSTIC_INDENTER);
-            }
-            self.diagnostic_output.push_str(diagnostic);
-        }
-    }
-}
-
-// def flush_diagnostics(where):
-//     if diagnostic_output:
-//         output_str = '\n'.join(diagnostic_output) + '\n'
-//         where.write(output_str)
-//         diagnostic_output[:] = []
-
-impl App {
-    fn flush_diagnostics<T>(&mut self, r#where: &mut T)
-    where
-        T: Write,
-    {
-        if !self.diagnostic_output.is_empty() {
-            r#where
-                .write_all(self.diagnostic_output.as_bytes())
-                .unwrap();
-        }
-        self.diagnostic_output.clear();
-    }
-}
-
-// # Make sure we don't output the same completion multiple times, which can happen
-// # For example, xsubpp.1.gz and xsubpp5.10.1.gz
-// # This maps commands to lists of completions
-// already_output_completions = {}
-//
-// def compile_and_search(regex, input):
-//     options_section_regex = re.compile(regex , re.DOTALL)
-//     options_section_matched = re.search( options_section_regex, input)
-//     return options_section_matched
-//
 
 // def unquote_double_quotes(data):
 //     if (len(data) < 2):
@@ -451,7 +326,13 @@ impl<'a> Completions<'a> {
     }
 
     fn build(self) -> Option<String> {
-        Some(self.built_command_output.join("\n")).filter(|c| !c.is_empty())
+        let mut s = self.built_command_output.join("\n");
+        if s.is_empty() {
+            None
+        } else {
+            s.push('\n'); // add trailing whitespace
+            Some(s)
+        }
     }
 }
 
@@ -575,10 +456,10 @@ impl ManParser for Type1 {
 
         let options_parts_re = regex!(r"\.PP((?s:.)*?)\.RE");
         let mut options_matched = options_parts_re.captures(options_section);
-        // add_diagnostic(format!("Command is {}", cmdname));
+        tracing::info!("Command is {}", cmdname);
 
         if options_matched.is_none() {
-            // add_diagnostic("Unable to find options");
+            tracing::info!("Unable to find options");
             return self
                 .fallback(options_section, cmdname)
                 .or_else(|| self.fallback2(options_section, cmdname));
@@ -602,10 +483,10 @@ impl ManParser for Type1 {
                     let option_desc = option_desc.trim().replace('\n', " ");
                     completions.add(option_name, &option_desc);
                 } else {
-                    // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
+                    tracing::info!("{:?} doesn't contain '-'", option_name);
                 }
             } else {
-                // add_diagnostic("Unable to split option from description");
+                tracing::info!("Unable to split option from description");
                 return None;
             }
 
@@ -618,11 +499,11 @@ impl ManParser for Type1 {
 
 impl Type1 {
     fn fallback(&self, mut options_section: &str, cmdname: &str) -> Option<String> {
-        // add_diagnostic("Trying fallback");
+        tracing::info!("Trying fallback");
         let options_parts_re = regex!(r"\.TP( \d+)?((?s:.)*?)\.TP");
         let mut options_matched = options_parts_re.captures(options_section);
         if options_matched.is_none() {
-            // add_diagnostic("Still not found");
+            tracing::info!("Still not found");
             return None;
         }
         let mut completions = Completions::new(cmdname);
@@ -631,7 +512,7 @@ impl Type1 {
             let data = remove_groff_formatting(data);
             let data = data.splitn(2, '\n').next_tuple::<(_, _)>();
             if data.filter(|data| !data.1.trim().is_empty()).is_none() {
-                // add_diagnostic("Unable to split option from description");
+                tracing::info!("Unable to split option from description");
                 return None;
             }
             let option_name = data.unwrap().0.trim();
@@ -641,7 +522,7 @@ impl Type1 {
                 let option_desc = data.unwrap().1.trim().replace('\n', " ");
                 completions.add(option_name, &option_desc);
             } else {
-                // add_diagnostic(format!("{:?} does not contain '-'", option_name));
+                tracing::info!("{:?} does not contain '-'", option_name);
             }
             // XXX possible to add fallback2 here
 
@@ -652,7 +533,7 @@ impl Type1 {
     }
 
     fn fallback2(&self, options_section: &str, cmdname: &str) -> Option<String> {
-        // add_diagnostic("Trying last chance fallback");
+        tracing::info!("Trying last chance fallback");
         let ix_remover_re = regex!(r"\.IX.*");
         let trailing_num_re = regex!(r"\d+$");
         let options_parts_re = regex!(r"\.IP ((?s:.)*?)\.IP");
@@ -660,7 +541,7 @@ impl Type1 {
         let mut options_section = &*ix_remover_re.replace_all(options_section, "");
         let mut options_matched = options_parts_re.captures(&options_section);
         if options_matched.is_none() {
-            // add_diagnostic("Still (still!) not found");
+            tracing::info!("Still (still!) not found");
             return None;
         }
         let mut completions = Completions::new(cmdname);
@@ -669,7 +550,7 @@ impl Type1 {
             let data = remove_groff_formatting(data);
             let data: Vec<&str> = data.splitn(2, '\n').collect();
             if data.len() < 2 || data[1].trim().is_empty() {
-                // add_diagnostic("Unable to split option from description");
+                tracing::info!("Unable to split option from description");
                 return None;
             }
             let option_name = trailing_num_re.replace_all(data[0].trim(), "");
@@ -680,7 +561,7 @@ impl Type1 {
                 let option_desc = data[1].trim().replace('\n', " ");
                 completions.add(option_name, &option_desc);
             } else {
-                // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
+                tracing::info!("{:?} doesn't contain '-'", option_name);
             }
 
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
@@ -705,10 +586,10 @@ impl ManParser for Type2 {
 
         let options_parts_re = regex!(r#"\.[IT]P( \d+(\.\d)?i?)?((?s:.)*?)\.([IT]P|UNINDENT)"#);
         let mut options_matched = options_parts_re.captures(options_section);
-        // add_diagnostic(format!("Command is {}", cmdname));
+        tracing::info!("Command is {}", cmdname);
 
         if options_matched.is_none() {
-            // add_diagnostic("Unable to find options");
+            tracing::info!("Unable to find options");
             return None;
         }
 
@@ -727,10 +608,10 @@ impl ManParser for Type2 {
                     let option_desc = option_desc.trim().replace('\n', " ");
                     completions.add(option_name, &option_desc);
                 } else {
-                    // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
+                    tracing::info!("{:?} doesn't contain '-'", option_name);
                 }
             } else {
-                // add_diagnostic("Unable to split option from description");
+                tracing::info!("Unable to split option from description");
             }
 
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
@@ -756,10 +637,10 @@ impl ManParser for Type3 {
 
         let options_parts_re = regex!(r"\.TP((?s:.)*?)\.TP");
         let mut options_matched = options_parts_re.captures(options_section);
-        // add_diagnostic(format!("Command is {}", cmdname));
+        tracing::info!("Command is {}", cmdname);
 
         if options_matched.is_none() {
-            // add_diagnostic("Unable to find options section");
+            tracing::info!("Unable to find options section");
             return None;
         }
 
@@ -772,7 +653,7 @@ impl ManParser for Type3 {
             let (option_name, option_desc) = match data.splitn(2, '\n').next_tuple() {
                 Some(tuple) => tuple,
                 None => {
-                    // add_diagnostic("Unable to split option from description");
+                    tracing::info!("Unable to split option from description");
                     return None;
                 }
             };
@@ -783,7 +664,7 @@ impl ManParser for Type3 {
                 let option_desc = option_desc.trim().replace("\n", " ");
                 completions.add(&option_name, &option_desc);
             } else {
-                // add_diagnostic(format!("{:?} doesn't contain '-'", option_name));
+                tracing::info!("{:?} doesn't contain '-'", option_name);
             }
 
             options_section = &options_section[mat.get(0).unwrap().end() - 3..];
@@ -808,10 +689,10 @@ impl ManParser for Type4 {
 
         let options_parts_re = regex!(r"\.TP((?s:.)*?)\.TP");
         let mut options_matched = options_parts_re.captures(options_section);
-        // add_diagnostic(format!("Command is {}", cmdname));
+        tracing::info!("Command is {}", cmdname);
 
         if options_matched.is_none() {
-            // add_diagnostic("Unable to find options section");
+            tracing::info!("Unable to find options section");
             return None;
         }
 
@@ -827,10 +708,10 @@ impl ManParser for Type4 {
                     let option_desc = option_desc.trim().replace('\n', " ");
                     completions.add(option_name, &option_desc);
                 } else {
-                    // add_diagnostic(format!("{} doesn't contain '-'", option_name));
+                    tracing::info!("{} doesn't contain '-'", option_name);
                 }
             } else {
-                // add_diagnostic("Unable to split option from description");
+                tracing::info!("Unable to split option from description");
                 return None;
             }
 
@@ -856,10 +737,10 @@ impl ManParser for TypeScdoc {
 
         let options_parts_re = regex!(r"((?s:.)*?)\.RE");
         let mut options_matched = options_parts_re.captures(options_section);
-        // add_diagnostic(format!("Command is {}", cmdname));
+        tracing::info!("Command is {}", cmdname);
 
         if options_matched.is_none() {
-            // add_diagnostic("Unable to find options section");
+            tracing::info!("Unable to find options section");
             return None;
         }
 
@@ -875,11 +756,11 @@ impl ManParser for TypeScdoc {
                 let option_name = unquote_double_quotes(option_name);
                 let option_name = unquote_single_quotes(option_name);
                 if !option_name.contains('-') {
-                    // add_diagnostic(format!("{} doesn't contain '-'", option_name));
+                    tracing::info!("{} doesn't contain '-'", option_name);
                 }
                 completions.add(option_name, option_desc);
             } else {
-                // add_diagnostic(format!("Unable to split option from description"));
+                tracing::info!("Unable to split option from description");
             }
 
             options_section = &options_section[mat.get(0).unwrap().end()..];
@@ -1305,13 +1186,13 @@ fn parse_manpage_at_path(
     output_directory: Option<&Path>,
     deroff_only: bool,
 ) -> io::Result<bool> {
-    // Clear diagnostic
-    // diagnostic_output[:] = []
-    // diagnostic_indent = 0
-
-    // Set up some diagnostic
-    // add_diagnostic(format!("Considering {}", manpage_path));
-    // diagnostic_indent += 1
+    // First level span
+    let span = tracing::info_span!(
+        "Considering",
+        "{}",
+        manpage_path.to_string_lossy().into_owned().as_str()
+    );
+    let _enter = span.enter();
 
     // Get the "base" command, e.g. gcc.1.gz -> gcc
     // These casts are safe as OsStr is internally a wrapper around [u8] on all
@@ -1366,13 +1247,15 @@ fn parse_manpage_at_path(
     let mut parsers = parsers.peekable();
 
     if parsers.peek().is_none() {
-        // add_diagnostic(format!("{}: Not supported", manpage_path));
+        tracing::info!("{}: Not supported", manpage_path.display());
     }
 
-    if let Some(mut completions) = parsers
-        // .inspect(|parser| add_diagnostic(format!("Trying {}", parser)))
-        .find_map(|parser| parser.parse_man_page(&manpage, &cmdname))
-    {
+    if let Some(mut completions) = parsers.find_map(|parser| {
+        // Second (last) level span
+        let span = tracing::info_span!("Trying", "{}", parser.to_string().as_str());
+        let _enter = span.enter();
+        parser.parse_man_page(&manpage, &cmdname)
+    }) {
         let comments = format!(
             "# {}\n# Autogenerated from man page {}\n",
             &cmdname,
@@ -1384,24 +1267,25 @@ fn parse_manpage_at_path(
             let fullpath = output_directory
                 .join(cmdname.as_ref())
                 .with_extension("fish");
-            match File::create(fullpath) {
+            match File::create(&fullpath) {
                 Ok(mut file) => file.write_all(completions.as_bytes())?,
                 Err(err) => {
-                    // add_diagnostic(format!("Unable to open file '{}': error({}): {}",
-                    // fullpath, errno, strerror));
+                    tracing::info!("Unable to open file '{}': {}", &fullpath.display(), err);
                     return Err(err);
                 }
             }
         } else {
             io::stdout().lock().write_all(completions.as_bytes())?;
         }
-        // add_diagnostic(format!("{} parsed successfully", manpage_path))
+        tracing::info!("{} parsed successfully", manpage_path.display());
         Ok(true)
     } else {
-        let _parser_names = parsers.join(", ");
-        // add_diagnostic(format!(
-        //     "{} contains no options or is unparsable (tried parser {})",
-        //     manpage_path, parser_names), BRIEF_VERBOSE);
+        let parser_names = parsers.join(", ");
+        tracing::warn!(
+            "{} contains no options or is unparsable (tried parser {})",
+            manpage_path.display(),
+            parser_names
+        );
         Ok(false)
     }
 }
@@ -1474,18 +1358,17 @@ fn parse_and_output_man_pages(
             Ok(true) => successful_count += 1,
             Ok(false) => {}
             Err(_) => {
-                // add_diagnostic(format!("Cannot open {}", manpage_path), VERY_VERBOSE)
+                tracing::info!("Cannot open {}", manpage_path.display());
             }
         };
-
-        // flush diagnostics
     }
 
-    // "Newline after loop"
-    println!();
-
-    // add_diagnostic(format!("successfully parsed {} / {} pages", successful_count, total_count), BRIEF_VERBOSE);
-    // flush diagnostics
+    // TODO: use indicatif
+    tracing::info!(
+        "successfully parsed {} / {} pages",
+        successful_count,
+        paths.len()
+    );
 }
 
 macro_rules! mantypes {
@@ -1634,6 +1517,14 @@ fn program_name() -> String {
 fn main() -> Result<(), String> {
     let opts = Opts::from_args();
 
+    let level = match opts.verbose {
+        0 => LevelFilter::OFF,
+        1 => LevelFilter::WARN,
+        2 => LevelFilter::INFO,
+        n => unreachable!(n),
+    };
+    tracing_subscriber::fmt().with_max_level(level).init();
+
     if opts.completions {
         Opts::clap().gen_completions_to(
             program_name(),
@@ -1642,8 +1533,6 @@ fn main() -> Result<(), String> {
         );
         return Ok(());
     }
-
-    // TODO: Set logging verbosity
 
     if let Some(cleanup_dir) = opts.cleanup_in.as_ref() {
         cleanup_autogenerated_completions_in_directory(cleanup_dir).ok();

@@ -1136,6 +1136,7 @@ fn test_comment() {
     assert_eq!(deroffer.s, "\nworld".to_owned());
 }
 
+// TODO make this public and use it in another binary, not sure if needed
 fn deroff_files(files: &[String]) -> io::Result<()> {
     for arg in files {
         eprintln!("{}", arg);
