@@ -1,16 +1,11 @@
 /// A translation of https://github.com/fish-shell/fish-shell/blob/e7bfd1d71ca54df726a4f1ea14bd6b0957b75752/share/tools/deroff.py
 /// Deroff, ported from deroff.py, which is ported from the venerable deroff.c
-use flate2::read::GzDecoder;
 use regex::Regex;
 
 use crate::util::TranslationTable;
 use std::borrow::Cow;
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{self, Read};
-
-const SKIP_HEADERS: bool = false;
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 enum TblState {
@@ -43,8 +38,6 @@ pub struct Deroffer {
     tbl_tab: String,
     eqn: bool,
     output: Cell<String>,
-    skipheaders: bool,
-    skiplists: bool,
     name: String,
 
     s: String, // This is not explicitly defined in python code
@@ -82,8 +75,6 @@ impl Deroffer {
             tbl_tab: String::new(),
             eqn: false,
             output: Cell::new(String::new()),
-            skipheaders: false,
-            skiplists: false,
             name: String::new(),
 
             s: String::new(), // This is not explicitly defined in python code
@@ -732,7 +723,7 @@ impl Deroffer {
             return true;
         }
 
-        if SKIP_HEADERS && self.nobody {
+        if self.nobody {
             return true;
         }
 
@@ -986,11 +977,6 @@ impl Deroffer {
         }
     }
 
-    fn flush_output<W: std::io::Write>(&mut self, mut write: W) {
-        write.write(self.get_output().as_bytes()).unwrap();
-        write.flush().unwrap()
-    }
-
     fn number(&mut self) -> bool {
         if let Some(mat) = self.g_re_number.find(&self.s) {
             self.condputs(mat.as_str());
@@ -1134,43 +1120,6 @@ fn test_comment() {
     deroffer.s = "hello\nworld".to_owned();
     deroffer.comment();
     assert_eq!(deroffer.s, "\nworld".to_owned());
-}
-
-// TODO make this public and use it in another binary, not sure if needed
-fn deroff_files(files: &[String]) -> io::Result<()> {
-    for arg in files {
-        eprintln!("{}", arg);
-        let mut file = File::open(arg)?;
-        let mut string = String::new();
-        if arg.ends_with(".gz") {
-            let mut decoder = GzDecoder::new(file);
-            decoder.read_to_string(&mut string)?;
-        } else {
-            match file.read_to_string(&mut string) {
-                Err(e) if e.kind() == io::ErrorKind::InvalidData => {
-                    // not valid UTF-8
-                    // TODO: This is a _bad_ workaround for latin1, we need to correctly decode input files
-                    let mut bytes = Vec::new();
-                    file.read_to_end(&mut bytes)?;
-
-                    for byte in bytes {
-                        string.push(byte as char);
-                    }
-                }
-                Err(e) => {
-                    eprintln!("unknown error {:?}", e);
-                    continue;
-                }
-                Ok(_) => {}
-            };
-        }
-
-        let mut deroffer = Deroffer::new();
-        deroffer.deroff(string);
-        deroffer.flush_output(io::stdout());
-    }
-
-    Ok(())
 }
 
 #[test]
