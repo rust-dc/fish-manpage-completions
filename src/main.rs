@@ -1217,11 +1217,7 @@ fn parse_manpage_at_path(
     deroff_only: bool,
 ) -> io::Result<bool> {
     // First level span
-    let span = tracing::info_span!(
-        "Considering",
-        "{}",
-        manpage_path.to_string_lossy().into_owned().as_str()
-    );
+    let span = tracing::info_span!("Considering", "{}", manpage_path.display());
     let _enter = span.enter();
 
     // Get the "base" command, e.g. gcc.1.gz -> gcc
