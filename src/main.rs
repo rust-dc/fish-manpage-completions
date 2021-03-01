@@ -1282,7 +1282,7 @@ fn parse_manpage_at_path(
 
     if let Some(mut completions) = parsers.find_map(|parser| {
         // Second (last) level span
-        let span = tracing::info_span!("Trying", "{}", parser.to_string().as_str());
+        let span = tracing::info_span!("Trying", "{}", parser);
         let _enter = span.enter();
         parser.parse_man_page(&manpage, &cmdname)
     }) {
