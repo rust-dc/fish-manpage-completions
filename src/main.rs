@@ -1553,7 +1553,10 @@ fn main() -> Result<(), String> {
         2 => LevelFilter::INFO,
         n => unreachable!(n),
     };
-    tracing_subscriber::fmt().with_max_level(level).init();
+    tracing_subscriber::fmt()
+        .with_writer(io::stderr)
+        .with_max_level(level)
+        .init();
 
     if opts.completions {
         Opts::clap().gen_completions_to(
