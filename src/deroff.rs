@@ -29,7 +29,6 @@ pub struct Deroffer {
     specletter: bool,
     refer: bool,
     r#macro: u8,
-    nobody: bool,
     inlist: bool,
     inheader: bool,
     pic: bool,
@@ -66,7 +65,6 @@ impl Deroffer {
             specletter: false,
             refer: false,
             r#macro: 0,
-            nobody: false,
             inlist: false,
             inheader: false,
             pic: false,
@@ -481,13 +479,11 @@ impl Deroffer {
             self.inheader = true;
         } else {
             self.inheader = false;
-            self.nobody = true;
         }
         false
     }
 
     fn macro_ss_ip(&mut self) -> bool {
-        self.nobody = true;
         false
     }
 
@@ -716,14 +712,9 @@ impl Deroffer {
             _ => {}
         }
 
-        self.nobody = false;
         let s0s1 = self.s.chars().take(2).collect::<String>();
 
         if self.g_macro_dispatch(&s0s1) {
-            return true;
-        }
-
-        if self.nobody {
             return true;
         }
 
