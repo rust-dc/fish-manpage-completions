@@ -358,7 +358,15 @@ impl Deroffer {
     }
 
     fn skip_char(&mut self, amount: usize) {
-        self.s.drain(0..amount);
+        // drain takes in byte position but amount is character position
+        match self.s.char_indices().nth(amount) {
+            Some((pos, _)) => {
+                self.s.drain(..pos);
+            }
+            None => {
+                self.s.clear();
+            }
+        }
     }
 
     fn skip_leading_whitespace(&mut self) {
@@ -1768,14 +1776,18 @@ fn test_digit() {
 #[test]
 fn test_skip_char() {
     let mut d = Deroffer::new();
-    d.s = String::from("      Hello         World");
+    d.s = String::from("      Hello         World一");
     d.skip_char(6);
-    assert_eq!(&d.s, "Hello         World");
+    assert_eq!(&d.s, "Hello         World一");
     d.skip_char(5);
-    assert_eq!(&d.s, "         World");
+    assert_eq!(&d.s, "         World一");
     d.skip_char(9);
-    assert_eq!(&d.s, "World");
+    assert_eq!(&d.s, "World一");
     d.skip_char(5);
+    assert_eq!(&d.s, "一");
+    d.skip_char(1);
+    assert_eq!(&d.s, "");
+    d.skip_char(1);
     assert_eq!(&d.s, "");
 }
 
