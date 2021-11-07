@@ -1,0 +1,54 @@
+name: main
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  SCCACHE_REGION: us-east-1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Format
+      env:
+        SCCACHE_BUCKET: ${{ secrets.SCCACHE_BUCKET }}
+        SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
+        SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      run: |
+        docker run \
+            --rm \
+            --tty \
+            --volume "$PWD:/code" \
+            --workdir /code \
+            --env SCCACHE_REGION \
+            --env SCCACHE_BUCKET \
+            --env SCCACHE_AWS_SECRET_ACCESS_KEY \
+            --env SCCACHE_AWS_ACCESS_KEY_ID \
+            scoots/rust-con-sccache:latest \
+            cargo fmt --all -- --check --verbose
+
+    - name: Test
+      env:
+        SCCACHE_BUCKET: ${{ secrets.SCCACHE_BUCKET }}
+        SCCACHE_AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
+        SCCACHE_AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+      run: |
+        docker run \
+            --rm \
+            --tty \
+            --volume "$PWD:/code" \
+            --workdir /code \
+            --env SCCACHE_REGION \
+            --env SCCACHE_BUCKET \
+            --env SCCACHE_AWS_SECRET_ACCESS_KEY \
+            --env SCCACHE_AWS_ACCESS_KEY_ID \
+            scoots/rust-con-sccache:latest \
+            bash -c 'cargo test --verbose --all && sccache-wrapper.sh --show-stats'

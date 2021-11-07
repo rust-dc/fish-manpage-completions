@@ -1,7 +1,7 @@
 fish-manpage-completions
 ========================
 
-[![Build Status](https://travis-ci.com/rust-dc/fish-manpage-completions.svg?branch=master)](https://travis-ci.com/rust-dc/fish-manpage-completions)
+![Build Status](https://github.com/rust-dc/fish-manpage-completions/actions/workflows/main.yml/badge.svg)
 
 Port! Not Starboard! From Python to Rust!
 
