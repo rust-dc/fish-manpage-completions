@@ -1318,75 +1318,17 @@ fn parse_manpage_at_path(
     }
 }
 
-/// Get the number of digits in num
-// fn num_digits(n: usize) -> usize {
-//     (1.max(n) as f32).log10() as usize + 1
-// }
-
-// #[test]
-// fn test_num_digits() {
-//     assert_eq!(num_digits(1000), 4);
-//     assert_eq!(num_digits(100), 3);
-//     assert_eq!(num_digits(33), 2);
-//     assert_eq!(num_digits(123456789012345), 15);
-//     assert_eq!(num_digits(0), 1);
-// }
-
 fn parse_and_output_man_pages(
     paths: &mut [PathBuf],
     output_directory: Option<PathBuf>,
     show_progress: bool,
     deroff_only: bool,
 ) {
-    paths.sort();
+    paths.par_sort_unstable();
 
-    // let max_digits = num_digits(paths.len());
-    // let (tx, rx) = mpsc::channel::<PathBuf>();
-
-    // // XXX: maybe we can do custom drawing logic or paint ourselves?
-    // if let Some(output_directory) = output_directory.as_ref() {
-    //     if show_progress {
-    //         println!(
-    //             "Parsing man pages and writing completions to {}",
-    //             output_directory.display()
-    //         );
-
-    //         // draw in another thread
-    //         thread::spawn(move || {
-    //             let mut index = 1;
-    //             while let Ok(manpage_path) = rx.recv() {
-    //                 // foo/bar/gcc.1.gz -> gcc.1.gz
-    //                 let man_file_name = manpage_path
-    //                     .file_name()
-    //                     .map(|fname| fname.to_string_lossy())
-    //                     .unwrap_or_else(|| {
-    //                         panic!(
-    //                             "Failed to get manfile name from {:?}",
-    //                             manpage_path.display()
-    //                         )
-    //                     });
-
-    //                 let progress = format!(
-    //                     "{0:>1$} / {2} : {3}",
-    //                     index, max_digits, total, man_file_name,
-    //                 );
-
-    //                 let stdout = std::io::stdout();
-    //                 let mut lock = stdout.lock();
-    //                 lock.write_all(format!("\r\x1b[K{}", progress).as_bytes())
-    //                     .expect("Failed to write to stdout");
-    //                 lock.flush().expect("Failed to flush stdout");
-    //                 index += 1;
-    //             }
-    //         });
-    //     }
-    // }
-
-    // let paths_iter = paths.par_iter().map_with(tx, |tx, manpage_path| {
     let paths_iter = paths.par_iter().map(|manpage_path| {
         // We know the lifetime will always be the same as another
         // painting thread but how to not clone this?
-        // tx.send(manpage_path.to_owned()).unwrap();
         match parse_manpage_at_path(&manpage_path, output_directory.as_deref(), deroff_only) {
             Ok(true) => 1,
             Ok(false) => 0,
