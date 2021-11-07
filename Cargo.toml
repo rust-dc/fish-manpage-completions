@@ -16,6 +16,8 @@ xz2 = "0.1.6"
 dirs = "3.0.1"
 tracing = "0.1.22"
 tracing-subscriber = "0.2.15"
+indicatif = { version = "0.16.2", features = ["rayon"] }
+rayon = "1.5.1"
 
 [dev-dependencies]
 pretty_assertions = "0.6.1"

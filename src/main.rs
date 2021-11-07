@@ -39,7 +39,9 @@ use std::{env, fmt};
 
 use bzip2::read::BzDecoder;
 use flate2::read::GzDecoder;
+use indicatif::ParallelProgressIterator;
 use itertools::Itertools;
+use rayon::prelude::*;
 use structopt::StructOpt;
 use tracing_subscriber::filter::LevelFilter;
 use xz2::read::XzDecoder;
@@ -1316,80 +1318,32 @@ fn parse_manpage_at_path(
     }
 }
 
-/// Get the number of digits in num
-fn num_digits(n: usize) -> usize {
-    (1.max(n) as f32).log10() as usize + 1
-}
-
-#[test]
-fn test_num_digits() {
-    assert_eq!(num_digits(1000), 4);
-    assert_eq!(num_digits(100), 3);
-    assert_eq!(num_digits(33), 2);
-    assert_eq!(num_digits(123456789012345), 15);
-    assert_eq!(num_digits(0), 1);
-}
-
 fn parse_and_output_man_pages(
     paths: &mut [PathBuf],
     output_directory: Option<PathBuf>,
     show_progress: bool,
     deroff_only: bool,
 ) {
-    paths.sort();
+    paths.par_sort_unstable();
 
-    let total = paths.len();
-
-    let mut successful_count = 0;
-    let max_digits = num_digits(total);
-
-    if let Some(output_directory) = output_directory.as_ref() {
-        if show_progress {
-            println!(
-                "Parsing man pages and writing completions to {}",
-                output_directory.display()
-            );
-        }
-    }
-
-    for (index, manpage_path) in paths.iter().enumerate() {
-        // foo/bar/gcc.1.gz -> gcc.1.gz
-        let man_file_name = manpage_path
-            .file_name()
-            .map(|fname| fname.to_string_lossy())
-            .unwrap_or_else(|| {
-                panic!(
-                    "Failed to get manfile name from {:?}",
-                    manpage_path.display()
-                )
-            });
-
-        if show_progress && output_directory.is_some() {
-            let progress = format!(
-                "{0:>1$} / {2} : {3}",
-                index + 1,
-                max_digits,
-                total,
-                man_file_name,
-            );
-
-            let stdout = std::io::stdout();
-            let mut lock = stdout.lock();
-            lock.write_all(format!("\r\x1b[K{}", progress).as_bytes())
-                .expect("Failed to write to stdout");
-            lock.flush().expect("Failed to flush stdout");
-        }
-
+    let paths_iter = paths.par_iter().map(|manpage_path| {
+        // We know the lifetime will always be the same as another
+        // painting thread but how to not clone this?
         match parse_manpage_at_path(&manpage_path, output_directory.as_deref(), deroff_only) {
-            Ok(true) => successful_count += 1,
-            Ok(false) => {}
+            Ok(true) => 1,
+            Ok(false) => 0,
             Err(_) => {
                 tracing::info!("Cannot open {}", manpage_path.display());
+                0
             }
-        };
-    }
+        }
+    });
+    let successful_count: u64 = if show_progress {
+        paths_iter.progress().sum() // may not be accurate since it paints after
+    } else {
+        paths_iter.sum()
+    };
 
-    // TODO: use indicatif
     tracing::info!(
         "successfully parsed {} / {} pages",
         successful_count,
