@@ -1419,11 +1419,20 @@ fn get_paths_from_man_locations() -> Vec<PathBuf> {
     } else {
         Default::default()
     };
+
     if parent_paths.is_empty() {
-        eprintln!("Unable to get the manpath, falling back to /usr/share/man:/usr/local/share/man. Please set $MANPATH if that is not correct.");
-        parent_paths.push(PathBuf::from("/usr/share/man"));
-        parent_paths.push(PathBuf::from("/usr/local/share/man"));
+        const FALLBACK_PATHS: [&'static str; 3] =
+            ["/usr/share/man", "/usr/local/man", "/usr/local/share/man"];
+
+        eprintln!(
+            "Unable to get the manpath, falling back to {}. Please set \
+            $MANPATH if that is not correct.",
+            FALLBACK_PATHS.join(":"),
+        );
+
+        parent_paths = FALLBACK_PATHS.map(PathBuf::from).into();
     }
+
     let mut paths = Vec::new();
     for parent_path in parent_paths {
         for section in &["man1", "man6", "man8"] {
