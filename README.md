@@ -5,13 +5,47 @@ fish-manpage-completions
 
 Port! Not Starboard! From Python to Rust!
 
-We're planning to do an initial naïve port from the Python source with the same
-function names, class (i.e., struct/enum in Rust) names, etc.
+Current status
+--------------
 
-To contribute, add a comment to
-[this issue](https://github.com/rust-dc/fish-manpage-completions/issues/2), claiming a
-function. When you have it ported in your local or forked branch, submit a PR
-that includes a link to your comment.
+It works(!), although there might be minor recent enhancements to the upstream Python original missing from this version.
+
+### Install
+
+Having already installed Rust as noted below, run
+
+```sh
+cargo install --locked --path .
+```
+
+at the top-level of this repo.
+
+### Using
+
+Once installed, run
+
+```sh
+fish-manpage-completions \
+  --manpath \
+  --directory ~/.local/share/fish/generated_completions \
+  --progress
+```
+
+You can also, of course, redefine fish's built-in `fish_update_completions` function to use this rather than the original Python source.
+
+```fish
+function fish_update_completions
+  fish-manpage-completions \
+    --manpath \
+    --directory ~/.local/share/fish/generated_completions \
+    --progress
+end
+
+funcsave fish_update_completions
+```
+
+Contributing
+------------
 
 For in-depth discussion of a particularly hairy function, open a dedicated issue
 or pipe up on [the RustDC Zulip chat](https://rust-dc.zulipchat.com/).
@@ -25,12 +59,6 @@ To build and run tests.
 
 ```fish
 cargo test
-```
-
-To run the command. (Not working as of now)
-
-```fish
-cargo run
 ```
 
 Examples
