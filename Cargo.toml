@@ -7,7 +7,7 @@ edition = "2021"
 [dependencies]
 structopt = "0.3.21"
 itertools = "0.10"
-regex = "1.4.2"
+regex = "1.5.5"
 lazy_static = "1.4.0"
 bstr = "0.2.14"
 flate2 = "1.0.19"
